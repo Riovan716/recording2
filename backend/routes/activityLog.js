@@ -5,14 +5,11 @@ const {
   getActivitiesByRole, 
   manualCleanup 
 } = require('../controllers/activityLogController');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Get all recent activities
-router.get('/recent', getRecentActivities);
-
-// Get activities by role (guru, siswa, admin)
-router.get('/role/:role', getActivitiesByRole);
-
-// Manual cleanup endpoint (admin only)
-router.delete('/cleanup', manualCleanup);
+// Protected routes (authentication required)
+router.get('/recent', authenticateToken, requireAdmin, getRecentActivities);
+router.get('/role/:role', authenticateToken, requireAdmin, getActivitiesByRole);
+router.delete('/cleanup', authenticateToken, requireAdmin, manualCleanup);
 
 module.exports = router; 

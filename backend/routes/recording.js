@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const recordingController = require('../controllers/recordingController');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const upload = multer({ dest: path.join(__dirname, '../uploads') });
 
@@ -20,17 +21,14 @@ const corsMiddleware = (req, res, next) => {
   }
 };
 
-// Upload recording
-router.post('/upload', upload.single('recording'), recordingController.uploadRecording);
-// List recordings
+// Public routes (no authentication required for viewing)
 router.get('/', recordingController.listRecordings);
-// Back-compat plural alias and optional limit support
 router.get('/all', recordingController.listRecordings);
-// Download recording
 router.get('/download/:filename', recordingController.downloadRecording);
-// Stream recording (for video playback) - with CORS
 router.get('/stream/:filename', corsMiddleware, recordingController.streamRecording);
-// Delete recording
-router.delete('/:id', recordingController.deleteRecording);
+
+// Protected routes (authentication required)
+router.post('/upload', authenticateToken, requireAdmin, upload.single('recording'), recordingController.uploadRecording);
+router.delete('/:id', authenticateToken, requireAdmin, recordingController.deleteRecording);
 
 module.exports = router; 

@@ -19,11 +19,11 @@ exports.uploadRecording = async (req, res) => {
     
     // Log activity
     await logActivity(
-      req.session.userId || 1, // Default to 1 if no session
-      'admin',
-      'admin',
+      req.user.id, // Menggunakan req.user dari middleware authenticateToken
+      req.user.role,
+      req.user.name || 'admin',
       'upload_recording',
-      `Admin uploaded a recording: ${judul}`,
+      `${req.user.name || 'Admin'} uploaded a recording: ${judul}`,
       { filename, judul }
     );
     
@@ -99,11 +99,11 @@ exports.deleteRecording = async (req, res) => {
 
     // Log activity
     await logActivity(
-      req.session.userId || 1,
-      'admin',
-      'admin',
+      req.user.id, // Menggunakan req.user dari middleware authenticateToken
+      req.user.role,
+      req.user.name || 'admin',
       'delete_recording',
-      `Admin deleted recording: ${recording.judul}`,
+      `${req.user.name || 'Admin'} deleted recording: ${recording.judul}`,
       { filename: recording.filename, judul: recording.judul }
     );
 

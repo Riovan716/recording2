@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const isDev = process.env.NODE_ENV !== 'production';
 
 module.exports = {
@@ -19,12 +21,13 @@ module.exports = {
 
   // Security
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-here',
-  ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY || 30, // days
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY || 7, // days
 
   // Media Server
   MEDIA_PORT: process.env.MEDIA_PORT || 8000,
   MEDIA_HOST: process.env.MEDIA_HOST || (isDev ? 'localhost' : '0.0.0.0'),
 
   // CORS Configuration
-  CORS_ORIGIN: isDev ? ['http://localhost:5173', 'http://localhost:3000'] : ['http://localhost:3000'],
+  CORS_ORIGIN: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : (isDev ? ['http://localhost:5173', 'http://localhost:3000'] : ['http://localhost:3000']),
 }; 

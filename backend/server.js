@@ -1,7 +1,6 @@
 const express = require('express');
 const app = express();
 const livestreamRoutes = require('./routes/livestream');
-const session = require('express-session');
 const { sequelize, User, LiveStream } = require('./models');
 const userRoutes = require('./routes/users');
 const recordingRoutes = require('./routes/recording');
@@ -15,7 +14,7 @@ const config = require('./config');
 app.use(express.json());
 app.use(cors({
   origin: config.CORS_ORIGIN,
-  credentials: true
+  credentials: false // Tidak perlu credentials untuk JWT
 }));
 
 // Serve static files from uploads directory
@@ -24,13 +23,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Tambahkan session middleware sebelum semua route!
-app.use(session({
-  secret: 'your_secret_key', // ganti dengan secret yang aman
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false } // secure: true hanya untuk https
-}));
+// Session middleware dihapus - menggunakan JWT authentication
 
 // Sinkronisasi model ke database (otomatis buat tabel jika belum ada)
 sequelize.sync()

@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 module.exports = {
   database: {
     host: process.env.DB_HOST || 'localhost',
@@ -16,18 +18,18 @@ module.exports = {
   },
   server: {
     port: process.env.PORT || 3000,
-    host: '0.0.0.0'
+    host: process.env.HOST || '0.0.0.0'
   },
   media: {
     port: process.env.MEDIA_PORT || 8000,
-    host: '0.0.0.0'
+    host: process.env.MEDIA_HOST || '0.0.0.0'
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
-    expiresIn: '24h'
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   },
   upload: {
-    path: './uploads',
-    maxSize: 100 * 1024 * 1024 // 100MB
+    path: process.env.UPLOAD_PATH || './uploads',
+    maxSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024 // 100MB
   }
 }; 

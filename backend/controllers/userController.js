@@ -2,6 +2,7 @@
 const { User } = require('../models');
 const { logActivity } = require('./activityLogController');
 const jwt = require('jsonwebtoken');
+const config = require('../config');
 
 // Get all admin users
 const getAdminUsers = async (req, res) => {
@@ -135,98 +136,70 @@ const deleteUser = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
-  let userId = null;
-
-  // Cek session
-  if (req.session && req.session.userId) {
-    userId = req.session.userId;
-    console.log('Profile access via session, userId:', userId);
-  }
-
-  // Cek JWT di header Authorization: Bearer <token>
-  if (!userId && req.headers.authorization) {
-    const token = req.headers.authorization.split(' ')[1];
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-here');
-      userId = decoded.id;
-      console.log('Profile access via JWT, userId:', userId);
-    } catch (err) {
-      console.log('JWT verification failed:', err.message);
-      return res.status(401).json({ error: 'Token tidak valid' });
+  try {
+    // Menggunakan req.user dari middleware authenticateToken
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    res.json({ 
+      id: user.id,
+      name: user.name, 
+      email: user.email,
+      role: user.role 
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  // Cek cookie untuk session yang mungkin tersimpan
-  if (!userId && req.cookies && req.cookies['connect.sid']) {
-    console.log('Session cookie found but no userId in session');
-  }
-
-  if (!userId) {
-    console.log('No authentication found. Session:', req.session);
-    console.log('Headers:', req.headers);
-    return res.status(401).json({ error: 'Tidak ada sesi login atau token valid' });
-  }
-
-  const user = await User.findByPk(userId);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  res.json({ name: user.name, email: user.email });
 };
 
 const updateProfile = async (req, res) => {
-  let userId = null;
-
-  // Cek session
-  if (req.session && req.session.userId) {
-    userId = req.session.userId;
-    console.log('Profile update via session, userId:', userId);
-  }
-
-  // Cek JWT di header Authorization: Bearer <token>
-  if (!userId && req.headers.authorization) {
-    const token = req.headers.authorization.split(' ')[1];
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-here');
-      userId = decoded.id;
-      console.log('Profile update via JWT, userId:', userId);
-    } catch (err) {
-      console.log('JWT verification failed:', err.message);
-      return res.status(401).json({ error: 'Token tidak valid' });
+  try {
+    // Menggunakan req.user dari middleware authenticateToken
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    const { name, email, password } = req.body;
+    const oldName = user.name;
+    const oldEmail = user.email;
+    
+    user.name = name || user.name;
+    user.email = email || user.email;
+    if (password) user.password = password; // (hash di produksi)
+    await user.save();
+
+    // Log activity
+    await logActivity(
+      userId,
+      user.role,
+      user.name,
+      'edit_profile',
+      `${user.name} updated their profile information`,
+      { 
+        nameChanged: name !== oldName,
+        emailChanged: email !== oldEmail,
+        passwordChanged: !!password
+      }
+    );
+
+    res.json({ 
+      success: true, 
+      name: user.name, 
+      email: user.email,
+      role: user.role 
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  if (!userId) {
-    console.log('No authentication found for profile update. Session:', req.session);
-    return res.status(401).json({ error: 'Tidak ada sesi login atau token valid' });
-  }
-
-  const user = await User.findByPk(userId);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const { name, email, password } = req.body;
-  const oldName = user.name;
-  const oldEmail = user.email;
-  
-  user.name = name || user.name;
-  user.email = email || user.email;
-  if (password) user.password = password; // (hash di produksi)
-  await user.save();
-
-  // Log activity
-  await logActivity(
-    userId,
-    user.role,
-    user.name,
-    'edit_profile',
-    `${user.name} updated their profile information`,
-    { 
-      nameChanged: name !== oldName,
-      emailChanged: email !== oldEmail,
-      passwordChanged: !!password
-    }
-  );
-
-  res.json({ success: true, name: user.name, email: user.email });
 };
 
 // Update password for specific user
@@ -272,9 +245,16 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Email atau password salah' });
     }
     
-    // Create session
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
+    // Create JWT token
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role 
+      },
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
+    );
     
     // Log activity
     await logActivity(
@@ -286,11 +266,12 @@ const login = async (req, res) => {
       { email: user.email }
     );
     
-    // Return user data (exclude password)
+    // Return user data (exclude password) and token
     const { password: _, ...userWithoutPassword } = user.toJSON();
     
     res.json({ 
       message: 'Login berhasil',
+      token,
       user: userWithoutPassword 
     });
   } catch (error) {
