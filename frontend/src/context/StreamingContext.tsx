@@ -590,7 +590,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.17') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
