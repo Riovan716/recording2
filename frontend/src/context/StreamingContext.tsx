@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect } from 'r
 import io from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
 import { API_URL } from '../config';
+import { useAuth } from './AuthContext';
 
 interface StreamingState {
   isStreaming: boolean;
@@ -47,6 +48,7 @@ export const useStreaming = () => {
 };
 
 export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
     isRecording: false,
@@ -195,6 +197,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           const response = await fetch(`${API_URL}/api/livestream/upload-recording`, {
             method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
             body: formData,
           });
 
@@ -229,7 +234,10 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('Notifying backend about stream start...');
       const response = await fetch(`${API_URL}/api/livestream/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: roomId,
           title: title,
@@ -306,7 +314,10 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (streamingState.roomId) {
         await fetch(`${API_URL}/api/livestream/stop`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
+          },
           body: JSON.stringify({ id: streamingState.roomId }),
         });
       }
@@ -759,6 +770,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const response = await fetch(`${API_URL}/api/recordings/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 

@@ -26,7 +26,7 @@ interface Recording {
 }
 
 const AdminVideoListPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +41,11 @@ const AdminVideoListPage: React.FC = () => {
   const fetchRecordings = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/recording`);
+      const res = await fetch(`${API_URL}/api/recording`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         setRecordings(data);
@@ -97,7 +101,10 @@ const AdminVideoListPage: React.FC = () => {
     try {
       for (const id of selectedRecordings) {
         await fetch(`${API_URL}/api/recording/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         });
       }
       setSelectedRecordings([]);

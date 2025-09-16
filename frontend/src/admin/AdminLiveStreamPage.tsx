@@ -48,7 +48,7 @@ interface StreamingStats {
 }
 
 const AdminLiveStreamPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { streamingState, startStream, stopStream, updateStatus, setSelectedKelas, setSelectedMapel } = useStreaming();
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -87,8 +87,16 @@ const AdminLiveStreamPage: React.FC = () => {
 
       // Fetch from backend API
       const [statsRes, activeRes] = await Promise.all([
-        fetch(`${API_URL}/api/livestream/stats`),
-        fetch(`${API_URL}/api/livestream/active`),
+        fetch(`${API_URL}/api/livestream/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+        fetch(`${API_URL}/api/livestream/active`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
       ]);
 
       let stats = {

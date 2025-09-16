@@ -46,9 +46,9 @@ const AdminLogin = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.user.role === 'admin') {
-          localStorage.setItem('adminToken', 'admin-token');
+          localStorage.setItem('adminToken', data.token);
           localStorage.setItem('adminData', JSON.stringify(data.user));
-          login(data.user, 'admin-token');
+          login(data.user, data.token);
           navigate('/admin/dashboard');
         } else {
           setError('Akun ini bukan admin');

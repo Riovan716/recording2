@@ -35,9 +35,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check localStorage on app start
-    const storedToken = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('authUser');
+    // Check localStorage on app start - check both regular auth and admin auth
+    const storedToken = localStorage.getItem('authToken') || localStorage.getItem('adminToken');
+    const storedUser = localStorage.getItem('authUser') || localStorage.getItem('adminData');
     
     if (storedToken && storedUser) {
       try {
@@ -47,6 +47,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error parsing stored auth data:', error);
         localStorage.removeItem('authToken');
         localStorage.removeItem('authUser');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminData');
       }
     }
   }, []);
@@ -63,6 +65,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUser');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminData');
   };
 
   const value: AuthContextType = {

@@ -27,7 +27,7 @@ const COLORS = {
 };
 
 const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalRecordings: 0,
     totalStreams: 0,
@@ -39,9 +39,21 @@ const AdminDashboard: React.FC = () => {
     setLoading(true);
     try {
       const [recordingsRes, streamsRes, activeRes] = await Promise.all([
-        fetch(`${API_URL}/api/recording`),
-        fetch(`${API_URL}/api/livestream/stats`),
-        fetch(`${API_URL}/api/livestream/active`)
+        fetch(`${API_URL}/api/recording`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+        fetch(`${API_URL}/api/livestream/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }),
+        fetch(`${API_URL}/api/livestream/active`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
       ]);
 
       const recordings = recordingsRes.ok ? await recordingsRes.json() : [];
