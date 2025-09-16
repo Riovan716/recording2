@@ -75,7 +75,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const audioProducerRef = useRef<any>(null);
 
   useEffect(() => {
-    socket.current = io('http://localhost:4000');
+    socket.current = io('http://192.168.1.17:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();

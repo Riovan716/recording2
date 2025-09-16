@@ -148,7 +148,7 @@ const ViewerPage: React.FC = () => {
       }, 10000); // 10 second timeout
       
       // Connect to MediaSoup server
-      socketRef.current = io('http://localhost:4000');
+      socketRef.current = io('http://192.168.1.17:4000');
       
       socketRef.current.on('connect', async () => {
         console.log('Connected to MediaSoup server');

@@ -51,6 +51,8 @@ function createWindow() {
       allowRunningInsecureContent: true,
       experimentalFeatures: true,
       enableRemoteModule: false,
+      // Allow local network access
+      allowDisplayingInsecureContent: true,
       // Additional permissions for screen sharing
       additionalArguments: ["--enable-features=VaapiVideoDecoder"]
     }

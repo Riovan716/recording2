@@ -18,11 +18,11 @@ module.exports = {
   },
   server: {
     port: process.env.PORT || 3000,
-    host: process.env.HOST || '0.0.0.0'
+    host: process.env.HOST || '192.168.1.17'
   },
   media: {
     port: process.env.MEDIA_PORT || 8000,
-    host: process.env.MEDIA_HOST || '0.0.0.0'
+    host: process.env.MEDIA_HOST || '192.168.1.17'
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',

@@ -173,7 +173,7 @@ const AdminRecordingPage: React.FC = () => {
       return;
     }
 
-    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.17') {
       alert('Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.');
       return;
     }

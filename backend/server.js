@@ -54,8 +54,9 @@ app.get('/', (req, res) => {
 });
 
 const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const HOST = config.HOST;
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
   console.log(`Database: ${config.DB_HOST}:${config.DB_PORT}`);
   console.log(`Environment: ${config.NODE_ENV}`);
 });
