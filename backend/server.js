@@ -1,0 +1,69 @@
+const express = require('express');
+const app = express();
+const livestreamRoutes = require('./routes/livestream');
+const session = require('express-session');
+const { sequelize, User, LiveStream } = require('./models');
+const userRoutes = require('./routes/users');
+const recordingRoutes = require('./routes/recording');
+const activityLogRoutes = require('./routes/activityLog');
+
+const cors = require('cors');
+const { spawn } = require('child_process');
+const path = require('path');
+const config = require('./config');
+
+app.use(express.json());
+app.use(cors({
+  origin: config.CORS_ORIGIN,
+  credentials: true
+}));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Tambahkan session middleware sebelum semua route!
+app.use(session({
+  secret: 'your_secret_key', // ganti dengan secret yang aman
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // secure: true hanya untuk https
+}));
+
+// Sinkronisasi model ke database (otomatis buat tabel jika belum ada)
+sequelize.sync()
+  .then(() => console.log('All models were synchronized successfully.'))
+  .catch(err => console.error('Sync error:', err));
+
+// Jalankan mediaServer.js (NodeMediaServer untuk RTMP/HLS)
+
+// Health check endpoint
+app.get('/api', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Recording App Backend Server', 
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.use('/api/users', userRoutes);
+app.use('/api/recording', recordingRoutes);
+// Back-compat: allow plural base path as used by some frontend calls
+app.use('/api/recordings', recordingRoutes);
+app.use('/api/livestream', livestreamRoutes);
+app.use('/api/activity', activityLogRoutes);
+
+// Serve React app for root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+const PORT = config.PORT;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Database: ${config.DB_HOST}:${config.DB_PORT}`);
+  console.log(`Environment: ${config.NODE_ENV}`);
+});
+

@@ -1,0 +1,313 @@
+
+const { User } = require('../models');
+const { logActivity } = require('./activityLogController');
+const jwt = require('jsonwebtoken');
+
+// Get all admin users
+const getAdminUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { role: 'admin' },
+      attributes: ['id', 'name', 'email', 'password', 'role', 'createdAt', 'updatedAt']
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get all users
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'password', 'role', 'createdAt', 'updatedAt']
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get user by ID
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Create new admin user
+const createUser = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // Check if user with same email already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    // Create admin user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: 'admin'
+    });
+    
+    res.status(201).json(user);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Update admin user
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, password } = req.body;
+    
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check if email is being changed and if it already exists
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+    }
+    
+    // Update user
+    await user.update({
+      name: name || user.name,
+      email: email || user.email,
+      password: password || user.password,
+      role: 'admin'
+    });
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Delete admin user
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Delete the user
+    await user.destroy();
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const getProfile = async (req, res) => {
+  let userId = null;
+
+  // Cek session
+  if (req.session && req.session.userId) {
+    userId = req.session.userId;
+    console.log('Profile access via session, userId:', userId);
+  }
+
+  // Cek JWT di header Authorization: Bearer <token>
+  if (!userId && req.headers.authorization) {
+    const token = req.headers.authorization.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-here');
+      userId = decoded.id;
+      console.log('Profile access via JWT, userId:', userId);
+    } catch (err) {
+      console.log('JWT verification failed:', err.message);
+      return res.status(401).json({ error: 'Token tidak valid' });
+    }
+  }
+
+  // Cek cookie untuk session yang mungkin tersimpan
+  if (!userId && req.cookies && req.cookies['connect.sid']) {
+    console.log('Session cookie found but no userId in session');
+  }
+
+  if (!userId) {
+    console.log('No authentication found. Session:', req.session);
+    console.log('Headers:', req.headers);
+    return res.status(401).json({ error: 'Tidak ada sesi login atau token valid' });
+  }
+
+  const user = await User.findByPk(userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  res.json({ name: user.name, email: user.email });
+};
+
+const updateProfile = async (req, res) => {
+  let userId = null;
+
+  // Cek session
+  if (req.session && req.session.userId) {
+    userId = req.session.userId;
+    console.log('Profile update via session, userId:', userId);
+  }
+
+  // Cek JWT di header Authorization: Bearer <token>
+  if (!userId && req.headers.authorization) {
+    const token = req.headers.authorization.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-here');
+      userId = decoded.id;
+      console.log('Profile update via JWT, userId:', userId);
+    } catch (err) {
+      console.log('JWT verification failed:', err.message);
+      return res.status(401).json({ error: 'Token tidak valid' });
+    }
+  }
+
+  if (!userId) {
+    console.log('No authentication found for profile update. Session:', req.session);
+    return res.status(401).json({ error: 'Tidak ada sesi login atau token valid' });
+  }
+
+  const user = await User.findByPk(userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const { name, email, password } = req.body;
+  const oldName = user.name;
+  const oldEmail = user.email;
+  
+  user.name = name || user.name;
+  user.email = email || user.email;
+  if (password) user.password = password; // (hash di produksi)
+  await user.save();
+
+  // Log activity
+  await logActivity(
+    userId,
+    user.role,
+    user.name,
+    'edit_profile',
+    `${user.name} updated their profile information`,
+    { 
+      nameChanged: name !== oldName,
+      emailChanged: email !== oldEmail,
+      passwordChanged: !!password
+    }
+  );
+
+  res.json({ success: true, name: user.name, email: user.email });
+};
+
+// Update password for specific user
+const updatePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Verify current password
+    if (user.password !== currentPassword) {
+      return res.status(400).json({ error: 'Password saat ini tidak benar' });
+    }
+    
+    // Update password
+    await user.update({ password: newPassword });
+    
+    res.json({ message: 'Password berhasil diperbarui' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Login function
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Find user by email
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Email atau password salah' });
+    }
+    
+    // Check password (in production, use bcrypt for hashing)
+    if (user.password !== password) {
+      return res.status(401).json({ error: 'Email atau password salah' });
+    }
+    
+    // Create session
+    req.session.userId = user.id;
+    req.session.userRole = user.role;
+    
+    // Log activity
+    await logActivity(
+      user.id,
+      user.role,
+      user.name,
+      'login',
+      `${user.name} logged in`,
+      { email: user.email }
+    );
+    
+    // Return user data (exclude password)
+    const { password: _, ...userWithoutPassword } = user.toJSON();
+    
+    res.json({ 
+      message: 'Login berhasil',
+      user: userWithoutPassword 
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = {
+  getAdminUsers,
+  getAllUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser,
+  getProfile,
+  updateProfile,
+  updatePassword,
+  login
+}; 
