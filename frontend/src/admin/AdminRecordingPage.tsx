@@ -333,7 +333,7 @@ const AdminRecordingPage: React.FC = () => {
                   </button>
                   <button
                     onClick={handleStartScreenRecording}
-                    disabled={streamingState.isRecording || streamingState.isScreenRecording || !(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)}
+                    disabled={streamingState.isRecording || streamingState.isScreenRecording || (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources))}
                     style={{
                       flex: 1,
                       display: 'flex',
@@ -341,17 +341,17 @@ const AdminRecordingPage: React.FC = () => {
                       justifyContent: 'center',
                       gap: '8px',
                       background: COLORS.white,
-                      color: !(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) ? COLORS.subtext : COLORS.primary,
-                      border: `1px solid ${!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) ? COLORS.border : COLORS.primary}`,
+                      color: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? COLORS.subtext : COLORS.primary,
+                      border: `1px solid ${(!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? COLORS.border : COLORS.primary}`,
                       borderRadius: 6,
                       padding: '10px 16px',
                       fontSize: '14px',
                       fontWeight: 500,
-                      cursor: !(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) ? 'not-allowed' : 'pointer',
-                      opacity: !(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) ? 0.6 : 1,
+                      cursor: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? 'not-allowed' : 'pointer',
+                      opacity: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? 0.6 : 1,
                     }}
                     title={
-                      !(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) 
+                      (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources))
                         ? (window.navigator.userAgent.toLowerCase().includes('electron') 
                           ? 'Screen recording tidak didukung di aplikasi Electron. Gunakan browser web untuk screen recording.' 
                           : 'Screen recording tidak didukung di browser ini')
@@ -359,7 +359,7 @@ const AdminRecordingPage: React.FC = () => {
                     }
                   >
                     <FaDesktop size={14} />
-                    Rekam Layar {!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && 
+                    Rekam Layar {(!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) && 
                       (window.navigator.userAgent.toLowerCase().includes('electron') ? '(Electron)' : '(Tidak didukung)')}
                   </button>
                 </>

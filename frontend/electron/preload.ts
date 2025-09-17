@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, desktopCapturer } from "electron";
 
 try {
   console.log("[preload] loaded");
@@ -17,6 +17,9 @@ try {
     // App info
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     getAppPath: () => ipcRenderer.invoke('get-app-path'),
+    
+    // Screen recording APIs
+    getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
     
     // Menu events
     onMenuNewRecording: (callback: any) => {

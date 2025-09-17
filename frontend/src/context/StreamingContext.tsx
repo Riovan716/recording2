@@ -448,7 +448,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
       
       // For Electron, try to use desktopCapturer API
-      if (isElectron && (window as any).electronAPI) {
+      if (isElectron && (window as any).electronAPI && (window as any).electronAPI.getScreenSources) {
         try {
           updateStatus("Mengambil daftar layar yang tersedia...");
           const sources = await (window as any).electronAPI.getScreenSources();
@@ -597,6 +597,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Get screen stream with system audio
       let screenStream: MediaStream;
       try {
+        updateStatus("Meminta izin untuk screen recording...");
         screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             width: { ideal: 1920 },
@@ -604,6 +605,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           },
           audio: true, // This will capture system audio if user allows it
         });
+        updateStatus("Screen stream berhasil didapatkan...");
       } catch (getDisplayMediaError: any) {
         console.error("getDisplayMedia error:", getDisplayMediaError);
         
@@ -622,16 +624,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Get microphone stream for external audio
       let micStream: MediaStream;
       try {
+        updateStatus("Meminta izin untuk mikrofon...");
         micStream = await navigator.mediaDevices.getUserMedia({
           audio: true
         });
+        updateStatus("Mikrofon berhasil didapatkan...");
       } catch (micError: any) {
         console.warn("Microphone access failed:", micError);
+        updateStatus("Mikrofon tidak tersedia, melanjutkan tanpa audio eksternal...");
         // Continue without microphone if it fails
         micStream = new MediaStream();
       }
 
       // Combine audio streams using AudioContext
+      updateStatus("Menggabungkan audio streams...");
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const destination = audioContext.createMediaStreamDestination();
 
@@ -663,6 +669,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
 
       console.log('Combined stream created (web browser) with', combinedStream.getAudioTracks().length, 'audio tracks');
+      updateStatus("Stream gabungan berhasil dibuat...");
 
       // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
@@ -670,6 +677,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check for supported MIME types
+      updateStatus("Menyiapkan MediaRecorder...");
       let mimeType = 'video/webm;codecs=vp8,opus';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         mimeType = 'video/webm';
@@ -721,6 +729,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       mediaRecorder.start();
+      updateStatus("Recording layar dimulai...");
       
       setStreamingState(prev => ({
         ...prev,

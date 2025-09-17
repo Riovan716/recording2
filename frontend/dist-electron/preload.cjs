@@ -12,6 +12,8 @@ try {
     // App info
     getAppVersion: () => electron.ipcRenderer.invoke("get-app-version"),
     getAppPath: () => electron.ipcRenderer.invoke("get-app-path"),
+    // Screen recording APIs
+    getScreenSources: () => electron.ipcRenderer.invoke("get-screen-sources"),
     // Menu events
     onMenuNewRecording: (callback) => {
       electron.ipcRenderer.on("menu-new-recording", callback);

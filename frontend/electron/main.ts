@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from "electron";
+import { app, BrowserWindow, session, ipcMain, desktopCapturer } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
@@ -134,6 +134,26 @@ app.commandLine.appendSwitch('--enable-usermedia-screen-capture');
 app.commandLine.appendSwitch('--disable-features', 'VizDisplayCompositor');
 app.commandLine.appendSwitch('--enable-features', 'VaapiVideoDecoder');
 app.commandLine.appendSwitch('--autoplay-policy', 'no-user-gesture-required');
+
+// IPC handlers
+ipcMain.handle('get-screen-sources', async () => {
+  try {
+    console.log("[main] Getting screen sources...");
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 150, height: 150 }
+    });
+    console.log("[main] Found screen sources:", sources.length);
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL()
+    }));
+  } catch (error) {
+    console.error("[main] Error getting screen sources:", error);
+    throw error;
+  }
+});
 
 app.whenReady().then(() => {
   console.log("=== APP STARTING ===");
