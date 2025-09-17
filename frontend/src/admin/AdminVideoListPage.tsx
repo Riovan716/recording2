@@ -168,22 +168,40 @@ const AdminVideoListPage: React.FC = () => {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: 700, 
-          color: '#1e293b', 
-          margin: '0 0 8px 0' 
+      <div style={{
+        background: VIBRANT_BLUE,
+        borderRadius: 18,
+        color: WHITE,
+        padding: '32px 40px',
+        marginBottom: 32,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 24px rgba(37,99,235,0.08)',
+        minHeight: 120,
+      }}>
+        <div>
+          <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>
+            {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+            Video Recording
+          </div>
+          <div style={{ fontSize: 16, opacity: 0.9 }}>
+            Selamat datang, {user?.name || 'Administrator'}! kelola video Anda dengan mudah.
+          </div>
+        </div>
+        <span style={{ 
+          height: 100, 
+          fontSize: 100, 
+          objectFit: 'contain', 
+          marginLeft: 32, 
+          display: 'flex', 
+          alignItems: 'center', 
+          filter: 'drop-shadow(0 4px 24px #0002)' 
         }}>
-          Daftar Video Recording
-        </h1>
-        <p style={{ 
-          fontSize: '16px', 
-          color: GRAY_TEXT, 
-          margin: 0 
-        }}>
-          Kelola dan lihat semua video pembelajaran yang telah direkam
-        </p>
+          📹
+        </span>
       </div>
 
       {/* Stats Cards */}

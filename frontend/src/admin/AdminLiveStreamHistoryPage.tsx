@@ -54,7 +54,7 @@ interface StreamingStats {
 }
 
 const AdminLiveStreamHistoryPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [liveStreamHistory, setLiveStreamHistory] = useState<LiveStream[]>([]);
   const [streamingStats, setStreamingStats] = useState<StreamingStats>({
@@ -71,6 +71,9 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<LiveStream | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [streamToDelete, setStreamToDelete] = useState<LiveStream | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -197,6 +200,63 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
     setSelectedVideo(null);
   };
 
+  const handleDeleteStream = (stream: LiveStream) => {
+    setStreamToDelete(stream);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setStreamToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!streamToDelete) return;
+    
+    try {
+      setDeleting(true);
+      if (!token) {
+        alert('Anda harus login untuk menghapus live stream');
+        return;
+      }
+      
+      console.log('Sending DELETE request to:', `${API_URL}/api/livestream/${streamToDelete.id}`);
+      console.log('Token:', token ? 'Present' : 'Missing');
+      
+      const response = await fetch(`${API_URL}/api/livestream/${streamToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        // Remove from local state
+        setLiveStreamHistory(prev => prev.filter(stream => stream.id !== streamToDelete.id));
+        
+        // Update stats
+        setStreamingStats(prev => ({
+          ...prev,
+          totalStreams: prev.totalStreams - 1,
+        }));
+        
+        setShowDeleteModal(false);
+        setStreamToDelete(null);
+      } else {
+        const errorData = await response.json();
+        alert(`Gagal menghapus live stream: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting live stream:', error);
+      alert('Gagal menghapus live stream. Silakan coba lagi.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Filter and sort data
   const filteredAndSortedHistory = liveStreamHistory
     .filter(stream => {
@@ -303,295 +363,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
         </span>
       </div>
 
-      {/* Stats Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile
-            ? "repeat(2, 1fr)"
-            : isTablet
-            ? "repeat(3, 1fr)"
-            : "repeat(5, 1fr)",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
-        {/* Total Streams */}
-        <div
-          style={{
-            background: COLORS.white,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: CARD_RADIUS,
-            padding: isMobile ? "16px" : "20px",
-            boxShadow: SHADOW,
-            textAlign: "center",
-            gridColumn: isMobile ? "span 2" : "span 1",
-          }}
-        >
-          {statsLoading ? (
-            <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-              Memuat...
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS.primary,
-                  marginBottom: "4px",
-                }}
-              >
-                {streamingStats.totalStreams}
-              </div>
-              <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-                Total Siaran
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Total Duration */}
-        <div
-          style={{
-            background: COLORS.white,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: CARD_RADIUS,
-            padding: isMobile ? "16px" : "20px",
-            boxShadow: SHADOW,
-            textAlign: "center",
-          }}
-        >
-          {statsLoading ? (
-            <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-              Memuat...
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS.blue,
-                  marginBottom: "4px",
-                }}
-              >
-                {formatDuration(streamingStats.totalDuration)}
-              </div>
-              <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-                Durasi Total
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Total Viewers */}
-        <div
-          style={{
-            background: COLORS.white,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: CARD_RADIUS,
-            padding: isMobile ? "16px" : "20px",
-            boxShadow: SHADOW,
-            textAlign: "center",
-          }}
-        >
-          {statsLoading ? (
-            <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-              Memuat...
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS.green,
-                  marginBottom: "4px",
-                }}
-              >
-                {streamingStats.totalViewers}
-              </div>
-              <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-                Total Penonton
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Active Streams */}
-        <div
-          style={{
-            background: COLORS.white,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: CARD_RADIUS,
-            padding: isMobile ? "16px" : "20px",
-            boxShadow: SHADOW,
-            textAlign: "center",
-            display: isMobile ? "none" : "block",
-          }}
-        >
-          {statsLoading ? (
-            <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-              Memuat...
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS.red,
-                  marginBottom: "4px",
-                }}
-              >
-                {streamingStats.activeStreams}
-              </div>
-              <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-                Siaran Aktif
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Average Viewers */}
-        <div
-          style={{
-            background: COLORS.white,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: CARD_RADIUS,
-            padding: isMobile ? "16px" : "20px",
-            boxShadow: SHADOW,
-            textAlign: "center",
-            display: isMobile ? "none" : "block",
-          }}
-        >
-          {statsLoading ? (
-            <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-              Memuat...
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  fontSize: isMobile ? "20px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS.yellow,
-                  marginBottom: "4px",
-                }}
-              >
-                {streamingStats.averageViewers}
-              </div>
-              <div style={{ fontSize: "12px", color: COLORS.subtext }}>
-                Rata-rata Penonton
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Filters and Controls */}
-      <div
-        style={{
-          background: COLORS.white,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: CARD_RADIUS,
-          padding: isMobile ? "16px" : "20px",
-          boxShadow: SHADOW,
-          marginBottom: "24px",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "18px",
-            fontWeight: 600,
-            color: COLORS.text,
-            margin: "0 0 16px 0",
-          }}
-        >
-          Filter & Urutkan
-        </h3>
-        
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-            gap: "16px",
-          }}
-        >
-          {/* Status Filter */}
-          <div>
-            <label style={{ fontSize: "14px", fontWeight: 500, color: COLORS.text, marginBottom: "8px", display: "block" }}>
-              Status
-            </label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'ended')}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 6,
-                fontSize: "14px",
-                background: COLORS.white,
-                color: COLORS.text,
-              }}
-            >
-              <option value="all">Semua Status</option>
-              <option value="active">Aktif</option>
-              <option value="ended">Selesai</option>
-            </select>
-          </div>
-
-          {/* Sort By */}
-          <div>
-            <label style={{ fontSize: "14px", fontWeight: 500, color: COLORS.text, marginBottom: "8px", display: "block" }}>
-              Urutkan Berdasarkan
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'startTime' | 'duration' | 'viewers')}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 6,
-                fontSize: "14px",
-                background: COLORS.white,
-                color: COLORS.text,
-              }}
-            >
-              <option value="startTime">Waktu Mulai</option>
-              <option value="duration">Durasi</option>
-              <option value="viewers">Jumlah Penonton</option>
-            </select>
-          </div>
-
-          {/* Sort Order */}
-          <div>
-            <label style={{ fontSize: "14px", fontWeight: 500, color: COLORS.text, marginBottom: "8px", display: "block" }}>
-              Urutan
-            </label>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 6,
-                fontSize: "14px",
-                background: COLORS.white,
-                color: COLORS.text,
-              }}
-            >
-              <option value="desc">Terbaru</option>
-              <option value="asc">Terlama</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* History List */}
       <div
         style={{
@@ -661,139 +432,148 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div 
+            style={{ 
+              display: "grid", 
+              gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+              gap: "20px",
+              padding: "20px 0"
+            }}
+          >
             {filteredAndSortedHistory.map((stream, index) => (
               <div
                 key={stream.id}
                 style={{
-                  background: "#f8fafc",
+                  background: COLORS.white,
                   border: `1px solid ${COLORS.border}`,
-                  borderRadius: 12,
-                  padding: "20px",
-                  transition: "all 0.2s",
+                  borderRadius: 16,
+                  padding: 0,
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                  transition: "all 0.3s ease",
                   cursor: "pointer",
+                  overflow: "hidden",
+                  minHeight: "280px",
+                  display: "flex",
+                  flexDirection: "column",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f1f5f9";
-                  e.currentTarget.style.borderColor = COLORS.primary;
+                  e.currentTarget.style.transform = "translateY(-4px)";
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.15)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f8fafc";
-                  e.currentTarget.style.borderColor = COLORS.border;
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
                 }}
               >
+                {/* Preview Image/Thumbnail */}
                 <div
                   style={{
+                    width: "100%",
+                    height: "140px",
+                    background: `linear-gradient(135deg, ${COLORS.primary}20, ${COLORS.blue}20)`,
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    marginBottom: "12px",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  <div>
-                    <div
+                  {stream.recordingPath ? (
+                    <video
                       style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        color: COLORS.text,
-                        marginBottom: "4px",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
                       }}
-                    >
-                      {stream.title || `Live Stream #${stream.id}`}
+                      muted
+                      preload="metadata"
+                      src={`${API_URL}${stream.recordingPath}`}
+                      onError={(e) => {
+                        // Fallback to placeholder if video fails to load
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.parentElement!.innerHTML = `
+                          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: ${COLORS.subtext};">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📹</div>
+                            <div style="font-size: 12px; font-weight: 500;">Video Preview</div>
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      display: "flex", 
+                      flexDirection: "column", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      color: COLORS.subtext 
+                    }}>
+                      <div style={{ fontSize: "32px", marginBottom: "8px" }}>📹</div>
+                      <div style={{ fontSize: "12px", fontWeight: 500 }}>No Preview</div>
                     </div>
-                    <div style={{ fontSize: "14px", color: COLORS.subtext }}>
-                      {stream.startTime && formatDate(stream.startTime)}
-                    </div>
-                  </div>
+                  )}
+                  
+                  {/* Status Badge */}
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
+                      position: "absolute",
+                      top: "8px",
+                      right: "8px",
+                      background: stream.status === 'active' ? COLORS.red : COLORS.green,
+                      color: COLORS.white,
+                      fontSize: "10px",
+                      padding: "4px 8px",
+                      borderRadius: 12,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
                     }}
                   >
-                    <span
-                      style={{
-                        background: COLORS.blue,
-                        color: COLORS.white,
-                        fontSize: "10px",
-                        padding: "4px 8px",
-                        borderRadius: 4,
-                        fontWeight: 500,
-                      }}
-                    >
-                      💾 SAVED
-                    </span>
-                    <span
-                      style={{
-                        background: stream.status === 'active' ? COLORS.red : COLORS.green,
-                        color: COLORS.white,
-                        fontSize: "10px",
-                        padding: "4px 8px",
-                        borderRadius: 4,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {stream.status === 'active' ? 'LIVE' : 'ENDED'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-                    gap: "16px",
-                    fontSize: "14px",
-                    color: COLORS.subtext,
-                    marginBottom: "16px",
-                  }}
-                >
-                  <div>
-                    <strong>Durasi:</strong> {stream.duration ? formatDuration(stream.duration) : 'N/A'}
-                  </div>
-                  <div>
-                    <strong>Penonton:</strong> {stream.viewers || 0}
-                  </div>
-                  <div>
-                    <strong>ID Stream:</strong> {stream.id}
+                    {stream.status === 'active' ? 'LIVE' : 'SAVED'}
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                {(stream.recordingPath || stream.isRecording) && (
+                {/* Card Content */}
+                <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column" }}>
+                  {/* Title */}
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      color: COLORS.text,
+                      marginBottom: "8px",
+                      lineHeight: 1.3,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {stream.title || `Live Stream #${stream.id}`}
+                  </div>
+
+                  {/* Date */}
+                  <div style={{ 
+                    fontSize: "14px", 
+                    color: COLORS.subtext,
+                    marginBottom: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}>
+                    <span style={{ fontSize: "12px" }}>📅</span>
+                    {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "2-digit", 
+                      year: "numeric"
+                    })}
+                  </div>
+
+                  {/* Action Buttons */}
                   <div
                     style={{
                       display: "flex",
-                      gap: "12px",
-                      justifyContent: "flex-end",
+                      gap: "8px",
+                      marginTop: "auto",
                     }}
                   >
-                    <button
-                      onClick={() => handlePlayVideo(stream)}
-                      style={{
-                        padding: "8px 16px",
-                        background: COLORS.primary,
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: 6,
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        transition: "all 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = COLORS.primaryDark;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = COLORS.primary;
-                      }}
-                    >
-                      ▶️ Tonton
-                    </button>
                     <button
                       onClick={() => {
                         // Download functionality
@@ -804,17 +584,45 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                         }
                       }}
                       style={{
-                        padding: "8px 16px",
-                        background: COLORS.green,
+                        flex: 1,
+                        padding: "10px 12px",
+                        background: COLORS.primary,
                         color: COLORS.white,
                         border: "none",
-                        borderRadius: 6,
-                        fontSize: "14px",
-                        fontWeight: 500,
+                        borderRadius: 8,
+                        fontSize: "13px",
+                        fontWeight: 600,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
+                        justifyContent: "center",
+                        gap: "6px",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = COLORS.primaryDark;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = COLORS.primary;
+                      }}
+                    >
+                      <span style={{ fontSize: "14px" }}>⬇️</span>
+                      Download
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePlayVideo(stream)}
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        background: COLORS.green,
+                        color: COLORS.white,
+                        border: "none",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         transition: "all 0.2s",
                       }}
                       onMouseEnter={(e) => {
@@ -824,26 +632,35 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                         e.currentTarget.style.background = COLORS.green;
                       }}
                     >
-                      📥 Download
+                      <span style={{ fontSize: "16px" }}>▶️</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteStream(stream)}
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        background: COLORS.red,
+                        color: COLORS.white,
+                        border: "none",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = COLORS.redDark;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = COLORS.red;
+                      }}
+                    >
+                      <span style={{ fontSize: "16px" }}>🗑️</span>
                     </button>
                   </div>
-                )}
-                
-                {stream.recordingPath && (
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      padding: "8px 12px",
-                      background: COLORS.green,
-                      color: COLORS.white,
-                      borderRadius: 6,
-                      fontSize: "12px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    🎥 Recording tersedia: {stream.recordingPath}
-                  </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
@@ -960,6 +777,179 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               </div>
               <div>
                 <strong>Penonton:</strong> {selectedVideo.viewers || 0}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && streamToDelete && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: COLORS.white,
+              borderRadius: 16,
+              padding: "32px",
+              maxWidth: "400px",
+              width: "100%",
+              position: "relative",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={handleCloseDeleteModal}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "transparent",
+                color: COLORS.subtext,
+                border: "none",
+                borderRadius: "50%",
+                width: "32px",
+                height: "32px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                zIndex: 1001,
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Modal Content */}
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
+              
+              <h3
+                style={{
+                  margin: "0 0 16px 0",
+                  fontSize: "20px",
+                  fontWeight: 600,
+                  color: COLORS.text,
+                }}
+              >
+                Hapus Live Stream?
+              </h3>
+
+              <p
+                style={{
+                  margin: "0 0 24px 0",
+                  fontSize: "14px",
+                  color: COLORS.subtext,
+                  lineHeight: 1.5,
+                }}
+              >
+                Apakah Anda yakin ingin menghapus live stream <strong>"{streamToDelete.title || `Live Stream #${streamToDelete.id}`}"</strong>? 
+                <br />
+                <br />
+                Tindakan ini akan menghapus:
+                <br />
+                • Data live stream dari database
+                <br />
+                • File recording (jika ada)
+                <br />
+                • Thumbnail (jika ada)
+                <br />
+                <br />
+                <strong style={{ color: COLORS.red }}>Tindakan ini tidak dapat dibatalkan!</strong>
+              </p>
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={handleCloseDeleteModal}
+                  disabled={deleting}
+                  style={{
+                    padding: "12px 24px",
+                    background: COLORS.border,
+                    color: COLORS.text,
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: deleting ? "not-allowed" : "pointer",
+                    opacity: deleting ? 0.6 : 1,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!deleting) {
+                      e.currentTarget.style.background = "#d1d5db";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!deleting) {
+                      e.currentTarget.style.background = COLORS.border;
+                    }
+                  }}
+                >
+                  Batal
+                </button>
+                
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  style={{
+                    padding: "12px 24px",
+                    background: deleting ? COLORS.subtext : COLORS.red,
+                    color: COLORS.white,
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: deleting ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!deleting) {
+                      e.currentTarget.style.background = COLORS.redDark;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!deleting) {
+                      e.currentTarget.style.background = COLORS.red;
+                    }
+                  }}
+                >
+                  {deleting ? (
+                    <>
+                      <span style={{ fontSize: "12px" }}>⏳</span>
+                      Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: "12px" }}>🗑️</span>
+                      Ya, Hapus
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

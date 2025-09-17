@@ -332,29 +332,7 @@ const AdminRecordingPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
               {!(streamingState.isRecording || streamingState.isScreenRecording) ? (
                 <>
-                  <button
-                    onClick={handleStartCameraRecording}
-                    disabled={streamingState.isRecording || streamingState.isScreenRecording}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      background: COLORS.white,
-                      color: COLORS.primary,
-                      border: `1px solid ${COLORS.primary}`,
-                      borderRadius: 6,
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      opacity: 1,
-                    }}
-                  >
-                    <FaVideo size={14} />
-                    Record Kamera
-                  </button>
+               
                   <button
                     onClick={handleStartMultiCameraRecording}
                     disabled={streamingState.isRecording || streamingState.isScreenRecording}
@@ -376,7 +354,7 @@ const AdminRecordingPage: React.FC = () => {
                     }}
                   >
                     <FaCamera size={14} />
-                    Multi-Kamera
+                    Camera recording
                   </button>
                   <button
                     onClick={handleStartScreenRecording}

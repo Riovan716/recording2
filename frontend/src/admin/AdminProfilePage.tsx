@@ -420,29 +420,6 @@ const AdminProfilePage: React.FC = () => {
                 </button>
               </div>
             </form>
-
-            {/* Logout Button */}
-            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${COLORS.border}` }}>
-              <button
-                onClick={handleLogout}
-                style={{
-                  width: '100%',
-                  background: COLORS.red,
-                  color: COLORS.white,
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '12px 16px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = COLORS.redDark}
-                onMouseOut={(e) => e.currentTarget.style.background = COLORS.red}
-              >
-                🚪 Keluar dari Akun
-              </button>
-            </div>
           </div>
         </div>
 

@@ -519,6 +519,74 @@ exports.getRecordings = async (req, res) => {
   }
 };
 
+// Fungsi untuk menghapus live stream dari database dan file system
+exports.deleteLiveStream = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Delete request received for ID:', id);
+    
+    // Cari live stream di database
+    const stream = await LiveStream.findByPk(id);
+    console.log('Stream found:', stream ? 'Yes' : 'No');
+    
+    if (!stream) {
+      console.log('Stream not found in database');
+      return res.status(404).json({ 
+        success: false,
+        error: 'Live stream tidak ditemukan' 
+      });
+    }
+    
+    // Hapus file recording jika ada
+    if (stream.recordingPath) {
+      const filePath = path.join(__dirname, '..', stream.recordingPath);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log('Recording file deleted:', filePath);
+        } catch (fileError) {
+          console.error('Error deleting recording file:', fileError);
+        }
+      }
+    }
+    
+    // Hapus thumbnail jika ada
+    const thumbnailPath = path.join(__dirname, '../uploads', `thumb_${id}.jpg`);
+    if (fs.existsSync(thumbnailPath)) {
+      try {
+        fs.unlinkSync(thumbnailPath);
+        console.log('Thumbnail file deleted:', thumbnailPath);
+      } catch (fileError) {
+        console.error('Error deleting thumbnail file:', fileError);
+      }
+    }
+    
+    // Hapus dari database
+    await stream.destroy();
+    
+    // Hapus dari memory jika masih ada
+    liveStreams = liveStreams.filter(s => s.id !== id);
+    streamingStats.activeStreams = liveStreams.length;
+    
+    // Hapus dari history
+    streamingStats.streamHistory = streamingStats.streamHistory.filter(h => h.id !== id);
+    
+    console.log('Live stream deleted successfully:', id);
+    
+    res.json({ 
+      success: true, 
+      message: 'Live stream berhasil dihapus' 
+    });
+    
+  } catch (error) {
+    console.error('Error deleting live stream:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Gagal menghapus live stream' 
+    });
+  }
+};
+
 // Fungsi untuk membersihkan live stream yang sudah berakhir dari memory
 exports.cleanupEndedStreams = () => {
   // Hapus live stream yang sudah berakhir dari memory (lebih dari 1 jam yang lalu)
