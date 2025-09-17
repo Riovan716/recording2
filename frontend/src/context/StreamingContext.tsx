@@ -35,6 +35,7 @@ interface StreamingContextType {
   updateStatus: (status: string) => void;
   setSelectedKelas: (kelas: string) => void;
   setSelectedMapel: (mapel: string) => void;
+  startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string) => Promise<void>;
 }
 
 const StreamingContext = createContext<StreamingContextType | undefined>(undefined);
@@ -817,6 +818,352 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
+  const startMultiCameraRecording = async (selectedCameras: string[], layoutType: string, judul: string) => {
+    try {
+      updateStatus("Memulai recording multi-kamera...");
+      
+      if (selectedCameras.length === 0) {
+        throw new Error("Pilih setidaknya satu kamera untuk recording");
+      }
+
+      if (selectedCameras.length > 4) {
+        throw new Error("Maksimal 4 kamera untuk recording");
+      }
+
+      // Get streams from selected cameras
+      const cameraStreams: { [deviceId: string]: MediaStream } = {};
+      const audioStreams: MediaStream[] = [];
+
+      for (const deviceId of selectedCameras) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: deviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false // We'll handle audio separately
+          });
+          cameraStreams[deviceId] = stream;
+        } catch (error: any) {
+          console.error(`Error accessing camera ${deviceId}:`, error);
+          throw new Error(`Gagal mengakses kamera: ${error.message}`);
+        }
+      }
+
+      // Get audio stream (microphone)
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
+        audioStreams.push(audioStream);
+      } catch (error: any) {
+        console.warn("Audio stream failed:", error);
+        // Continue without audio if it fails
+      }
+
+      // Create canvas for composition
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Canvas context tidak tersedia');
+      }
+
+      // Create video elements for each camera
+      const videoElements: { [deviceId: string]: HTMLVideoElement } = {};
+      Object.entries(cameraStreams).forEach(([deviceId, stream]) => {
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.width = '320px';
+        video.style.height = '240px';
+        videoElements[deviceId] = video;
+      });
+
+      // Wait for videos to load and start playing
+      await Promise.all(Object.values(videoElements).map(video => 
+        new Promise(resolve => {
+          video.onloadedmetadata = () => {
+            video.play().then(() => {
+              // Small delay to ensure video is actually playing
+              setTimeout(() => {
+                resolve(true);
+              }, 100);
+            }).catch(resolve);
+          };
+        })
+      ));
+
+      // Additional delay to ensure all videos are ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Create canvas stream
+      const canvasStream = canvas.captureStream(30); // 30 FPS
+
+      // Combine canvas video with audio
+      const combinedStream = new MediaStream();
+      
+      // Add canvas video track
+      canvasStream.getVideoTracks().forEach(track => {
+        combinedStream.addTrack(track);
+      });
+
+      // Add audio track if available
+      if (audioStreams.length > 0) {
+        audioStreams[0].getAudioTracks().forEach(track => {
+          combinedStream.addTrack(track);
+        });
+      }
+
+      // Animation function to draw cameras to canvas
+      const drawCamerasToCanvas = () => {
+        try {
+          // Clear canvas
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const activeStreams = Object.entries(cameraStreams).filter(([deviceId]) => 
+            selectedCameras.includes(deviceId)
+          );
+
+          if (activeStreams.length === 0) return;
+
+          switch (layoutType) {
+            case 'grid':
+              drawGridLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              break;
+            case 'pip':
+              drawPictureInPictureLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              break;
+            case 'split':
+              drawSplitLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              break;
+          }
+        } catch (error) {
+          console.error('Error drawing to canvas:', error);
+        }
+      };
+
+      // Layout drawing functions
+      const drawGridLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        const count = streams.length;
+        let cols = 1;
+        let rows = 1;
+
+        if (count === 2) {
+          cols = 2;
+          rows = 1;
+        } else if (count === 3) {
+          cols = 2;
+          rows = 2;
+        } else if (count >= 4) {
+          cols = 2;
+          rows = 2;
+        }
+
+        const cellWidth = canvasWidth / cols;
+        const cellHeight = canvasHeight / rows;
+
+        streams.forEach(([deviceId, stream], index) => {
+          const video = videos[deviceId];
+          if (!video || video.readyState < 2) return; // Check if video is ready
+
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          
+          const x = col * cellWidth;
+          const y = row * cellHeight;
+
+          try {
+            // Draw video frame
+            ctx.drawImage(video, x, y, cellWidth, cellHeight);
+
+            // Draw camera label
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x, y, cellWidth, 30);
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.fillText(`Kamera ${index + 1}`, x + 10, y + 20);
+          } catch (error) {
+            console.error(`Error drawing camera ${index + 1}:`, error);
+          }
+        });
+      };
+
+      const drawPictureInPictureLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        if (streams.length === 0) return;
+
+        // Main camera (first one)
+        const [mainDeviceId, mainStream] = streams[0];
+        const mainVideo = videos[mainDeviceId];
+        if (mainVideo && mainVideo.readyState >= 2) {
+          try {
+            ctx.drawImage(mainVideo, 0, 0, canvasWidth, canvasHeight);
+          } catch (error) {
+            console.error('Error drawing main camera:', error);
+          }
+        }
+
+        // Secondary cameras as small windows
+        const pipSize = Math.min(canvasWidth, canvasHeight) * 0.25;
+        const pipSpacing = pipSize + 10;
+
+        streams.slice(1).forEach(([deviceId, stream], index) => {
+          const video = videos[deviceId];
+          if (!video || video.readyState < 2) return;
+
+          const x = canvasWidth - pipSize - 10;
+          const y = 10 + (index * pipSpacing);
+
+          try {
+            // Draw small video
+            ctx.drawImage(video, x, y, pipSize, pipSize);
+
+            // Draw border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, pipSize, pipSize);
+
+            // Draw label
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x, y + pipSize - 20, pipSize, 20);
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(`Kamera ${index + 2}`, x + 5, y + pipSize - 5);
+          } catch (error) {
+            console.error(`Error drawing PIP camera ${index + 2}:`, error);
+          }
+        });
+      };
+
+      const drawSplitLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        if (streams.length === 0) return;
+
+        if (streams.length === 2) {
+          // Side by side
+          const halfWidth = canvasWidth / 2;
+          streams.forEach(([deviceId, stream], index) => {
+            const video = videos[deviceId];
+            if (!video) return;
+
+            const x = index * halfWidth;
+            ctx.drawImage(video, x, 0, halfWidth, canvasHeight);
+          });
+        } else {
+          // Top and bottom
+          const halfHeight = canvasHeight / 2;
+          streams.forEach(([deviceId, stream], index) => {
+            const video = videos[deviceId];
+            if (!video) return;
+
+            const y = index * halfHeight;
+            ctx.drawImage(video, 0, y, canvasWidth, halfHeight);
+          });
+        }
+      };
+
+      // Store animation frame reference for cleanup
+      let animationFrameId: number;
+      let isRecordingActive = true;
+      
+      // Start animation loop
+      const animate = () => {
+        if (!isRecordingActive) return;
+        
+        drawCamerasToCanvas();
+        animationFrameId = requestAnimationFrame(animate);
+      };
+
+      // Check if MediaRecorder is supported
+      if (!window.MediaRecorder) {
+        throw new Error("MediaRecorder tidak didukung di browser ini.");
+      }
+
+      // Check for supported MIME types
+      let mimeType = 'video/webm;codecs=vp8,opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            throw new Error("Format video tidak didukung di browser ini.");
+          }
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(combinedStream, {
+        mimeType: mimeType
+      });
+
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const videoBlob = new Blob(chunks, { type: mimeType });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        
+        // Stop animation loop
+        isRecordingActive = false;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+        
+        // Clean up camera streams
+        Object.values(cameraStreams).forEach(stream => {
+          stream.getTracks().forEach(track => track.stop());
+        });
+        audioStreams.forEach(stream => {
+          stream.getTracks().forEach(track => track.stop());
+        });
+        
+        setStreamingState(prev => ({
+          ...prev,
+          videoBlob,
+          videoUrl,
+          recordingStream: null,
+          mediaRecorder: null,
+          isRecording: false,
+          status: `Recording ${selectedCameras.length} kamera selesai`
+        }));
+      };
+
+      mediaRecorder.onerror = (event: any) => {
+        console.error("MediaRecorder error:", event);
+        updateStatus("Error saat recording multi-kamera. Silakan coba lagi.");
+      };
+
+      // Start recording
+      mediaRecorder.start();
+      
+      setStreamingState(prev => ({
+        ...prev,
+        isRecording: true,
+        recordingStream: combinedStream,
+        mediaRecorder,
+        recordingStartTime: Date.now(),
+        recordingTitle: judul,
+        status: `Recording ${selectedCameras.length} kamera berjalan...`
+      }));
+
+      // Start animation loop
+      animate();
+
+      updateStatus(`Recording ${selectedCameras.length} kamera berjalan...`);
+
+    } catch (error: any) {
+      console.error("Error starting multi-camera recording:", error);
+      updateStatus(error.message || "Gagal memulai recording multi-kamera.");
+    }
+  };
+
   const value = {
     streamingState,
     startStream,
@@ -828,7 +1175,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     cancelUpload,
     updateStatus,
     setSelectedKelas,
-    setSelectedMapel
+    setSelectedMapel,
+    startMultiCameraRecording
   };
 
   return (

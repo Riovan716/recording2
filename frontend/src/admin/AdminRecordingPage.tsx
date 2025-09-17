@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useStreaming } from '../context/StreamingContext';
-import { FaVideo, FaDesktop, FaUpload, FaStop, FaDownload, FaUser, FaBook } from 'react-icons/fa';
+import { FaVideo, FaDesktop, FaUpload, FaStop, FaDownload, FaUser, FaBook, FaCamera, FaTimes } from 'react-icons/fa';
 import ModalNotifikasi from '../components/ModalNotifikasi';
+import MultiCameraRecorder from '../components/MultiCameraRecorder';
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
@@ -115,8 +116,8 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 );
 
 const AdminRecordingPage: React.FC = () => {
-  const { user } = useAuth();
-  const { streamingState, startCameraRecording, startScreenRecording, stopRecording, uploadRecording, cancelUpload, setSelectedKelas, setSelectedMapel } = useStreaming();
+  const { user, token } = useAuth();
+  const { streamingState, startCameraRecording, startScreenRecording, stopRecording, uploadRecording, cancelUpload, setSelectedKelas, setSelectedMapel, startMultiCameraRecording } = useStreaming();
   const [recordings, setRecordings] = useState<any[]>([]);
   const [showPopup, setShowPopup] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -125,7 +126,9 @@ const AdminRecordingPage: React.FC = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [showJudulModal, setShowJudulModal] = useState(false);
   const [recordingJudul, setRecordingJudul] = useState('');
-  const [pendingRecordingType, setPendingRecordingType] = useState<'camera' | 'screen' | null>(null);
+  const [pendingRecordingType, setPendingRecordingType] = useState<'camera' | 'screen' | 'multi-camera' | null>(null);
+  const [showMultiCameraRecorder, setShowMultiCameraRecorder] = useState(false);
+  const [multiCameraStatus, setMultiCameraStatus] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -182,6 +185,11 @@ const AdminRecordingPage: React.FC = () => {
     setShowJudulModal(true);
   };
 
+  const handleStartMultiCameraRecording = () => {
+    setPendingRecordingType('multi-camera');
+    setShowMultiCameraRecorder(true);
+  };
+
   const handleConfirmRecording = async () => {
     if (!recordingJudul.trim()) {
       alert('Judul recording harus diisi!');
@@ -215,6 +223,7 @@ const AdminRecordingPage: React.FC = () => {
     }
   };
 
+
   const showConfirmDialog = (message: string, action: () => void) => {
     setConfirmMessage(message);
     setConfirmAction(() => action);
@@ -236,6 +245,21 @@ const AdminRecordingPage: React.FC = () => {
         cancelUpload();
       }
     );
+  };
+
+  const handleMultiCameraStartRecording = async (selectedCameras: string[], layoutType: string, judul: string) => {
+    try {
+      // Start multi-camera recording with canvas composition
+      await startMultiCameraRecording(selectedCameras, layoutType, judul);
+      setShowMultiCameraRecorder(false);
+      setPendingRecordingType(null);
+    } catch (error) {
+      console.error('Error starting multi-camera recording:', error);
+    }
+  };
+
+  const handleMultiCameraStatusUpdate = (status: string) => {
+    setMultiCameraStatus(status);
   };
 
 
@@ -330,6 +354,29 @@ const AdminRecordingPage: React.FC = () => {
                   >
                     <FaVideo size={14} />
                     Record Kamera
+                  </button>
+                  <button
+                    onClick={handleStartMultiCameraRecording}
+                    disabled={streamingState.isRecording || streamingState.isScreenRecording}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: COLORS.white,
+                      color: COLORS.primary,
+                      border: `1px solid ${COLORS.primary}`,
+                      borderRadius: 6,
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      opacity: 1,
+                    }}
+                  >
+                    <FaCamera size={14} />
+                    Multi-Kamera
                   </button>
                   <button
                     onClick={handleStartScreenRecording}
@@ -435,6 +482,7 @@ const AdminRecordingPage: React.FC = () => {
               </div>
             )}
 
+
             {/* Status */}
             {streamingState.status && (
               <div style={{
@@ -465,6 +513,7 @@ const AdminRecordingPage: React.FC = () => {
                 />
               </div>
             )}
+
 
             {/* Live Camera Preview */}
             {(streamingState.isRecording || streamingState.isScreenRecording) && streamingState.recordingStream && (
@@ -687,6 +736,142 @@ const AdminRecordingPage: React.FC = () => {
                   Mulai Recording
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Multi-Camera Recorder Modal */}
+        {showMultiCameraRecorder && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: COLORS.white,
+              borderRadius: CARD_RADIUS,
+              padding: isMobile ? '20px' : '32px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: SHADOW,
+              border: `1px solid ${COLORS.border}`,
+              margin: isMobile ? '10px' : '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: '24px',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? '12px' : '0'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{
+                    width: isMobile ? 32 : 40,
+                    height: isMobile ? 32 : 40,
+                    borderRadius: 8,
+                    background: COLORS.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: COLORS.white,
+                  }}>
+                    <FaCamera size={isMobile ? 14 : 16} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: isMobile ? '18px' : '24px',
+                    fontWeight: 700,
+                    color: COLORS.text,
+                    fontFamily: FONT_FAMILY
+                  }}>
+                    Multi-Camera Recording
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMultiCameraRecorder(false);
+                    setPendingRecordingType(null);
+                  }}
+                  style={{
+                    background: COLORS.bg,
+                    color: COLORS.subtext,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 8,
+                    padding: isMobile ? '8px 12px' : '10px 16px',
+                    fontSize: isMobile ? '12px' : '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    alignSelf: isMobile ? 'flex-end' : 'auto'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = COLORS.accent;
+                    e.currentTarget.style.color = COLORS.white;
+                    e.currentTarget.style.borderColor = COLORS.accent;
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = COLORS.bg;
+                    e.currentTarget.style.color = COLORS.subtext;
+                    e.currentTarget.style.borderColor = COLORS.border;
+                  }}
+                >
+                  <FaTimes size={12} />
+                  Tutup
+                </button>
+              </div>
+
+              {/* Multi-Camera Status */}
+              {multiCameraStatus && (
+                <div style={{
+                  marginBottom: '20px',
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  background: multiCameraStatus.includes('berhasil') ? '#d1fae5' : 
+                             multiCameraStatus.includes('Error') ? '#fee2e2' : '#fef3c7',
+                  color: multiCameraStatus.includes('berhasil') ? '#065f46' : 
+                         multiCameraStatus.includes('Error') ? '#dc2626' : '#d97706',
+                  border: `1px solid ${multiCameraStatus.includes('berhasil') ? '#a7f3d0' : 
+                                   multiCameraStatus.includes('Error') ? '#fecaca' : '#fde68a'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: multiCameraStatus.includes('berhasil') ? '#10b981' : 
+                               multiCameraStatus.includes('Error') ? '#ef4444' : '#f59e0b',
+                    animation: multiCameraStatus.includes('Error') ? 'none' : 'blink 1s infinite'
+                  }} />
+                  {multiCameraStatus}
+                </div>
+              )}
+
+              <MultiCameraRecorder
+                onStartRecording={handleMultiCameraStartRecording}
+                onStatusUpdate={handleMultiCameraStatusUpdate}
+              />
             </div>
           </div>
         )}

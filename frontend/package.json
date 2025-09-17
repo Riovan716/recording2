@@ -10,7 +10,7 @@
     "dev:media": "cd ../backend && npm run media",
     "build": "tsc -b && vite build && electron-builder",
     "build:win": "npm run build && npx electron-builder --win",
-    "build:mac": "npm run build && npx electron-builder --mac", 
+    "build:mac": "npm run build && npx electron-builder --mac",
     "build:linux": "npm run build && npx electron-builder --linux",
     "build:all": "npm run build && npx electron-builder -mwl",
     "lint": "eslint .",
@@ -20,6 +20,7 @@
   "dependencies": {
     "hls": "^0.0.1",
     "hls.js": "^1.6.7",
+    "lucide-react": "^0.544.0",
     "mediasoup-client": "^3.12.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
