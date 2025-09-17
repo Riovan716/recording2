@@ -8,7 +8,9 @@
     "dev": "vite",
     "dev:backend": "cd ../backend && npm start",
     "dev:media": "cd ../backend && npm run media",
-    "build": "tsc -b && vite build && electron-builder",
+    "build": "npm run build:electron && npm run build:renderer",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:renderer": "vite build",
     "build:win": "npm run build && npx electron-builder --win",
     "build:mac": "npm run build && npx electron-builder --mac",
     "build:linux": "npm run build && npx electron-builder --linux",
@@ -59,5 +61,23 @@
     "react"
   ],
   "author": "Your Name",
-  "license": "MIT"
+  "license": "MIT",
+  "build": {
+    "appId": "com.recording.app",
+    "productName": "Recording App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
 }

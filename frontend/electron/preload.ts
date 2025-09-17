@@ -64,8 +64,10 @@ try {
 
   // Marker untuk debugging di renderer
   (globalThis as any).__PRELOAD_OK__ = true;
+  // Also expose it on window for renderer access
+  contextBridge.exposeInMainWorld("__PRELOAD_OK__", true);
 
-  console.log("[preload] APIs exposed: window.electronAPI, window.ipc");
+  console.log("[preload] APIs exposed: window.electronAPI, window.ipc, window.__PRELOAD_OK__");
 } catch (err) {
   // Jika ada error runtime di preload, log agar terlihat di console main
   try {

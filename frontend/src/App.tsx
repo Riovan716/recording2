@@ -53,7 +53,8 @@ function LocationTracker() {
 }
 
 function App() {
-  console.log('App component rendering...');
+  console.log('[App.tsx] App component rendering...');
+  console.log('[App.tsx] Current location:', window.location.href);
   
   return (
     <ErrorBoundary>
