@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import io from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
 import { API_URL } from '../config';
@@ -35,7 +35,8 @@ interface StreamingContextType {
   updateStatus: (status: string) => void;
   setSelectedKelas: (kelas: string) => void;
   setSelectedMapel: (mapel: string) => void;
-  startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string) => Promise<void>;
+  startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[]) => Promise<void>;
+  updateRecordingLayout: (newLayout: any[]) => void;
 }
 
 const StreamingContext = createContext<StreamingContextType | undefined>(undefined);
@@ -74,6 +75,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const producerTransportRef = useRef<any>(null);
   const videoProducerRef = useRef<any>(null);
   const audioProducerRef = useRef<any>(null);
+  const currentRecordingLayout = useRef<any[]>([]);
+  const [recordingLayoutVersion, setRecordingLayoutVersion] = useState(0);
 
   useEffect(() => {
     socket.current = io('http://192.168.1.17:4000');
@@ -818,7 +821,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
-  const startMultiCameraRecording = async (selectedCameras: string[], layoutType: string, judul: string) => {
+  const startMultiCameraRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[]) => {
     try {
       updateStatus("Memulai recording multi-kamera...");
       
@@ -828,6 +831,11 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (selectedCameras.length > 4) {
         throw new Error("Maksimal 4 kamera untuk recording");
+      }
+
+      // Store the initial layout
+      if (customLayout && customLayout.length > 0) {
+        currentRecordingLayout.current = customLayout;
       }
 
       // Get streams from selected cameras
@@ -941,6 +949,15 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               break;
             case 'split':
               drawSplitLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              break;
+            case 'custom':
+              // Use current recording layout if available, otherwise use initial customLayout
+              const layoutToUse = currentRecordingLayout.current.length > 0 ? currentRecordingLayout.current : customLayout;
+              if (layoutToUse && layoutToUse.length > 0) {
+                drawCustomLayout(ctx, canvas.width, canvas.height, layoutToUse, videoElements);
+              } else {
+                drawGridLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              }
               break;
           }
         } catch (error) {
@@ -1066,6 +1083,45 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       };
 
+      const drawCustomLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, layouts: any[], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        if (layouts.length === 0) return;
+
+        // Sort layouts by zIndex to draw in correct order
+        const sortedLayouts = [...layouts].sort((a, b) => a.zIndex - b.zIndex);
+
+        sortedLayouts.forEach(layout => {
+          const video = videos[layout.deviceId];
+          if (!video || video.readyState < 2) return;
+
+          // Convert percentage to pixel coordinates
+          const x = (layout.x / 100) * canvasWidth;
+          const y = (layout.y / 100) * canvasHeight;
+          const width = (layout.width / 100) * canvasWidth;
+          const height = (layout.height / 100) * canvasHeight;
+
+          try {
+            // Draw video frame
+            ctx.drawImage(video, x, y, width, height);
+
+            // Draw border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+
+            // Draw label background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x, y, width, 30);
+
+            // Draw label text
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.fillText(layout.label, x + 10, y + 20);
+          } catch (error) {
+            console.error(`Error drawing custom camera ${layout.deviceId}:`, error);
+          }
+        });
+      };
+
       // Store animation frame reference for cleanup
       let animationFrameId: number;
       let isRecordingActive = true;
@@ -1164,6 +1220,12 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const updateRecordingLayout = useCallback((newLayout: any[]) => {
+    currentRecordingLayout.current = newLayout;
+    setRecordingLayoutVersion(prev => prev + 1); // Trigger re-render
+    updateStatus("Layout recording telah diupdate!");
+  }, []);
+
   const value = {
     streamingState,
     startStream,
@@ -1176,7 +1238,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateStatus,
     setSelectedKelas,
     setSelectedMapel,
-    startMultiCameraRecording
+    startMultiCameraRecording,
+    updateRecordingLayout
   };
 
   return (

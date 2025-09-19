@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FaTh, FaSquare, FaColumns, FaCheck, FaTimes, FaRedo, FaStar, FaVideo, FaPlay, FaCamera, FaTimes as FaClose } from 'react-icons/fa';
+import { FaTh, FaSquare, FaColumns, FaCheck, FaTimes, FaRedo, FaStar, FaVideo, FaPlay, FaCamera, FaTimes as FaClose, FaArrowsAlt } from 'react-icons/fa';
+import BasicLayoutEditor from './BasicLayoutEditor';
 
 interface CameraDevice {
   deviceId: string;
@@ -7,10 +8,21 @@ interface CameraDevice {
   kind: string;
 }
 
-type LayoutType = 'grid' | 'pip' | 'split';
+type LayoutType = 'grid' | 'pip' | 'split' | 'custom';
+
+interface CameraLayout {
+  id: string;
+  deviceId: string;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+}
 
 interface MultiCameraRecorderProps {
-  onStartRecording: (selectedCameras: string[], layoutType: LayoutType, judul: string) => void;
+  onStartRecording: (selectedCameras: string[], layoutType: LayoutType, judul: string, customLayout?: CameraLayout[], cameras?: CameraDevice[]) => void;
   onStatusUpdate: (status: string) => void;
   onClose?: () => void;
 }
@@ -25,6 +37,9 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
   const [layoutType, setLayoutType] = useState<LayoutType>('grid');
   const [recordingJudul, setRecordingJudul] = useState('');
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+  const [customLayouts, setCustomLayouts] = useState<CameraLayout[]>([]);
+  const [savedLayouts, setSavedLayouts] = useState<CameraLayout[]>([]);
 
   // Detect available cameras
   const getAvailableCameras = useCallback(async () => {
@@ -57,7 +72,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
     } finally {
       setIsLoadingCameras(false);
     }
-  }, [onStatusUpdate, isLoadingCameras]);
+  }, [onStatusUpdate]);
 
   // Toggle camera selection
   const toggleCameraSelection = useCallback((deviceId: string) => {
@@ -71,6 +86,13 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
       return newSelected;
     });
   }, [onStatusUpdate]);
+
+  // Handle custom layout change
+  const handleLayoutChange = useCallback((layouts: CameraLayout[]) => {
+    setCustomLayouts(layouts);
+    // Also update savedLayouts so it reflects the current state
+    setSavedLayouts(layouts);
+  }, []);
 
   // Start recording
   const handleStartRecording = () => {
@@ -89,13 +111,40 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
       return;
     }
 
-    onStartRecording(selectedCameras, layoutType, recordingJudul);
+    if (layoutType === 'custom' && customLayouts.length === 0) {
+      onStatusUpdate('Atur layout kamera terlebih dahulu!');
+      return;
+    }
+
+    // Get selected camera devices
+    const selectedCameraDevices = availableCameras.filter(camera => 
+      selectedCameras.includes(camera.deviceId)
+    );
+    
+    onStartRecording(selectedCameras, layoutType, recordingJudul, layoutType === 'custom' ? customLayouts : undefined, selectedCameraDevices);
   };
+
+  // Load saved layout on mount and when modal opens
+  useEffect(() => {
+    const savedLayout = localStorage.getItem('cameraLayout');
+    if (savedLayout) {
+      try {
+        const parsedLayout = JSON.parse(savedLayout);
+        setSavedLayouts(parsedLayout);
+        // Also set customLayouts if we're in custom mode
+        if (layoutType === 'custom') {
+          setCustomLayouts(parsedLayout);
+        }
+      } catch (error) {
+        console.error('Error parsing saved layout:', error);
+      }
+    }
+  }, [layoutType, showLayoutEditor]);
 
   // Initialize cameras on mount
   useEffect(() => {
     getAvailableCameras();
-  }, []); // Empty dependency array to run only once
+  }, [getAvailableCameras]); // Include getAvailableCameras in dependencies
 
   return (
     <>
@@ -452,14 +501,163 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                 </div>
               </div>
             </label>
+
+            {/* Custom Layout */}
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              padding: '12px', 
+              border: `1px solid ${layoutType === 'custom' ? 'black' : '#d1d5db'}`,
+              backgroundColor: layoutType === 'custom' ? '#f9fafb' : 'white',
+              cursor: 'pointer',
+              borderRadius: '6px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              if (layoutType !== 'custom') {
+                e.currentTarget.style.borderColor = '#9ca3af';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (layoutType !== 'custom') {
+                e.currentTarget.style.borderColor = '#d1d5db';
+              }
+            }}>
+              <input
+                type="radio"
+                name="layout"
+                value="custom"
+                checked={layoutType === 'custom'}
+                onChange={() => setLayoutType('custom')}
+                style={{ 
+                  width: '16px', 
+                  height: '16px', 
+                  accentColor: 'black'
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    border: '1px solid black', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <FaArrowsAlt style={{ fontSize: '16px', color: 'black' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Atur layout sesuai keinginan</p>
+                  </div>
+                </div>
+              </div>
+            </label>
           </div>
         </div>
+
+        {/* Custom Layout Buttons */}
+        {layoutType === 'custom' && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <button
+                onClick={() => {
+                  // Load saved layout before opening editor
+                  const savedLayout = localStorage.getItem('cameraLayout');
+                  if (savedLayout) {
+                    try {
+                      const parsedLayout = JSON.parse(savedLayout);
+                      setCustomLayouts(parsedLayout);
+                      setSavedLayouts(parsedLayout);
+                    } catch (error) {
+                      console.error('Error parsing saved layout:', error);
+                    }
+                  }
+                  setShowLayoutEditor(true);
+                }}
+                disabled={selectedCameras.length === 0}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '12px 24px', 
+                  borderRadius: '6px', 
+                  fontSize: '14px', 
+                  fontWeight: '500',
+                  backgroundColor: selectedCameras.length === 0 ? '#d1d5db' : '#3b82f6',
+                  color: selectedCameras.length === 0 ? '#6b7280' : 'white',
+                  border: 'none',
+                  cursor: selectedCameras.length === 0 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  flex: 1,
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedCameras.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedCameras.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                  }
+                }}
+              >
+                <FaArrowsAlt style={{ fontSize: '14px' }} />
+                Atur Layout
+              </button>
+              
+              {(savedLayouts.length > 0 || customLayouts.length > 0) && (
+                <button
+                  onClick={() => {
+                    const layoutToLoad = customLayouts.length > 0 ? customLayouts : savedLayouts;
+                    setCustomLayouts(layoutToLoad);
+                    onStatusUpdate('Layout tersimpan telah dimuat!');
+                  }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    padding: '12px 16px', 
+                    borderRadius: '6px', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  💾 Muat Layout
+                </button>
+              )}
+            </div>
+            
+            {(savedLayouts.length > 0 || customLayouts.length > 0) && (
+              <div style={{ 
+                padding: '8px 12px', 
+                backgroundColor: '#f0f9ff', 
+                border: '1px solid #0ea5e9', 
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#0369a1'
+              }}>
+                Layout tersimpan tersedia ({customLayouts.length > 0 ? customLayouts.length : savedLayouts.length} kamera)
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Mulai Recording Button */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px' }}>
           <button
             onClick={handleStartRecording}
-            disabled={selectedCameras.length === 0 || !recordingJudul.trim()}
+            disabled={selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0)}
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -468,19 +666,19 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
               borderRadius: '6px', 
               fontSize: '14px', 
               fontWeight: '500',
-              backgroundColor: selectedCameras.length === 0 || !recordingJudul.trim() ? '#d1d5db' : '#f3f4f6',
-              color: selectedCameras.length === 0 || !recordingJudul.trim() ? '#6b7280' : 'black',
-              border: selectedCameras.length === 0 || !recordingJudul.trim() ? 'none' : '1px solid #d1d5db',
-              cursor: selectedCameras.length === 0 || !recordingJudul.trim() ? 'not-allowed' : 'pointer',
+              backgroundColor: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? '#d1d5db' : '#f3f4f6',
+              color: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? '#6b7280' : 'black',
+              border: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? 'none' : '1px solid #d1d5db',
+              cursor: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              if (selectedCameras.length > 0 && recordingJudul.trim()) {
+              if (selectedCameras.length > 0 && recordingJudul.trim() && !(layoutType === 'custom' && customLayouts.length === 0)) {
                 e.currentTarget.style.backgroundColor = '#e5e7eb';
               }
             }}
             onMouseLeave={(e) => {
-              if (selectedCameras.length > 0 && recordingJudul.trim()) {
+              if (selectedCameras.length > 0 && recordingJudul.trim() && !(layoutType === 'custom' && customLayouts.length === 0)) {
                 e.currentTarget.style.backgroundColor = '#f3f4f6';
               }
             }}
@@ -491,6 +689,48 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Layout Editor Modal */}
+    {showLayoutEditor && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000,
+        padding: '20px'
+      }}>
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '0',
+          maxWidth: '1000px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'hidden',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          border: '1px solid #e5e7eb'
+        }}>
+          <BasicLayoutEditor
+            cameras={(() => {
+              const filteredCameras = availableCameras.filter(camera => selectedCameras.includes(camera.deviceId));
+              console.log('MultiCameraRecorder: selectedCameras:', selectedCameras);
+              console.log('MultiCameraRecorder: availableCameras:', availableCameras);
+              console.log('MultiCameraRecorder: filteredCameras:', filteredCameras);
+              return filteredCameras;
+            })()}
+            onLayoutChange={handleLayoutChange}
+            onClose={() => setShowLayoutEditor(false)}
+            initialLayouts={savedLayouts}
+          />
+        </div>
+      </div>
+    )}
     </>
   );
 };

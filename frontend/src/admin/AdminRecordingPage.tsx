@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useStreaming } from '../context/StreamingContext';
 import { FaVideo, FaDesktop, FaUpload, FaStop, FaDownload, FaUser, FaBook, FaCamera, FaTimes } from 'react-icons/fa';
 import ModalNotifikasi from '../components/ModalNotifikasi';
 import MultiCameraRecorder from '../components/MultiCameraRecorder';
+import BasicLayoutEditor from '../components/BasicLayoutEditor';
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
@@ -117,7 +118,7 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 
 const AdminRecordingPage: React.FC = () => {
   const { user, token } = useAuth();
-  const { streamingState, startCameraRecording, startScreenRecording, stopRecording, uploadRecording, cancelUpload, setSelectedKelas, setSelectedMapel, startMultiCameraRecording } = useStreaming();
+  const { streamingState, startCameraRecording, startScreenRecording, stopRecording, uploadRecording, cancelUpload, setSelectedKelas, setSelectedMapel, startMultiCameraRecording, updateRecordingLayout } = useStreaming();
   const [recordings, setRecordings] = useState<any[]>([]);
   const [showPopup, setShowPopup] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -129,6 +130,9 @@ const AdminRecordingPage: React.FC = () => {
   const [pendingRecordingType, setPendingRecordingType] = useState<'camera' | 'screen' | 'multi-camera' | null>(null);
   const [showMultiCameraRecorder, setShowMultiCameraRecorder] = useState(false);
   const [multiCameraStatus, setMultiCameraStatus] = useState('');
+  const [showRecordingLayoutEditor, setShowRecordingLayoutEditor] = useState(false);
+  const [recordingLayouts, setRecordingLayouts] = useState<any[]>([]);
+  const [recordingCameras, setRecordingCameras] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -247,10 +251,15 @@ const AdminRecordingPage: React.FC = () => {
     );
   };
 
-  const handleMultiCameraStartRecording = async (selectedCameras: string[], layoutType: string, judul: string) => {
+  const handleMultiCameraStartRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], cameras?: any[]) => {
     try {
+      // Store the cameras being used for recording
+      if (cameras) {
+        setRecordingCameras(cameras);
+      }
+      
       // Start multi-camera recording with canvas composition
-      await startMultiCameraRecording(selectedCameras, layoutType, judul);
+      await startMultiCameraRecording(selectedCameras, layoutType, judul, customLayout);
       setShowMultiCameraRecorder(false);
       setPendingRecordingType(null);
     } catch (error) {
@@ -258,9 +267,14 @@ const AdminRecordingPage: React.FC = () => {
     }
   };
 
-  const handleMultiCameraStatusUpdate = (status: string) => {
+  const handleMultiCameraStatusUpdate = useCallback((status: string) => {
     setMultiCameraStatus(status);
-  };
+  }, []);
+
+  const handleRecordingLayoutChange = useCallback((layouts: any[]) => {
+    setRecordingLayouts(layouts);
+    updateRecordingLayout(layouts);
+  }, [updateRecordingLayout]);
 
 
 
@@ -389,27 +403,65 @@ const AdminRecordingPage: React.FC = () => {
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={handleStopRecording}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    background: COLORS.accent,
-                    color: COLORS.white,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <AnimatedDot />
-                  {streamingState.isRecording ? 'Stop Recording' : 'Stop Screen Recording'}
-                </button>
+                <>
+                  <button
+                    onClick={handleStopRecording}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: COLORS.accent,
+                      color: COLORS.white,
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <AnimatedDot />
+                    {streamingState.isRecording ? 'Stop Recording' : 'Stop Screen Recording'}
+                  </button>
+                  
+                  {/* Edit Layout Button - Only show for multi-camera recording */}
+                  {streamingState.isRecording && (
+                    <button
+                      onClick={() => {
+                        // Load current layout from localStorage
+                        const savedLayout = localStorage.getItem('cameraLayout');
+                        if (savedLayout) {
+                          try {
+                            const parsedLayout = JSON.parse(savedLayout);
+                            setRecordingLayouts(parsedLayout);
+                          } catch (error) {
+                            console.error('Error parsing saved layout:', error);
+                          }
+                        }
+                        setShowRecordingLayoutEditor(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px 16px',
+                        backgroundColor: '#3b82f6',
+                        color: COLORS.white,
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🎨 Edit Layout
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -849,6 +901,42 @@ const AdminRecordingPage: React.FC = () => {
               <MultiCameraRecorder
                 onStartRecording={handleMultiCameraStartRecording}
                 onStatusUpdate={handleMultiCameraStatusUpdate}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Recording Layout Editor Modal */}
+        {showRecordingLayoutEditor && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '0',
+              maxWidth: '1000px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e5e7eb'
+            }}>
+              <BasicLayoutEditor
+                cameras={recordingCameras}
+                onLayoutChange={handleRecordingLayoutChange}
+                onClose={() => setShowRecordingLayoutEditor(false)}
+                initialLayouts={recordingLayouts}
               />
             </div>
           </div>

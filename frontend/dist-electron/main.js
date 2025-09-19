@@ -1,46 +1,55 @@
-import { app as l, BrowserWindow as u, ipcMain as w, desktopCapturer as R, session as g } from "electron";
-import { fileURLToPath as _ } from "node:url";
-import i from "node:path";
-import a from "node:fs";
-const c = i.dirname(_(import.meta.url));
-process.env.APP_ROOT = i.join(c, "..");
-const m = process.env.VITE_DEV_SERVER_URL, d = i.join(process.env.APP_ROOT, "dist-electron"), p = i.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = m ? i.join(process.env.APP_ROOT, "public") : p;
-function P() {
-  const r = [
-    i.join(c, "preload.cjs"),
-    i.join(c, "preload.js"),
-    i.join(c, "preload.mjs"),
-    i.join(d, "preload.cjs"),
-    i.join(d, "preload.js"),
-    i.join(d, "preload.mjs")
-  ], o = r.find((e) => a.existsSync(e));
-  return o || (console.error("[main] Preload NOT FOUND. Tried:"), r.forEach((e) => console.error("  -", e)), r[0]);
+import { app, BrowserWindow, ipcMain, desktopCapturer, session } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import fs from "node:fs";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+function findPreload() {
+  const candidates = [
+    path.join(__dirname, "preload.cjs"),
+    path.join(__dirname, "preload.js"),
+    path.join(__dirname, "preload.mjs"),
+    path.join(MAIN_DIST, "preload.cjs"),
+    path.join(MAIN_DIST, "preload.js"),
+    path.join(MAIN_DIST, "preload.mjs")
+  ];
+  const found = candidates.find((p) => fs.existsSync(p));
+  if (!found) {
+    console.error("[main] Preload NOT FOUND. Tried:");
+    candidates.forEach((p) => console.error("  -", p));
+    return candidates[0];
+  }
+  return found;
 }
-let n = null;
-function h() {
-  const r = P();
-  if (console.log(
+let win = null;
+function createWindow() {
+  const preloadPath = findPreload();
+  console.log(
     "[main] Using preload:",
-    r,
+    preloadPath,
     "exists?",
-    a.existsSync(r)
-  ), n = new u({
+    fs.existsSync(preloadPath)
+  );
+  win = new BrowserWindow({
     width: 1280,
     height: 800,
-    show: !1,
+    show: false,
     backgroundColor: "#111111",
-    icon: i.join(process.env.VITE_PUBLIC, "vite.svg"),
+    icon: path.join(process.env.VITE_PUBLIC, "vite.svg"),
     webPreferences: {
-      preload: r,
-      contextIsolation: !0,
-      nodeIntegration: !1,
-      sandbox: !1,
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
       // penting agar modul Electron tersedia di preload
-      webSecurity: !1,
+      webSecurity: false,
       // dev only
-      allowRunningInsecureContent: !0,
-      experimentalFeatures: !0,
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true,
       // Allow local network access
       // allowDisplayingInsecureContent: true, // Deprecated property
       // Additional permissions for screen sharing
@@ -54,10 +63,13 @@ function h() {
       // allowFileAccessFromFileURLs: true, // Deprecated property
       // allowUniversalAccessFromFileURLs: true, // Deprecated property
     }
-  }), n.webContents.on("preload-error", (o, e, t) => {
-    console.error("[main] PRELOAD ERROR at", e, t);
-  }), n.webContents.on("dom-ready", () => {
-    console.log("[main] DOM ready, checking preload status"), n.webContents.executeJavaScript(
+  });
+  win.webContents.on("preload-error", (_e, p, err) => {
+    console.error("[main] PRELOAD ERROR at", p, err);
+  });
+  win.webContents.on("dom-ready", () => {
+    console.log("[main] DOM ready, checking preload status");
+    win.webContents.executeJavaScript(
       `
         console.log("[renderer] has electronAPI?", !!window.electronAPI);
         console.log("[renderer] electronAPI contents:", window.electronAPI);
@@ -85,71 +97,109 @@ function h() {
           console.error('[renderer] Unhandled Promise Rejection:', e.reason);
         });
         `
-    ).catch((o) => console.error("[main] executeJavaScript error:", o));
-  }), g.defaultSession.setPermissionRequestHandler((o, e, t) => {
-    if (console.log(`[main] Permission requested: ${e}`), e === "media")
-      return console.log(`[main] Granting permission: ${e}`), t(!0);
-    console.log(`[main] Granting permission: ${e}`), t(!0);
-  }), g.defaultSession.setPermissionCheckHandler((o, e, t, s) => (console.log(`[main] Permission check: ${e}`), !0)), m)
-    n.loadURL(m);
-  else {
-    const o = i.join(p, "index.html");
-    console.log("[main] RENDERER_DIST:", p), console.log("[main] Loading index.html from:", o), console.log("[main] File exists:", a.existsSync(o)), console.log("[main] File size:", a.statSync(o).size, "bytes");
-    const e = `file://${o.replace(/\\/g, "/")}`;
-    console.log("[main] Loading with URL:", e), n.loadURL(e).catch((t) => {
-      console.error("[main] Failed to load URL:", t), n && !n.isDestroyed() && n.loadFile(o).catch((s) => {
-        console.error("[main] Failed to load file:", s);
-      });
+    ).catch((err) => console.error("[main] executeJavaScript error:", err));
+  });
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
+    console.log(`[main] Permission requested: ${permission}`);
+    if (permission === "media") {
+      console.log(`[main] Granting permission: ${permission}`);
+      return cb(true);
+    }
+    console.log(`[main] Granting permission: ${permission}`);
+    cb(true);
+  });
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, _origin, _details) => {
+    console.log(`[main] Permission check: ${permission}`);
+    if (permission === "media") {
+      return true;
+    }
+    return true;
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    const indexPath = path.join(RENDERER_DIST, "index.html");
+    console.log("[main] RENDERER_DIST:", RENDERER_DIST);
+    console.log("[main] Loading index.html from:", indexPath);
+    console.log("[main] File exists:", fs.existsSync(indexPath));
+    console.log("[main] File size:", fs.statSync(indexPath).size, "bytes");
+    const fileUrl = `file://${indexPath.replace(/\\/g, "/")}`;
+    console.log("[main] Loading with URL:", fileUrl);
+    win.loadURL(fileUrl).catch((err) => {
+      console.error("[main] Failed to load URL:", err);
+      if (win && !win.isDestroyed()) {
+        win.loadFile(indexPath).catch((err2) => {
+          console.error("[main] Failed to load file:", err2);
+        });
+      }
     });
   }
-  n.webContents.once("did-finish-load", () => {
-    console.log("[main] Page finished loading"), n?.isDestroyed() || (n.show(), n.focus());
-  }), n.webContents.on("did-start-loading", () => {
+  win.webContents.once("did-finish-load", () => {
+    console.log("[main] Page finished loading");
+    if (!win?.isDestroyed()) {
+      win.show();
+      win.focus();
+    }
+  });
+  win.webContents.on("did-start-loading", () => {
     console.log("[main] Started loading page");
-  }), n.webContents.on("did-stop-loading", () => {
+  });
+  win.webContents.on("did-stop-loading", () => {
     console.log("[main] Stopped loading page");
-  }), n.webContents.on("did-fail-load", (o, e, t, s) => {
-    console.error("[main] did-fail-load:"), console.error("  Error Code:", e), console.error("  Error Description:", t), console.error("  Validated URL:", s), n?.show();
-  }), n.webContents.on("console-message", (o, e, t, s, f) => {
-    e >= 2 && console.log(`[renderer-console] ${e}: ${t} (${f}:${s})`);
-  }), n.webContents.on("did-fail-load", (o, e, t, s) => {
-    console.error(`[main] Script load failed: ${e} - ${t} for ${s}`);
+  });
+  win.webContents.on("did-fail-load", (event, errorCode, errorDescription, validatedURL) => {
+    console.error("[main] did-fail-load:");
+    console.error("  Error Code:", errorCode);
+    console.error("  Error Description:", errorDescription);
+    console.error("  Validated URL:", validatedURL);
+    win?.show();
+  });
+  win.webContents.on("console-message", (event, level, message, line, sourceId) => {
+    if (level >= 2) {
+      console.log(`[renderer-console] ${level}: ${message} (${sourceId}:${line})`);
+    }
+  });
+  win.webContents.on("did-fail-load", (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[main] Script load failed: ${errorCode} - ${errorDescription} for ${validatedURL}`);
   });
 }
-l.on("window-all-closed", () => {
-  process.platform !== "darwin" && l.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
-l.on("activate", () => {
-  u.getAllWindows().length === 0 && h();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-l.commandLine.appendSwitch("--enable-usermedia-screen-capture");
-l.commandLine.appendSwitch("--disable-features", "VizDisplayCompositor");
-l.commandLine.appendSwitch("--enable-features", "VaapiVideoDecoder");
-l.commandLine.appendSwitch("--autoplay-policy", "no-user-gesture-required");
-w.on("preload-crashed", (r, o) => {
-  console.error("[main] PRELOAD CRASHED:", o);
+app.commandLine.appendSwitch("--enable-usermedia-screen-capture");
+app.commandLine.appendSwitch("--disable-features", "VizDisplayCompositor");
+app.commandLine.appendSwitch("--enable-features", "VaapiVideoDecoder");
+app.commandLine.appendSwitch("--autoplay-policy", "no-user-gesture-required");
+ipcMain.on("preload-crashed", (_event, error) => {
+  console.error("[main] PRELOAD CRASHED:", error);
 });
-w.handle("get-screen-sources", async () => {
+ipcMain.handle("get-screen-sources", async () => {
   try {
     console.log("[main] Getting screen sources...");
-    const r = await R.getSources({
+    const sources = await desktopCapturer.getSources({
       types: ["screen", "window"],
       thumbnailSize: { width: 150, height: 150 }
     });
-    return console.log("[main] Found screen sources:", r.length), r.map((o) => ({
-      id: o.id,
-      name: o.name,
-      thumbnail: o.thumbnail.toDataURL()
+    console.log("[main] Found screen sources:", sources.length);
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL()
     }));
-  } catch (r) {
-    throw console.error("[main] Error getting screen sources:", r), r;
+  } catch (error) {
+    console.error("[main] Error getting screen sources:", error);
+    throw error;
   }
 });
-l.whenReady().then(() => {
-  console.log("=== APP STARTING ==="), h();
+app.whenReady().then(() => {
+  console.log("=== APP STARTING ===");
+  createWindow();
 });
 export {
-  d as MAIN_DIST,
-  p as RENDERER_DIST,
-  m as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

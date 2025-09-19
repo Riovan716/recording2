@@ -1,1 +1,54 @@
-"use strict";const r=require("electron");try{let n=function(){return console.log("[preload] Test function called - preload is working!"),"Preload test successful"};console.log("[preload] loaded");const o=Object.freeze({isElectron:!0,testPreload:n,getAppVersion:()=>r.ipcRenderer.invoke("get-app-version"),getAppPath:()=>r.ipcRenderer.invoke("get-app-path"),getScreenSources:()=>r.ipcRenderer.invoke("get-screen-sources"),onMenuNewRecording:e=>{r.ipcRenderer.on("menu-new-recording",e)},onMenuOpenRecording:e=>{r.ipcRenderer.on("menu-open-recording",e)},removeAllListeners:e=>{r.ipcRenderer.removeAllListeners(e)},getBackendStatus:()=>r.ipcRenderer.invoke("get-backend-status"),openPreviewWindow:e=>r.ipcRenderer.invoke("open-preview-window",e)});console.log("[preload] Exposing electronAPI:",o),r.contextBridge.exposeInMainWorld("electronAPI",o),console.log("[preload] electronAPI exposed successfully"),r.contextBridge.exposeInMainWorld("ipc",Object.freeze({on:(...e)=>r.ipcRenderer.on(...e),off:(...e)=>r.ipcRenderer.off(...e),send:(...e)=>r.ipcRenderer.send(...e),invoke:(...e)=>r.ipcRenderer.invoke(...e)})),globalThis.__PRELOAD_OK__=!0,r.contextBridge.exposeInMainWorld("__PRELOAD_OK__",!0),console.log("[preload] APIs exposed: window.electronAPI, window.ipc, window.__PRELOAD_OK__")}catch(n){try{require("electron").ipcRenderer?.send("preload-crashed",String(n))}catch{}console.error("[preload] FAILED:",n)}
+"use strict";
+const electron = require("electron");
+try {
+  let testPreload = function() {
+    console.log("[preload] Test function called - preload is working!");
+    return "Preload test successful";
+  };
+  console.log("[preload] loaded");
+  const electronAPI = Object.freeze({
+    isElectron: true,
+    testPreload,
+    // App info
+    getAppVersion: () => electron.ipcRenderer.invoke("get-app-version"),
+    getAppPath: () => electron.ipcRenderer.invoke("get-app-path"),
+    // Screen recording APIs
+    getScreenSources: () => electron.ipcRenderer.invoke("get-screen-sources"),
+    // Menu events
+    onMenuNewRecording: (callback) => {
+      electron.ipcRenderer.on("menu-new-recording", callback);
+    },
+    onMenuOpenRecording: (callback) => {
+      electron.ipcRenderer.on("menu-open-recording", callback);
+    },
+    // Remove listeners
+    removeAllListeners: (channel) => {
+      electron.ipcRenderer.removeAllListeners(channel);
+    },
+    // Backend status
+    getBackendStatus: () => electron.ipcRenderer.invoke("get-backend-status"),
+    // Preview window
+    openPreviewWindow: (url) => electron.ipcRenderer.invoke("open-preview-window", url)
+  });
+  console.log("[preload] Exposing electronAPI:", electronAPI);
+  electron.contextBridge.exposeInMainWorld("electronAPI", electronAPI);
+  console.log("[preload] electronAPI exposed successfully");
+  electron.contextBridge.exposeInMainWorld(
+    "ipc",
+    Object.freeze({
+      on: (...args) => electron.ipcRenderer.on(...args),
+      off: (...args) => electron.ipcRenderer.off(...args),
+      send: (...args) => electron.ipcRenderer.send(...args),
+      invoke: (...args) => electron.ipcRenderer.invoke(...args)
+    })
+  );
+  globalThis.__PRELOAD_OK__ = true;
+  electron.contextBridge.exposeInMainWorld("__PRELOAD_OK__", true);
+  console.log("[preload] APIs exposed: window.electronAPI, window.ipc, window.__PRELOAD_OK__");
+} catch (err) {
+  try {
+    require("electron").ipcRenderer?.send("preload-crashed", String(err));
+  } catch {
+  }
+  console.error("[preload] FAILED:", err);
+}
