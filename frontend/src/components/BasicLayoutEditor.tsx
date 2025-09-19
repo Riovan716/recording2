@@ -10,6 +10,7 @@ interface CameraLayout {
   width: number;
   height: number;
   zIndex: number;
+  enabled: boolean;
 }
 
 interface BasicLayoutEditorProps {
@@ -70,7 +71,8 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
           deviceId: camera.deviceId,
           label: camera.label,
           x, y, width, height,
-          zIndex: index
+          zIndex: index,
+          enabled: true
         };
       });
 
@@ -147,8 +149,8 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw each camera layout
-    layouts.forEach(layout => {
+    // Draw each camera layout (only enabled ones)
+    layouts.filter(layout => layout.enabled).forEach(layout => {
       const video = videoElements[layout.deviceId];
       if (!video || video.readyState < 2) return;
 
@@ -304,6 +306,14 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
     setLayouts(prev => prev.filter(layout => layout.id !== itemId));
   };
 
+  const toggleCamera = (itemId: string) => {
+    setLayouts(prev => prev.map(layout => 
+      layout.id === itemId 
+        ? { ...layout, enabled: !layout.enabled }
+        : layout
+    ));
+  };
+
   const resetLayout = () => {
     const resetLayouts: CameraLayout[] = cameras.map((camera, index) => {
       let x = 0, y = 0, width = 0, height = 0;
@@ -327,7 +337,8 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         deviceId: camera.deviceId,
         label: camera.label,
         x, y, width, height,
-        zIndex: index
+        zIndex: index,
+        enabled: true
       };
     });
     setLayouts(resetLayouts);
@@ -495,12 +506,49 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         ))}
       </div>
 
+      {/* Camera Selection */}
+      <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: '0 0 12px 0' }}>
+          Pilih Kamera yang Aktif
+        </h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+          {layouts.map(layout => (
+            <label key={layout.id} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '8px 12px',
+              backgroundColor: layout.enabled ? '#f0f9ff' : '#f9fafb',
+              border: `1px solid ${layout.enabled ? '#3b82f6' : '#d1d5db'}`,
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: layout.enabled ? '#1e40af' : '#6b7280'
+            }}>
+              <input
+                type="checkbox"
+                checked={layout.enabled}
+                onChange={() => toggleCamera(layout.id)}
+                style={{ 
+                  width: '16px', 
+                  height: '16px',
+                  accentColor: '#3b82f6'
+                }}
+              />
+              <span style={{ fontWeight: layout.enabled ? '500' : '400' }}>
+                {layout.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Layout Info */}
       <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-              {layouts.length} kamera aktif
+              {layouts.filter(layout => layout.enabled).length} dari {layouts.length} kamera aktif
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>

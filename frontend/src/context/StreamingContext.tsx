@@ -1089,7 +1089,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Sort layouts by zIndex to draw in correct order
         const sortedLayouts = [...layouts].sort((a, b) => a.zIndex - b.zIndex);
 
-        sortedLayouts.forEach(layout => {
+        sortedLayouts.filter(layout => layout.enabled !== false).forEach(layout => {
           const video = videos[layout.deviceId];
           if (!video || video.readyState < 2) return;
 
