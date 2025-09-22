@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useStreaming } from '../context/StreamingContext';
-import { FaVideo, FaDesktop, FaUpload, FaStop, FaDownload, FaUser, FaBook, FaCamera, FaTimes } from 'react-icons/fa';
+import { FaVideo, FaUpload, FaStop, FaDownload, FaUser, FaBook, FaCamera, FaTimes } from 'react-icons/fa';
 import ModalNotifikasi from '../components/ModalNotifikasi';
 import MultiCameraRecorder from '../components/MultiCameraRecorder';
 import BasicLayoutEditor from '../components/BasicLayoutEditor';
@@ -176,28 +176,6 @@ const AdminRecordingPage: React.FC = () => {
     setShowJudulModal(true);
   };
 
-  const handleStartScreenRecording = () => {
-    // Check if we're in Electron
-    const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
-    
-    // Check browser compatibility before showing modal
-    if (!navigator.mediaDevices || !('getDisplayMedia' in navigator.mediaDevices)) {
-      if (isElectron) {
-        alert('Screen recording tidak didukung di aplikasi Electron. Silakan gunakan aplikasi web di browser Chrome/Firefox/Edge untuk screen recording.');
-      } else {
-        alert('Screen recording tidak didukung di browser ini. Silakan gunakan browser yang lebih baru seperti Chrome, Firefox, atau Edge.');
-      }
-      return;
-    }
-
-    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.14') {
-      alert('Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.');
-      return;
-    }
-
-    setPendingRecordingType('screen');
-    setShowJudulModal(true);
-  };
 
   const handleStartMultiCameraRecording = () => {
     setPendingRecordingType('multi-camera');
@@ -213,8 +191,6 @@ const AdminRecordingPage: React.FC = () => {
     try {
       if (pendingRecordingType === 'camera') {
         await startCameraRecording("admin", recordingJudul);
-      } else if (pendingRecordingType === 'screen') {
-        await startScreenRecording("admin", recordingJudul);
       }
       setShowJudulModal(false);
       setRecordingJudul('');
@@ -383,38 +359,7 @@ const AdminRecordingPage: React.FC = () => {
                     }}
                   >
                     <FaCamera size={14} />
-                    Camera recording
-                  </button>
-                  <button
-                    onClick={handleStartScreenRecording}
-                    disabled={streamingState.isRecording || streamingState.isScreenRecording || (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources))}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      background: COLORS.white,
-                      color: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? COLORS.subtext : COLORS.primary,
-                      border: `1px solid ${(!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? COLORS.border : COLORS.primary}`,
-                      borderRadius: 6,
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? 'not-allowed' : 'pointer',
-                      opacity: (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) ? 0.6 : 1,
-                    }}
-                    title={
-                      (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources))
-                        ? (window.navigator.userAgent.toLowerCase().includes('electron') 
-                          ? 'Screen recording tidak didukung di aplikasi Electron. Gunakan browser web untuk screen recording.' 
-                          : 'Screen recording tidak didukung di browser ini')
-                        : ''
-                    }
-                  >
-                    <FaDesktop size={14} />
-                    Rekam Layar {(!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) && !(window.navigator.userAgent.toLowerCase().includes('electron') && (window as any).electronAPI && (window as any).electronAPI.getScreenSources)) && 
-                      (window.navigator.userAgent.toLowerCase().includes('electron') ? '(Electron)' : '(Tidak didukung)')}
+                    recording
                   </button>
                 </>
               ) : (
