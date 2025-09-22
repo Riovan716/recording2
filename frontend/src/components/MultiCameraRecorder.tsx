@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FaTh, FaSquare, FaColumns, FaCheck, FaTimes, FaRedo, FaStar, FaVideo, FaPlay, FaCamera, FaTimes as FaClose, FaArrowsAlt } from 'react-icons/fa';
+import { FaTh, FaSquare, FaColumns, FaCheck, FaTimes, FaRedo, FaStar, FaVideo, FaPlay, FaCamera, FaTimes as FaClose, FaArrowsAlt, FaDesktop } from 'react-icons/fa';
 import BasicLayoutEditor from './BasicLayoutEditor';
 
 interface CameraDevice {
@@ -8,7 +8,13 @@ interface CameraDevice {
   kind: string;
 }
 
-type LayoutType = 'grid' | 'pip' | 'split' | 'custom';
+interface ScreenSource {
+  id: string;
+  name: string;
+  type: string;
+}
+
+type LayoutType = 'pip' | 'custom';
 
 interface CameraLayout {
   id: string;
@@ -19,10 +25,11 @@ interface CameraLayout {
   width: number;
   height: number;
   zIndex: number;
+  enabled: boolean;
 }
 
 interface MultiCameraRecorderProps {
-  onStartRecording: (selectedCameras: string[], layoutType: LayoutType, judul: string, customLayout?: CameraLayout[], cameras?: CameraDevice[]) => void;
+  onStartRecording: (selectedCameras: string[], layoutType: LayoutType, judul: string, customLayout?: CameraLayout[], cameras?: CameraDevice[], screenSource?: ScreenSource) => void;
   onStatusUpdate: (status: string) => void;
   onClose?: () => void;
 }
@@ -34,12 +41,16 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
 }) => {
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [selectedCameras, setSelectedCameras] = useState<string[]>([]);
-  const [layoutType, setLayoutType] = useState<LayoutType>('grid');
+  const [layoutType, setLayoutType] = useState<LayoutType>('pip');
   const [recordingJudul, setRecordingJudul] = useState('');
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [customLayouts, setCustomLayouts] = useState<CameraLayout[]>([]);
   const [savedLayouts, setSavedLayouts] = useState<CameraLayout[]>([]);
+  const [includeScreenRecording, setIncludeScreenRecording] = useState(false);
+  const [availableScreens, setAvailableScreens] = useState<ScreenSource[]>([]);
+  const [selectedScreen, setSelectedScreen] = useState<ScreenSource | null>(null);
+  const [isLoadingScreens, setIsLoadingScreens] = useState(false);
 
   // Detect available cameras
   const getAvailableCameras = useCallback(async () => {
@@ -74,6 +85,60 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
     }
   }, [onStatusUpdate]);
 
+  // Detect available screen sources
+  const getAvailableScreens = useCallback(async () => {
+    if (isLoadingScreens) return;
+    
+    try {
+      setIsLoadingScreens(true);
+      onStatusUpdate('Mendeteksi layar yang tersedia...');
+      
+      const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
+      
+      if (isElectron && (window as any).electronAPI && (window as any).electronAPI.getScreenSources) {
+        // Use Electron's desktopCapturer API
+        const sources = await (window as any).electronAPI.getScreenSources();
+        const screenSources = sources.map((source: any) => ({
+          id: source.id,
+          name: source.name,
+          type: source.id.startsWith('screen:') ? 'screen' : 'window'
+        }));
+        setAvailableScreens(screenSources);
+        onStatusUpdate(`Ditemukan ${screenSources.length} layar/jendela`);
+      } else if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+        // For web browsers, provide multiple options
+        const screenOptions = [
+          {
+            id: 'entire-screen',
+            name: 'Entire screen (Layar)',
+            type: 'screen'
+          },
+          {
+            id: 'browser-tab',
+            name: 'Browser Tab (Tab Chrome)',
+            type: 'tab'
+          },
+          {
+            id: 'application-window',
+            name: 'Application Window (Jendela Aplikasi)',
+            type: 'window'
+          }
+        ];
+        setAvailableScreens(screenOptions);
+        onStatusUpdate('Screen recording tersedia - pilih sumber yang diinginkan');
+      } else {
+        setAvailableScreens([]);
+        onStatusUpdate('Screen recording tidak didukung di browser ini');
+      }
+    } catch (error: any) {
+      console.error('Error getting screen sources:', error);
+      onStatusUpdate('Gagal mendeteksi layar: ' + error.message);
+      setAvailableScreens([]);
+    } finally {
+      setIsLoadingScreens(false);
+    }
+  }, [onStatusUpdate]);
+
   // Toggle camera selection
   const toggleCameraSelection = useCallback((deviceId: string) => {
     setSelectedCameras(prev => {
@@ -96,8 +161,8 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
 
   // Start recording
   const handleStartRecording = () => {
-    if (selectedCameras.length === 0) {
-      onStatusUpdate('Pilih setidaknya satu kamera untuk recording');
+    if (selectedCameras.length === 0 && !includeScreenRecording) {
+      onStatusUpdate('Pilih setidaknya satu kamera atau aktifkan screen recording');
       return;
     }
 
@@ -116,12 +181,24 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
       return;
     }
 
+    if (includeScreenRecording && !selectedScreen) {
+      onStatusUpdate('Pilih layar untuk screen recording!');
+      return;
+    }
+
     // Get selected camera devices
     const selectedCameraDevices = availableCameras.filter(camera => 
       selectedCameras.includes(camera.deviceId)
     );
     
-    onStartRecording(selectedCameras, layoutType, recordingJudul, layoutType === 'custom' ? customLayouts : undefined, selectedCameraDevices);
+    onStartRecording(
+      selectedCameras, 
+      layoutType, 
+      recordingJudul, 
+      layoutType === 'custom' ? customLayouts : undefined, 
+      selectedCameraDevices,
+      includeScreenRecording && selectedScreen ? selectedScreen : undefined
+    );
   };
 
   // Load saved layout on mount and when modal opens
@@ -141,10 +218,11 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
     }
   }, [layoutType, showLayoutEditor]);
 
-  // Initialize cameras on mount
+  // Initialize cameras and screens on mount
   useEffect(() => {
     getAvailableCameras();
-  }, [getAvailableCameras]); // Include getAvailableCameras in dependencies
+    getAvailableScreens();
+  }, [getAvailableCameras, getAvailableScreens]); // Include both functions in dependencies
 
   return (
     <>
@@ -202,7 +280,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
       {/* Notification Bar */}
       <div style={{ backgroundColor: '#facc15', padding: '8px 16px' }}>
         <p style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
-          Ditemukan {availableCameras.length} kamera
+          Ditemukan {availableCameras.length} kamera{availableScreens.length > 0 ? ` dan ${availableScreens.length} layar` : ''}
         </p>
       </div>
 
@@ -321,72 +399,142 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
           </div>
         </div>
 
-        {/* Layout Kamera Section */}
+        {/* Screen Recording Section */}
+        {availableScreens.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaDesktop style={{ fontSize: '14px', color: 'black' }} />
+                <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Screen Recording</h3>
+              </div>
+              <button
+                onClick={getAvailableScreens}
+                disabled={isLoadingScreens}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '4px', 
+                  fontSize: '14px', 
+                  color: 'black', 
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <FaRedo style={{ 
+                  fontSize: '14px', 
+                  animation: isLoadingScreens ? 'spin 1s linear infinite' : 'none'
+                }} />
+                Refresh
+              </button>
+            </div>
+            
+            {/* Screen Recording Toggle */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px', 
+                padding: '12px', 
+                border: `1px solid ${includeScreenRecording ? 'black' : '#d1d5db'}`,
+                backgroundColor: includeScreenRecording ? '#f9fafb' : 'white',
+                cursor: 'pointer',
+                borderRadius: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (!includeScreenRecording) {
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!includeScreenRecording) {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }
+              }}>
+                <input
+                  type="checkbox"
+                  checked={includeScreenRecording}
+                  onChange={(e) => setIncludeScreenRecording(e.target.checked)}
+                  style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    accentColor: 'black'
+                  }}
+                />
+                <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
+                  Aktifkan Screen Recording
+                </span>
+              </label>
+            </div>
+
+            {/* Screen Selection */}
+            {includeScreenRecording && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {availableScreens.map((screen, index) => {
+                  const isSelected = selectedScreen?.id === screen.id;
+                  
+                  return (
+                    <label
+                      key={screen.id}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        padding: '12px', 
+                        border: `1px solid ${isSelected ? 'black' : '#d1d5db'}`,
+                        backgroundColor: isSelected ? '#f9fafb' : 'white',
+                        cursor: 'pointer',
+                        borderRadius: '6px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = '#9ca3af';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="screen"
+                        checked={isSelected}
+                        onChange={() => setSelectedScreen(screen)}
+                        style={{ 
+                          width: '16px', 
+                          height: '16px', 
+                          accentColor: 'black'
+                        }}
+                      />
+                      <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
+                        {screen.name} ({screen.type === 'screen' ? 'Layar' : 'Jendela'})
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Layout Section */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <FaTh style={{ fontSize: '14px', color: 'black' }} />
-            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Layout Kamera</h3>
+            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
+              Layout {includeScreenRecording ? 'Kamera & Layar' : 'Kamera'}
+            </h3>
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Grid Layout */}
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              padding: '12px', 
-              border: `1px solid ${layoutType === 'grid' ? 'black' : '#d1d5db'}`,
-              backgroundColor: layoutType === 'grid' ? '#f9fafb' : 'white',
-              cursor: 'pointer',
-              borderRadius: '6px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (layoutType !== 'grid') {
-                e.currentTarget.style.borderColor = '#9ca3af';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (layoutType !== 'grid') {
-                e.currentTarget.style.borderColor = '#d1d5db';
-              }
-            }}>
-              <input
-                type="radio"
-                name="layout"
-                value="grid"
-                checked={layoutType === 'grid'}
-                onChange={() => setLayoutType('grid')}
-                style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  accentColor: 'black'
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    border: '1px solid black', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center' 
-                  }}>
-                    <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px' }}>
-                      <rect x="2" y="2" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <rect x="14" y="14" width="8" height="8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M14 14L6 6" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Grid Layout</h4>
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Semua kamera dalam grid</p>
-                  </div>
-                </div>
-              </div>
-            </label>
-
             {/* Picture-in-Picture Layout */}
             <label style={{ 
               display: 'flex', 
@@ -438,65 +586,9 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Picture-in-Picture</h4>
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Satu utama, lainnya kecil</p>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            {/* Split Screen Layout */}
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              padding: '12px', 
-              border: `1px solid ${layoutType === 'split' ? 'black' : '#d1d5db'}`,
-              backgroundColor: layoutType === 'split' ? '#f9fafb' : 'white',
-              cursor: 'pointer',
-              borderRadius: '6px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (layoutType !== 'split') {
-                e.currentTarget.style.borderColor = '#9ca3af';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (layoutType !== 'split') {
-                e.currentTarget.style.borderColor = '#d1d5db';
-              }
-            }}>
-              <input
-                type="radio"
-                name="layout"
-                value="split"
-                checked={layoutType === 'split'}
-                onChange={() => setLayoutType('split')}
-                style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  accentColor: 'black'
-                }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    border: '1px solid black', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center' 
-                  }}>
-                    <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px' }}>
-                      <rect x="2" y="2" width="9" height="16" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <rect x="13" y="2" width="9" height="16" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M11 2V22" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Split Screen</h4>
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Bagi layar secara equal</p>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                      {includeScreenRecording ? 'Satu utama (kamera/layar), lainnya kecil' : 'Satu utama, lainnya kecil'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -550,7 +642,9 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Atur layout sesuai keinginan</p>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                      {includeScreenRecording ? 'Atur layout kamera & layar sesuai keinginan' : 'Atur layout sesuai keinginan'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -657,7 +751,12 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px' }}>
           <button
             onClick={handleStartRecording}
-            disabled={selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0)}
+            disabled={
+              (selectedCameras.length === 0 && !includeScreenRecording) || 
+              !recordingJudul.trim() || 
+              (layoutType === 'custom' && customLayouts.length === 0) ||
+              (includeScreenRecording && !selectedScreen)
+            }
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -666,19 +765,51 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
               borderRadius: '6px', 
               fontSize: '14px', 
               fontWeight: '500',
-              backgroundColor: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? '#d1d5db' : '#f3f4f6',
-              color: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? '#6b7280' : 'black',
-              border: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? 'none' : '1px solid #d1d5db',
-              cursor: selectedCameras.length === 0 || !recordingJudul.trim() || (layoutType === 'custom' && customLayouts.length === 0) ? 'not-allowed' : 'pointer',
+              backgroundColor: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !recordingJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? '#d1d5db' : '#f3f4f6',
+              color: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !recordingJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? '#6b7280' : 'black',
+              border: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !recordingJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? 'none' : '1px solid #d1d5db',
+              cursor: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !recordingJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              if (selectedCameras.length > 0 && recordingJudul.trim() && !(layoutType === 'custom' && customLayouts.length === 0)) {
+              const isValid = (
+                (selectedCameras.length > 0 || includeScreenRecording) && 
+                recordingJudul.trim() && 
+                !(layoutType === 'custom' && customLayouts.length === 0) &&
+                (!includeScreenRecording || selectedScreen)
+              );
+              if (isValid) {
                 e.currentTarget.style.backgroundColor = '#e5e7eb';
               }
             }}
             onMouseLeave={(e) => {
-              if (selectedCameras.length > 0 && recordingJudul.trim() && !(layoutType === 'custom' && customLayouts.length === 0)) {
+              const isValid = (
+                (selectedCameras.length > 0 || includeScreenRecording) && 
+                recordingJudul.trim() && 
+                !(layoutType === 'custom' && customLayouts.length === 0) &&
+                (!includeScreenRecording || selectedScreen)
+              );
+              if (isValid) {
                 e.currentTarget.style.backgroundColor = '#f3f4f6';
               }
             }}
@@ -727,6 +858,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
             onLayoutChange={handleLayoutChange}
             onClose={() => setShowLayoutEditor(false)}
             initialLayouts={savedLayouts}
+            screenSource={includeScreenRecording && selectedScreen ? selectedScreen : undefined}
           />
         </div>
       </div>

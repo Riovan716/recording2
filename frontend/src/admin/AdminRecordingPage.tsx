@@ -133,6 +133,7 @@ const AdminRecordingPage: React.FC = () => {
   const [showRecordingLayoutEditor, setShowRecordingLayoutEditor] = useState(false);
   const [recordingLayouts, setRecordingLayouts] = useState<any[]>([]);
   const [recordingCameras, setRecordingCameras] = useState<any[]>([]);
+  const [recordingScreenSource, setRecordingScreenSource] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -160,6 +161,15 @@ const AdminRecordingPage: React.FC = () => {
     fetchRecordings();
   }, []);
 
+  // Reset recording state when recording stops
+  React.useEffect(() => {
+    if (!streamingState.isRecording && !streamingState.isScreenRecording) {
+      setRecordingCameras([]);
+      setRecordingScreenSource(null);
+      setRecordingLayouts([]);
+    }
+  }, [streamingState.isRecording, streamingState.isScreenRecording]);
+
 
   const handleStartCameraRecording = () => {
     setPendingRecordingType('camera');
@@ -180,7 +190,7 @@ const AdminRecordingPage: React.FC = () => {
       return;
     }
 
-    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.17') {
+    if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.14') {
       alert('Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.');
       return;
     }
@@ -251,15 +261,20 @@ const AdminRecordingPage: React.FC = () => {
     );
   };
 
-  const handleMultiCameraStartRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], cameras?: any[]) => {
+  const handleMultiCameraStartRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], cameras?: any[], screenSource?: any) => {
     try {
       // Store the cameras being used for recording
       if (cameras) {
         setRecordingCameras(cameras);
       }
       
+      // Store the screen source being used for recording
+      if (screenSource) {
+        setRecordingScreenSource(screenSource);
+      }
+      
       // Start multi-camera recording with canvas composition
-      await startMultiCameraRecording(selectedCameras, layoutType, judul, customLayout);
+      await startMultiCameraRecording(selectedCameras, layoutType, judul, customLayout, screenSource);
       setShowMultiCameraRecorder(false);
       setPendingRecordingType(null);
     } catch (error) {
@@ -440,6 +455,18 @@ const AdminRecordingPage: React.FC = () => {
                             console.error('Error parsing saved layout:', error);
                           }
                         }
+                        
+                        // Load screen source from localStorage
+                        const savedScreenSource = localStorage.getItem('screenSource');
+                        if (savedScreenSource) {
+                          try {
+                            const parsedScreenSource = JSON.parse(savedScreenSource);
+                            setRecordingScreenSource(parsedScreenSource);
+                          } catch (error) {
+                            console.error('Error parsing saved screen source:', error);
+                          }
+                        }
+                        
                         setShowRecordingLayoutEditor(true);
                       }}
                       style={{
@@ -937,6 +964,7 @@ const AdminRecordingPage: React.FC = () => {
                 onLayoutChange={handleRecordingLayoutChange}
                 onClose={() => setShowRecordingLayoutEditor(false)}
                 initialLayouts={recordingLayouts}
+                screenSource={recordingScreenSource}
               />
             </div>
           </div>

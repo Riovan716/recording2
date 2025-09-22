@@ -35,7 +35,7 @@ interface StreamingContextType {
   updateStatus: (status: string) => void;
   setSelectedKelas: (kelas: string) => void;
   setSelectedMapel: (mapel: string) => void;
-  startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[]) => Promise<void>;
+  startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], screenSource?: any) => Promise<void>;
   updateRecordingLayout: (newLayout: any[]) => void;
 }
 
@@ -79,7 +79,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [recordingLayoutVersion, setRecordingLayoutVersion] = useState(0);
 
   useEffect(() => {
-    socket.current = io('http://192.168.1.17:4000');
+    socket.current = io('http://192.168.1.14:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();
@@ -594,7 +594,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.17') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.14') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
@@ -821,12 +821,12 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
-  const startMultiCameraRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[]) => {
+  const startMultiCameraRecording = async (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], screenSource?: any) => {
     try {
       updateStatus("Memulai recording multi-kamera...");
       
-      if (selectedCameras.length === 0) {
-        throw new Error("Pilih setidaknya satu kamera untuk recording");
+      if (selectedCameras.length === 0 && !screenSource) {
+        throw new Error("Pilih setidaknya satu kamera atau aktifkan screen recording");
       }
 
       if (selectedCameras.length > 4) {
@@ -841,6 +841,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Get streams from selected cameras
       const cameraStreams: { [deviceId: string]: MediaStream } = {};
       const audioStreams: MediaStream[] = [];
+      let screenStream: MediaStream | null = null;
 
       for (const deviceId of selectedCameras) {
         try {
@@ -856,6 +857,60 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch (error: any) {
           console.error(`Error accessing camera ${deviceId}:`, error);
           throw new Error(`Gagal mengakses kamera: ${error.message}`);
+        }
+      }
+
+      // Get screen stream if screen recording is enabled
+      if (screenSource) {
+        try {
+          updateStatus("Meminta izin untuk screen recording...");
+          
+          const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
+          
+          if (isElectron && (window as any).electronAPI && (window as any).electronAPI.getScreenSources) {
+            // Use Electron's desktopCapturer API
+            screenStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                // @ts-ignore - Electron specific constraint
+                mandatory: {
+                  chromeMediaSource: 'desktop',
+                  chromeMediaSourceId: screenSource.id,
+                  minWidth: 1280,
+                  maxWidth: 1920,
+                  minHeight: 720,
+                  maxHeight: 1080
+                }
+              },
+              audio: false // We'll handle audio separately
+            });
+          } else if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+            // Use web browser's getDisplayMedia with specific constraints based on screenSource type
+            let displayMediaOptions: any = {
+              video: {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              },
+              audio: false // We'll handle audio separately
+            };
+
+            // Add specific constraints based on screenSource type
+            if (screenSource.type === 'tab') {
+              displayMediaOptions.video.displaySurface = 'browser';
+            } else if (screenSource.type === 'window') {
+              displayMediaOptions.video.displaySurface = 'window';
+            } else {
+              displayMediaOptions.video.displaySurface = 'monitor';
+            }
+
+            screenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+          } else {
+            throw new Error("Screen recording tidak didukung di browser ini");
+          }
+          
+          updateStatus("Screen stream berhasil didapatkan...");
+        } catch (error: any) {
+          console.error("Error accessing screen:", error);
+          throw new Error(`Gagal mengakses layar: ${error.message}`);
         }
       }
 
@@ -892,8 +947,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         videoElements[deviceId] = video;
       });
 
+      // Create video element for screen stream
+      let screenVideoElement: HTMLVideoElement | null = null;
+      if (screenStream) {
+        screenVideoElement = document.createElement('video');
+        screenVideoElement.srcObject = screenStream;
+        screenVideoElement.autoplay = true;
+        screenVideoElement.muted = true;
+        screenVideoElement.playsInline = true;
+        screenVideoElement.style.width = '320px';
+        screenVideoElement.style.height = '240px';
+      }
+
       // Wait for videos to load and start playing
-      await Promise.all(Object.values(videoElements).map(video => 
+      const videoPromises = Object.values(videoElements).map(video => 
         new Promise(resolve => {
           video.onloadedmetadata = () => {
             video.play().then(() => {
@@ -904,7 +971,23 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }).catch(resolve);
           };
         })
-      ));
+      );
+
+      // Add screen video promise if available
+      if (screenVideoElement) {
+        videoPromises.push(new Promise(resolve => {
+          screenVideoElement!.onloadedmetadata = () => {
+            screenVideoElement!.play().then(() => {
+              // Small delay to ensure video is actually playing
+              setTimeout(() => {
+                resolve(true);
+              }, 100);
+            }).catch(resolve);
+          };
+        }));
+      }
+
+      await Promise.all(videoPromises);
 
       // Additional delay to ensure all videos are ready
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -927,7 +1010,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
 
-      // Animation function to draw cameras to canvas
+      // Animation function to draw cameras and screen to canvas
       const drawCamerasToCanvas = () => {
         try {
           // Clear canvas
@@ -938,25 +1021,31 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             selectedCameras.includes(deviceId)
           );
 
-          if (activeStreams.length === 0) return;
+          // Create combined streams array including screen if available
+          const allStreams = [...activeStreams];
+          if (screenStream && screenVideoElement) {
+            allStreams.push(['screen', screenStream]);
+          }
+
+          if (allStreams.length === 0) return;
+
+          // Create combined video elements object
+          const allVideoElements = { ...videoElements };
+          if (screenVideoElement) {
+            allVideoElements['screen'] = screenVideoElement;
+          }
 
           switch (layoutType) {
-            case 'grid':
-              drawGridLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
-              break;
             case 'pip':
-              drawPictureInPictureLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
-              break;
-            case 'split':
-              drawSplitLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+              drawPictureInPictureLayout(ctx, canvas.width, canvas.height, allStreams, allVideoElements);
               break;
             case 'custom':
               // Use current recording layout if available, otherwise use initial customLayout
               const layoutToUse = currentRecordingLayout.current.length > 0 ? currentRecordingLayout.current : customLayout;
               if (layoutToUse && layoutToUse.length > 0) {
-                drawCustomLayout(ctx, canvas.width, canvas.height, layoutToUse, videoElements);
+                drawCustomLayout(ctx, canvas.width, canvas.height, layoutToUse, allVideoElements);
               } else {
-                drawGridLayout(ctx, canvas.width, canvas.height, activeStreams, videoElements);
+                drawPictureInPictureLayout(ctx, canvas.width, canvas.height, allStreams, allVideoElements);
               }
               break;
           }
@@ -966,70 +1055,42 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       // Layout drawing functions
-      const drawGridLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
-        const count = streams.length;
-        let cols = 1;
-        let rows = 1;
-
-        if (count === 2) {
-          cols = 2;
-          rows = 1;
-        } else if (count === 3) {
-          cols = 2;
-          rows = 2;
-        } else if (count >= 4) {
-          cols = 2;
-          rows = 2;
-        }
-
-        const cellWidth = canvasWidth / cols;
-        const cellHeight = canvasHeight / rows;
-
-        streams.forEach(([deviceId, stream], index) => {
-          const video = videos[deviceId];
-          if (!video || video.readyState < 2) return; // Check if video is ready
-
-          const col = index % cols;
-          const row = Math.floor(index / cols);
-          
-          const x = col * cellWidth;
-          const y = row * cellHeight;
-
-          try {
-            // Draw video frame
-            ctx.drawImage(video, x, y, cellWidth, cellHeight);
-
-            // Draw camera label
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(x, y, cellWidth, 30);
-            ctx.fillStyle = 'white';
-            ctx.font = '14px Arial';
-            ctx.fillText(`Kamera ${index + 1}`, x + 10, y + 20);
-          } catch (error) {
-            console.error(`Error drawing camera ${index + 1}:`, error);
-          }
-        });
-      };
 
       const drawPictureInPictureLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
         if (streams.length === 0) return;
 
-        // Main camera (first one)
-        const [mainDeviceId, mainStream] = streams[0];
+        // Check if screen recording is included
+        const screenStream = streams.find(([deviceId]) => deviceId === 'screen');
+        const cameraStreams = streams.filter(([deviceId]) => deviceId !== 'screen');
+        
+        let mainDeviceId: string;
+        let mainStream: MediaStream;
+        
+        if (screenStream) {
+          // If screen recording is included, make it the main layout
+          [mainDeviceId, mainStream] = screenStream;
+        } else {
+          // If no screen recording, use first camera as main
+          [mainDeviceId, mainStream] = streams[0];
+        }
+        
         const mainVideo = videos[mainDeviceId];
         if (mainVideo && mainVideo.readyState >= 2) {
           try {
             ctx.drawImage(mainVideo, 0, 0, canvasWidth, canvasHeight);
           } catch (error) {
-            console.error('Error drawing main camera:', error);
+            console.error('Error drawing main source:', error);
           }
         }
 
-        // Secondary cameras as small windows
+        // Secondary sources as small windows
         const pipSize = Math.min(canvasWidth, canvasHeight) * 0.25;
         const pipSpacing = pipSize + 10;
 
-        streams.slice(1).forEach(([deviceId, stream], index) => {
+        // Get all other sources (cameras if screen is main, or remaining cameras if camera is main)
+        const otherStreams = screenStream ? cameraStreams : streams.slice(1);
+        
+        otherStreams.forEach(([deviceId, stream], index) => {
           const video = videos[deviceId];
           if (!video || video.readyState < 2) return;
 
@@ -1050,38 +1111,14 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             ctx.fillRect(x, y + pipSize - 20, pipSize, 20);
             ctx.fillStyle = 'white';
             ctx.font = '12px Arial';
-            ctx.fillText(`Kamera ${index + 2}`, x + 5, y + pipSize - 5);
+            const label = deviceId === 'screen' ? 'Layar' : `Kamera ${index + 1}`;
+            ctx.fillText(label, x + 5, y + pipSize - 5);
           } catch (error) {
-            console.error(`Error drawing PIP camera ${index + 2}:`, error);
+            console.error(`Error drawing PIP source ${index + 1}:`, error);
           }
         });
       };
 
-      const drawSplitLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
-        if (streams.length === 0) return;
-
-        if (streams.length === 2) {
-          // Side by side
-          const halfWidth = canvasWidth / 2;
-          streams.forEach(([deviceId, stream], index) => {
-            const video = videos[deviceId];
-            if (!video) return;
-
-            const x = index * halfWidth;
-            ctx.drawImage(video, x, 0, halfWidth, canvasHeight);
-          });
-        } else {
-          // Top and bottom
-          const halfHeight = canvasHeight / 2;
-          streams.forEach(([deviceId, stream], index) => {
-            const video = videos[deviceId];
-            if (!video) return;
-
-            const y = index * halfHeight;
-            ctx.drawImage(video, 0, y, canvasWidth, halfHeight);
-          });
-        }
-      };
 
       const drawCustomLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, layouts: any[], videos: { [deviceId: string]: HTMLVideoElement }) => {
         if (layouts.length === 0) return;
@@ -1176,6 +1213,12 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         Object.values(cameraStreams).forEach(stream => {
           stream.getTracks().forEach(track => track.stop());
         });
+        
+        // Clean up screen stream
+        if (screenStream) {
+          screenStream.getTracks().forEach(track => track.stop());
+        }
+        
         audioStreams.forEach(stream => {
           stream.getTracks().forEach(track => track.stop());
         });
@@ -1187,7 +1230,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           recordingStream: null,
           mediaRecorder: null,
           isRecording: false,
-          status: `Recording ${selectedCameras.length} kamera selesai`
+          status: `Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} selesai`
         }));
       };
 
@@ -1206,13 +1249,13 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         mediaRecorder,
         recordingStartTime: Date.now(),
         recordingTitle: judul,
-        status: `Recording ${selectedCameras.length} kamera berjalan...`
+        status: `Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`
       }));
 
       // Start animation loop
       animate();
 
-      updateStatus(`Recording ${selectedCameras.length} kamera berjalan...`);
+      updateStatus(`Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
 
     } catch (error: any) {
       console.error("Error starting multi-camera recording:", error);

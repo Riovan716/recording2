@@ -59,7 +59,7 @@ io.on('connection', socket => {
   socket.on('createProducerTransport', async (_, cb) => {
     try {
       const producerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.17', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -134,7 +134,7 @@ io.on('connection', socket => {
   socket.on('createConsumerTransport', async (_, cb) => {
     try {
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.17', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -372,6 +372,6 @@ io.on('connection', socket => {
 });
 
 const PORT = 4000;
-server.listen(PORT, '192.168.1.17', () => {
-  console.log(`MediaSoup server running on http://192.168.1.17:${PORT}`);
+server.listen(PORT, '192.168.1.14', () => {
+  console.log(`MediaSoup server running on http://192.168.1.14:${PORT}`);
 }); 

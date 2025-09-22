@@ -18,13 +18,15 @@ interface BasicLayoutEditorProps {
   onLayoutChange: (layouts: CameraLayout[]) => void;
   onClose?: () => void;
   initialLayouts?: CameraLayout[];
+  screenSource?: { id: string; name: string; type: string };
 }
 
 const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
   cameras,
   onLayoutChange,
   onClose,
-  initialLayouts
+  initialLayouts,
+  screenSource
 }) => {
   const [layouts, setLayouts] = useState<CameraLayout[]>([]);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -32,53 +34,84 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
   const [resizingItem, setResizingItem] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [videoElements, setVideoElements] = useState<{ [deviceId: string]: HTMLVideoElement }>({});
+  const [screenVideoElement, setScreenVideoElement] = useState<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastLayoutRef = useRef<string>('');
 
   // Initialize layouts when cameras or initialLayouts change
   useEffect(() => {
-    if (cameras.length === 0) return;
+    if (cameras.length === 0 && !screenSource) return;
     
     console.log('BasicLayoutEditor: cameras received:', cameras.length, cameras);
+    console.log('BasicLayoutEditor: screenSource:', screenSource);
     console.log('BasicLayoutEditor: initialLayouts:', initialLayouts);
     
-    // Use initialLayouts if provided and matches camera count, otherwise create default layout
-    if (initialLayouts && initialLayouts.length > 0 && initialLayouts.length === cameras.length) {
-      console.log('BasicLayoutEditor: Using initialLayouts with', initialLayouts.length, 'cameras');
+    const totalSources = cameras.length + (screenSource ? 1 : 0);
+    
+    // Use initialLayouts if provided and matches total source count, otherwise create default layout
+    if (initialLayouts && initialLayouts.length > 0 && initialLayouts.length === totalSources) {
+      console.log('BasicLayoutEditor: Using initialLayouts with', initialLayouts.length, 'sources');
       setLayouts(initialLayouts);
     } else {
-      console.log('BasicLayoutEditor: Creating default layout for', cameras.length, 'cameras');
-      const defaultLayouts: CameraLayout[] = cameras.map((camera, index) => {
+      console.log('BasicLayoutEditor: Creating default layout for', totalSources, 'sources');
+      const defaultLayouts: CameraLayout[] = [];
+      
+      // Add camera layouts (Picture-in-Picture style)
+      cameras.forEach((camera, index) => {
         let x = 0, y = 0, width = 0, height = 0;
         
-        if (cameras.length === 1) {
+        if (totalSources === 1) {
+          // Single source takes full screen
           x = 0; y = 0; width = 100; height = 100;
-        } else if (cameras.length === 2) {
-          x = index * 50; y = 0; width = 50; height = 100;
-        } else if (cameras.length === 3) {
-          if (index === 0) {
-            x = 0; y = 0; width = 50; height = 100;
-          } else {
-            x = 50; y = (index - 1) * 50; width = 50; height = 50;
-          }
-        } else if (cameras.length === 4) {
-          x = (index % 2) * 50; y = Math.floor(index / 2) * 50; width = 50; height = 50;
+        } else if (screenSource) {
+          // If screen recording is included, cameras become PIP windows
+          const pipSize = 25; // 25% of screen
+          x = 75; y = 5 + (index * 30); width = pipSize; height = pipSize;
+        } else if (index === 0) {
+          // Main camera takes most of the screen (when no screen recording)
+          x = 0; y = 0; width = 100; height = 100;
+        } else {
+          // Secondary cameras as small PIP windows (when no screen recording)
+          const pipSize = 25; // 25% of screen
+          x = 75; y = 5 + ((index - 1) * 30); width = pipSize; height = pipSize;
         }
 
-        return {
+        defaultLayouts.push({
           id: `camera-${camera.deviceId}`,
           deviceId: camera.deviceId,
           label: camera.label,
           x, y, width, height,
           zIndex: index,
           enabled: true
-        };
+        });
       });
+      
+      // Add screen layout if available (Picture-in-Picture style)
+      if (screenSource) {
+        let x = 0, y = 0, width = 0, height = 0;
+        
+        if (totalSources === 1) {
+          // Single source takes full screen
+          x = 0; y = 0; width = 100; height = 100;
+        } else {
+          // Screen recording becomes the main layout (full screen)
+          x = 0; y = 0; width = 100; height = 100;
+        }
+
+        defaultLayouts.push({
+          id: `screen-${screenSource.id}`,
+          deviceId: 'screen',
+          label: screenSource.name,
+          x, y, width, height,
+          zIndex: cameras.length, // Screen gets highest zIndex to be on top
+          enabled: true
+        });
+      }
 
       setLayouts(defaultLayouts);
     }
-  }, [cameras.length, initialLayouts]);
+  }, [cameras.length, screenSource, initialLayouts]);
 
   // Initialize video elements
   useEffect(() => {
@@ -94,8 +127,20 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         }
       });
       
+      // Clean up screen video
+      if (screenVideoElement) {
+        if (screenVideoElement.srcObject) {
+          const stream = screenVideoElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+        if (screenVideoElement.parentNode === document.body) {
+          document.body.removeChild(screenVideoElement);
+        }
+      }
+      
       const newVideoElements: { [deviceId: string]: HTMLVideoElement } = {};
       
+      // Initialize camera videos
       for (const camera of cameras) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -116,10 +161,69 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         }
       }
       
+      // Initialize screen video if available
+      if (screenSource) {
+        try {
+          const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
+          let screenStream: MediaStream;
+          
+          if (isElectron && (window as any).electronAPI && (window as any).electronAPI.getScreenSources) {
+            // Use Electron's desktopCapturer API
+            screenStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                // @ts-ignore - Electron specific constraint
+                mandatory: {
+                  chromeMediaSource: 'desktop',
+                  chromeMediaSourceId: screenSource.id,
+                  minWidth: 1280,
+                  maxWidth: 1920,
+                  minHeight: 720,
+                  maxHeight: 1080
+                }
+              },
+              audio: false
+            });
+          } else if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+            // Use web browser's getDisplayMedia with specific constraints based on screenSource type
+            let displayMediaOptions: any = {
+              video: {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              },
+              audio: false
+            };
+
+            // Add specific constraints based on screenSource type
+            if (screenSource.type === 'tab') {
+              displayMediaOptions.video.displaySurface = 'browser';
+            } else if (screenSource.type === 'window') {
+              displayMediaOptions.video.displaySurface = 'window';
+            } else {
+              displayMediaOptions.video.displaySurface = 'monitor';
+            }
+
+            screenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+          } else {
+            throw new Error("Screen recording tidak didukung di browser ini");
+          }
+          
+          const screenVideo = document.createElement('video');
+          screenVideo.srcObject = screenStream;
+          screenVideo.autoplay = true;
+          screenVideo.muted = true;
+          screenVideo.style.display = 'none';
+          document.body.appendChild(screenVideo);
+          
+          setScreenVideoElement(screenVideo);
+        } catch (error) {
+          console.error(`Error initializing screen ${screenSource.id}:`, error);
+        }
+      }
+      
       setVideoElements(newVideoElements);
     };
 
-    if (cameras.length > 0) {
+    if (cameras.length > 0 || screenSource) {
       initializeVideos();
     }
 
@@ -134,8 +238,18 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
           document.body.removeChild(video);
         }
       });
+      
+      if (screenVideoElement) {
+        if (screenVideoElement.srcObject) {
+          const stream = screenVideoElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+        if (screenVideoElement.parentNode === document.body) {
+          document.body.removeChild(screenVideoElement);
+        }
+      }
     };
-  }, [cameras.length]);
+  }, [cameras.length, screenSource]);
 
   // Draw canvas
   const drawCanvas = useCallback(() => {
@@ -149,9 +263,17 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw each camera layout (only enabled ones)
+    // Draw each layout (only enabled ones)
     layouts.filter(layout => layout.enabled).forEach(layout => {
-      const video = videoElements[layout.deviceId];
+      let video: HTMLVideoElement | null = null;
+      
+      // Get video element - either from cameras or screen
+      if (layout.deviceId === 'screen') {
+        video = screenVideoElement;
+      } else {
+        video = videoElements[layout.deviceId];
+      }
+      
       if (!video || video.readyState < 2) return;
 
       const x = (layout.x / 100) * canvas.width;
@@ -175,12 +297,13 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         // Draw label text
         ctx.fillStyle = 'white';
         ctx.font = '14px Arial';
-        ctx.fillText(layout.label, x + 10, y + 20);
+        const label = layout.deviceId === 'screen' ? 'Layar' : layout.label;
+        ctx.fillText(label, x + 10, y + 20);
       } catch (error) {
-        console.error(`Error drawing camera ${layout.deviceId}:`, error);
+        console.error(`Error drawing ${layout.deviceId}:`, error);
       }
     });
-  }, [layouts, videoElements]);
+  }, [layouts, videoElements, screenVideoElement]);
 
   // Update canvas with interval
   useEffect(() => {
@@ -315,32 +438,61 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
   };
 
   const resetLayout = () => {
-    const resetLayouts: CameraLayout[] = cameras.map((camera, index) => {
+    const totalSources = cameras.length + (screenSource ? 1 : 0);
+    const resetLayouts: CameraLayout[] = [];
+    
+    // Reset camera layouts (Picture-in-Picture style)
+    cameras.forEach((camera, index) => {
       let x = 0, y = 0, width = 0, height = 0;
       
-      if (cameras.length === 1) {
+      if (totalSources === 1) {
+        // Single source takes full screen
         x = 0; y = 0; width = 100; height = 100;
-      } else if (cameras.length === 2) {
-        x = index * 50; y = 0; width = 50; height = 100;
-      } else if (cameras.length === 3) {
-        if (index === 0) {
-          x = 0; y = 0; width = 50; height = 100;
-        } else {
-          x = 50; y = (index - 1) * 50; width = 50; height = 50;
-        }
-      } else if (cameras.length === 4) {
-        x = (index % 2) * 50; y = Math.floor(index / 2) * 50; width = 50; height = 50;
+      } else if (screenSource) {
+        // If screen recording is included, cameras become PIP windows
+        const pipSize = 25; // 25% of screen
+        x = 75; y = 5 + (index * 30); width = pipSize; height = pipSize;
+      } else if (index === 0) {
+        // Main camera takes most of the screen (when no screen recording)
+        x = 0; y = 0; width = 100; height = 100;
+      } else {
+        // Secondary cameras as small PIP windows (when no screen recording)
+        const pipSize = 25; // 25% of screen
+        x = 75; y = 5 + ((index - 1) * 30); width = pipSize; height = pipSize;
       }
 
-      return {
+      resetLayouts.push({
         id: `camera-${camera.deviceId}`,
         deviceId: camera.deviceId,
         label: camera.label,
         x, y, width, height,
         zIndex: index,
         enabled: true
-      };
+      });
     });
+    
+    // Reset screen layout if available (Picture-in-Picture style)
+    if (screenSource) {
+      let x = 0, y = 0, width = 0, height = 0;
+      
+      if (totalSources === 1) {
+        // Single source takes full screen
+        x = 0; y = 0; width = 100; height = 100;
+      } else {
+        // Screen recording becomes the main layout (full screen)
+        x = 0; y = 0; width = 100; height = 100;
+      }
+
+      resetLayouts.push({
+        id: `screen-${screenSource.id}`,
+        deviceId: 'screen',
+        label: screenSource.name,
+        x, y, width, height,
+        zIndex: cameras.length, // Screen gets highest zIndex to be on top
+        enabled: true
+      });
+    }
+    
     setLayouts(resetLayouts);
   };
 
@@ -509,7 +661,7 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
       {/* Camera Selection */}
       <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: '0 0 12px 0' }}>
-          Pilih Kamera yang Aktif
+          Pilih {screenSource ? 'Kamera & Layar' : 'Kamera'} yang Aktif
         </h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           {layouts.map(layout => (
@@ -536,7 +688,7 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
                 }}
               />
               <span style={{ fontWeight: layout.enabled ? '500' : '400' }}>
-                {layout.label}
+                {layout.deviceId === 'screen' ? 'Layar' : layout.label}
               </span>
             </label>
           ))}
@@ -548,7 +700,7 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-              {layouts.filter(layout => layout.enabled).length} dari {layouts.length} kamera aktif
+              {layouts.filter(layout => layout.enabled).length} dari {layouts.length} {screenSource ? 'sumber' : 'kamera'} aktif
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -570,6 +722,12 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
               onClick={() => {
                 // Save layout to localStorage
                 localStorage.setItem('cameraLayout', JSON.stringify(layouts));
+                // Also save screen source info if available
+                if (screenSource) {
+                  localStorage.setItem('screenSource', JSON.stringify(screenSource));
+                } else {
+                  localStorage.removeItem('screenSource');
+                }
                 // Explicitly call onLayoutChange to ensure parent gets updated
                 onLayoutChange(layouts);
                 // Show success message with better UX
