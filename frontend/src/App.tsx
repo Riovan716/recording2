@@ -48,13 +48,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 // Debug component to track location changes
 function LocationTracker() {
   const location = useLocation();
-  console.log('📍 Current location:', location.pathname);
+  // Removed console.log to prevent excessive logging
   return null;
 }
 
 function App() {
-  console.log('[App.tsx] App component rendering...');
-  console.log('[App.tsx] Current location:', window.location.href);
+  // Removed console.logs to prevent excessive logging
   
   return (
     <ErrorBoundary>

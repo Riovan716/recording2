@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useStreaming } from "../context/StreamingContext";
 import CameraPreview from "./CameraPreview";
 import ModalNotifikasi from "../components/ModalNotifikasi";
+import MultiCameraStreamer from "../components/MultiCameraStreamer";
+import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import { API_URL } from "../config";
 
 // Color palette konsisten dengan AdminPanel
@@ -49,7 +51,7 @@ interface StreamingStats {
 
 const AdminLiveStreamPage: React.FC = () => {
   const { user, token } = useAuth();
-  const { streamingState, startStream, stopStream, updateStatus, setSelectedKelas, setSelectedMapel } = useStreaming();
+  const { streamingState, startStream, stopStream, updateStatus, setSelectedKelas, setSelectedMapel, startMultiCameraStreaming, updateStreamingLayout } = useStreaming();
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const webSocket = useRef<WebSocket | null>(null);
@@ -69,6 +71,11 @@ const AdminLiveStreamPage: React.FC = () => {
   const [alertType, setAlertType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
   const [showTitleModal, setShowTitleModal] = useState(false);
   const [streamTitle, setStreamTitle] = useState('');
+  const [showMultiCameraStreamer, setShowMultiCameraStreamer] = useState(false);
+  const [showStreamingLayoutEditor, setShowStreamingLayoutEditor] = useState(false);
+  const [streamingCameras, setStreamingCameras] = useState<any[]>([]);
+  const [streamingScreenSource, setStreamingScreenSource] = useState<any>(null);
+  const [streamingLayouts, setStreamingLayouts] = useState<any[]>([]);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -81,7 +88,7 @@ const AdminLiveStreamPage: React.FC = () => {
 
 
   // Fetch streaming statistics
-  const fetchStreamingStats = async () => {
+  const fetchStreamingStats = useCallback(async () => {
     try {
       setStatsLoading(true);
 
@@ -137,7 +144,7 @@ const AdminLiveStreamPage: React.FC = () => {
     } finally {
       setStatsLoading(false);
     }
-  };
+  }, [token]);
 
 
 
@@ -151,7 +158,16 @@ const AdminLiveStreamPage: React.FC = () => {
     }, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStreamingStats]);
+
+  // Reset streaming information when streaming stops
+  useEffect(() => {
+    if (!streamingState.isStreaming) {
+      setStreamingCameras([]);
+      setStreamingScreenSource(null);
+      setStreamingLayouts([]);
+    }
+  }, [streamingState.isStreaming]);
 
   // Fetch initial data
   useEffect(() => {
@@ -176,6 +192,41 @@ const AdminLiveStreamPage: React.FC = () => {
 
   const handleStartStream = () => {
     setShowTitleModal(true);
+  };
+
+  const handleStartMultiCameraStreaming = () => {
+    setShowMultiCameraStreamer(true);
+  };
+
+  const handleMultiCameraStartStreaming = async (
+    selectedCameras: string[],
+    layoutType: string,
+    streamJudul: string,
+    customLayout?: any[],
+    selectedCameraDevices?: any[],
+    screenSource?: any
+  ) => {
+    try {
+      await startMultiCameraStreaming(
+        selectedCameras,
+        layoutType,
+        streamJudul,
+        customLayout,
+        screenSource
+      );
+      
+      // Save streaming information for layout editing
+      setStreamingCameras(selectedCameraDevices || []);
+      setStreamingScreenSource(screenSource || null);
+      setStreamingLayouts(customLayout || []);
+      
+      setShowMultiCameraStreamer(false);
+      await fetchStreamingStats();
+      showAlert("Multi-camera streaming berhasil dimulai!", "success");
+    } catch (error) {
+      console.error("Error starting multi-camera streaming:", error);
+      showAlert((error as Error).message || "Error memulai multi-camera streaming", "error");
+    }
   };
 
   const handleConfirmStartStream = async () => {
@@ -206,11 +257,27 @@ const AdminLiveStreamPage: React.FC = () => {
     try {
       await stopStream();
       
+      // Reset streaming information
+      setStreamingCameras([]);
+      setStreamingScreenSource(null);
+      setStreamingLayouts([]);
+      
       // Update stats
       await fetchStreamingStats();
     } catch (error) {
       console.error("Error stopping stream:", error);
     }
+  };
+
+  const handleStreamingLayoutChange = (newLayout: any[]) => {
+    setStreamingLayouts(newLayout);
+    // Update the streaming layout in real-time
+    handleUpdateStreamingLayout(newLayout);
+  };
+
+  const handleUpdateStreamingLayout = (newLayout: any[]) => {
+    updateStreamingLayout(newLayout);
+    showAlert("Layout streaming telah diupdate!", "success");
   };
 
 
@@ -371,28 +438,31 @@ const AdminLiveStreamPage: React.FC = () => {
 
             {!streamingState.isStreaming ? (
               <>
-                {/* Start Button */}
-                <button
-                  onClick={handleStartStream}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    background: COLORS.primary,
-                    color: COLORS.white,
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "12px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  📡 Mulai Live Stream
-                </button>
+                {/* Streaming Buttons */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
+                 
+                  <button
+                    onClick={handleStartMultiCameraStreaming}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      background: COLORS.primary,
+                      color: COLORS.white,
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      opacity: 1,
+                    }}
+                  >
+                    📹 Multi-Camera Stream
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -707,6 +777,66 @@ const AdminLiveStreamPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* Edit Layout Button - Only show for multi-camera streaming */}
+                {streamingState.isStreaming && (streamingCameras.length > 0 || streamingScreenSource) && (
+                  <button
+                    onClick={() => {
+                      // Load current layout from localStorage
+                      const savedLayout = localStorage.getItem('streamingLayout');
+                      if (savedLayout) {
+                        try {
+                          const parsedLayout = JSON.parse(savedLayout);
+                          setStreamingLayouts(parsedLayout);
+                        } catch (error) {
+                          console.error('Error parsing saved streaming layout:', error);
+                        }
+                      }
+                      
+                      // Load screen source from localStorage
+                      const savedScreenSource = localStorage.getItem('screenSource');
+                      if (savedScreenSource) {
+                        try {
+                          const parsedScreenSource = JSON.parse(savedScreenSource);
+                          setStreamingScreenSource(parsedScreenSource);
+                        } catch (error) {
+                          console.error('Error parsing saved screen source:', error);
+                        }
+                      }
+                      
+                      setShowStreamingLayoutEditor(true);
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+                      color: COLORS.white,
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)",
+                      marginBottom: "12px"
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(34, 197, 94, 0.4)";
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
+                    }}
+                  >
+                    <span style={{ fontSize: "16px" }}>🎛️</span>
+                    <span>Edit Layout</span>
+                  </button>
+                )}
+
                 {/* Enhanced Stop Button */}
                 <button
                   onClick={handleStopStream}
@@ -881,6 +1011,74 @@ const AdminLiveStreamPage: React.FC = () => {
         confirmText="OK"
         cancelText=""
         />
+
+      {/* Multi-Camera Streamer Modal */}
+      {showMultiCameraStreamer && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '0',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <MultiCameraStreamer
+              onStartStreaming={handleMultiCameraStartStreaming}
+              onStatusUpdate={updateStatus}
+              onClose={() => setShowMultiCameraStreamer(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Streaming Layout Editor Modal */}
+      {showStreamingLayoutEditor && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '0',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <BasicLayoutEditor
+              cameras={streamingCameras}
+              onLayoutChange={handleStreamingLayoutChange}
+              onClose={() => setShowStreamingLayoutEditor(false)}
+              initialLayouts={streamingLayouts}
+              screenSource={streamingScreenSource}
+            />
+          </div>
+        </div>
+      )}
       </div>
     </>
   );

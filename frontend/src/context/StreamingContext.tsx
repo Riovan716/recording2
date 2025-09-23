@@ -25,7 +25,7 @@ interface StreamingState {
 
 interface StreamingContextType {
   streamingState: StreamingState;
-  startStream: (kelas: string, mapel: string) => Promise<void>;
+  startStream: (kelas: string, mapel: string, customStream?: MediaStream) => Promise<void>;
   stopStream: () => Promise<void>;
   startCameraRecording: (kelas: string, judul: string) => Promise<void>;
   startScreenRecording: (kelas: string, judul: string) => Promise<void>;
@@ -36,7 +36,9 @@ interface StreamingContextType {
   setSelectedKelas: (kelas: string) => void;
   setSelectedMapel: (mapel: string) => void;
   startMultiCameraRecording: (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], screenSource?: any) => Promise<void>;
+  startMultiCameraStreaming: (selectedCameras: string[], layoutType: string, judul: string, customLayout?: any[], screenSource?: any) => Promise<void>;
   updateRecordingLayout: (newLayout: any[]) => void;
+  updateStreamingLayout: (newLayout: any[]) => void;
 }
 
 const StreamingContext = createContext<StreamingContextType | undefined>(undefined);
@@ -77,6 +79,22 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const audioProducerRef = useRef<any>(null);
   const currentRecordingLayout = useRef<any[]>([]);
   const [recordingLayoutVersion, setRecordingLayoutVersion] = useState(0);
+  
+  // Streaming layout management
+  const currentStreamingLayout = useRef<any[]>([]);
+  const [streamingLayoutVersion, setStreamingLayoutVersion] = useState(0);
+  const streamingAnimateRef = useRef<(() => void) | null>(null);
+  
+  // Force re-render when streaming layout changes
+  useEffect(() => {
+    // This effect will trigger when streamingLayoutVersion changes
+    // The animate function will automatically pick up the new layout
+    console.log('Streaming layout version changed:', streamingLayoutVersion);
+    if (streamingAnimateRef.current) {
+      // Force a re-render by calling animate
+      streamingAnimateRef.current();
+    }
+  }, [streamingLayoutVersion]);
 
   useEffect(() => {
     socket.current = io('http://192.168.1.14:4000');
@@ -99,16 +117,21 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setStreamingState(prev => ({ ...prev, selectedMapel: mapel }));
   };
 
-  const startStream = async (kelas: string, title: string) => {
+  const startStream = async (kelas: string, title: string, customStream?: MediaStream) => {
     const roomId = `${kelas}_${title.replace(/\s+/g, '_')}_${Date.now()}`;
     
     updateStatus('Memulai kamera...');
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      let stream: MediaStream;
+      if (customStream) {
+        stream = customStream;
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+      }
 
       console.log("Stream tracks:", stream.getTracks());
       console.log("Available tracks:", stream.getTracks());
@@ -326,6 +349,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
 
+      // Clear streaming animate reference
+      streamingAnimateRef.current = null;
+      
       // Update state
       setStreamingState(prev => ({
         ...prev,
@@ -1059,9 +1085,17 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const drawPictureInPictureLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
         if (streams.length === 0) return;
 
+        // Filter enabled streams first
+        const enabledStreams = streams.filter(([deviceId, stream]) => {
+          const layout = currentRecordingLayout.current.find(l => l.deviceId === deviceId);
+          return layout ? layout.enabled !== false : true; // Default to enabled if not found
+        });
+        
+        if (enabledStreams.length === 0) return; // No enabled streams
+        
         // Check if screen recording is included
-        const screenStream = streams.find(([deviceId]) => deviceId === 'screen');
-        const cameraStreams = streams.filter(([deviceId]) => deviceId !== 'screen');
+        const screenStream = enabledStreams.find(([deviceId]) => deviceId === 'screen');
+        const cameraStreams = enabledStreams.filter(([deviceId]) => deviceId !== 'screen');
         
         let mainDeviceId: string;
         let mainStream: MediaStream;
@@ -1071,7 +1105,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           [mainDeviceId, mainStream] = screenStream;
         } else {
           // If no screen recording, use first camera as main
-          [mainDeviceId, mainStream] = streams[0];
+          [mainDeviceId, mainStream] = enabledStreams[0];
         }
         
         const mainVideo = videos[mainDeviceId];
@@ -1088,7 +1122,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const pipSpacing = pipSize + 10;
 
         // Get all other sources (cameras if screen is main, or remaining cameras if camera is main)
-        const otherStreams = screenStream ? cameraStreams : streams.slice(1);
+        const otherStreams = screenStream ? cameraStreams : enabledStreams.slice(1);
         
         otherStreams.forEach(([deviceId, stream], index) => {
           const video = videos[deviceId];
@@ -1263,11 +1297,274 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const startMultiCameraStreaming = useCallback(async (
+    selectedCameras: string[], 
+    layoutType: string, 
+    judul: string, 
+    customLayout?: any[], 
+    screenSource?: any
+  ) => {
+    try {
+      updateStatus("Memulai multi-camera streaming...");
+
+      // Validate inputs
+      if (selectedCameras.length === 0 && !screenSource) {
+        throw new Error("Pilih setidaknya satu kamera atau aktifkan screen recording");
+      }
+
+      if (!judul.trim()) {
+        throw new Error("Judul streaming harus diisi");
+      }
+
+      // Get camera streams
+      const cameraStreams: { [deviceId: string]: MediaStream } = {};
+      for (const deviceId of selectedCameras) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: deviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false // We'll handle audio separately
+          });
+          cameraStreams[deviceId] = stream;
+        } catch (error: any) {
+          console.error(`Error accessing camera ${deviceId}:`, error);
+          throw new Error(`Gagal mengakses kamera: ${error.message}`);
+        }
+      }
+
+      // Get screen stream if screen recording is enabled
+      let screenStream: MediaStream | null = null;
+      if (screenSource) {
+        try {
+          updateStatus("Meminta izin untuk screen recording...");
+          
+          const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
+          
+          if (isElectron && (window as any).electronAPI && (window as any).electronAPI.getScreenSources) {
+            // Use Electron's desktopCapturer API
+            screenStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                // @ts-ignore - Electron specific constraint
+                mandatory: {
+                  chromeMediaSource: 'desktop',
+                  chromeMediaSourceId: screenSource.id,
+                  minWidth: 1280,
+                  maxWidth: 1920,
+                  minHeight: 720,
+                  maxHeight: 1080
+                }
+              },
+              audio: false // We'll handle audio separately
+            });
+          } else if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+            // Use web browser's getDisplayMedia with specific constraints based on screenSource type
+            let displayMediaOptions: any = {
+              video: {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              },
+              audio: false // We'll handle audio separately
+            };
+
+            // Add specific constraints based on screenSource type
+            if (screenSource.type === 'tab') {
+              displayMediaOptions.video.displaySurface = 'browser';
+            } else if (screenSource.type === 'window') {
+              displayMediaOptions.video.displaySurface = 'window';
+            } else {
+              displayMediaOptions.video.displaySurface = 'monitor';
+            }
+
+            screenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+          } else {
+            throw new Error("Screen recording tidak didukung di browser ini");
+          }
+          
+          updateStatus("Screen stream berhasil didapatkan...");
+        } catch (error: any) {
+          console.error("Error getting screen stream:", error);
+          throw new Error(`Gagal mendapatkan screen stream: ${error.message}`);
+        }
+      }
+
+      // Create canvas for composition
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error("Gagal membuat canvas context");
+      }
+
+      // Create video elements for each stream
+      const videoElements: { [deviceId: string]: HTMLVideoElement } = {};
+      for (const [deviceId, stream] of Object.entries(cameraStreams)) {
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.muted = true;
+        video.style.display = 'none';
+        document.body.appendChild(video);
+        videoElements[deviceId] = video;
+      }
+
+      let screenVideoElement: HTMLVideoElement | null = null;
+      if (screenStream) {
+        screenVideoElement = document.createElement('video');
+        screenVideoElement.srcObject = screenStream;
+        screenVideoElement.autoplay = true;
+        screenVideoElement.muted = true;
+        screenVideoElement.style.display = 'none';
+        document.body.appendChild(screenVideoElement);
+      }
+
+      // Store references for cleanup
+      const activeStreams: [string, MediaStream][] = Object.entries(cameraStreams);
+      if (screenStream && screenVideoElement) {
+        activeStreams.push(['screen', screenStream]);
+      }
+
+      // Store initial streaming layout
+      if (customLayout && customLayout.length > 0) {
+        currentStreamingLayout.current = customLayout;
+      }
+
+      // Animation function for canvas composition
+      const animate = () => {
+        // Use streamingLayoutVersion to ensure layout updates are reflected
+        const currentLayoutVersion = streamingLayoutVersion;
+        if (!ctx) return;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        try {
+          const allStreams = [...activeStreams];
+          const allVideoElements = { ...videoElements };
+          if (screenVideoElement) {
+            allVideoElements['screen'] = screenVideoElement;
+          }
+
+          switch (layoutType) {
+            case 'pip':
+              // Simple Picture-in-Picture layout
+              if (allStreams.length > 0) {
+                // Find the first enabled stream for main layout
+                const enabledStreams = allStreams.filter(([deviceId, stream]) => {
+                  const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
+                  return layout ? layout.enabled !== false : true; // Default to enabled if not found
+                });
+                
+                if (enabledStreams.length > 0) {
+                  const [mainDeviceId, mainStream] = enabledStreams[0];
+                  const mainVideo = allVideoElements[mainDeviceId];
+                  if (mainVideo && mainVideo.readyState >= 2) {
+                    ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
+                  }
+                  
+                  // Draw other enabled streams as PIP
+                  const pipSize = Math.min(canvas.width, canvas.height) * 0.25;
+                  enabledStreams.slice(1).forEach(([deviceId, stream], index) => {
+                    const video = allVideoElements[deviceId];
+                    if (video && video.readyState >= 2) {
+                      const x = canvas.width - pipSize - 10;
+                      const y = 10 + (index * (pipSize + 10));
+                      ctx.drawImage(video, x, y, pipSize, pipSize);
+                    }
+                  });
+                }
+              }
+              break;
+            case 'custom':
+              // Use current streaming layout if available, otherwise use initial customLayout
+              // currentLayoutVersion ensures we get the latest layout
+              const layoutToUse = currentStreamingLayout.current.length > 0 ? currentStreamingLayout.current : (customLayout || []);
+              if (layoutToUse.length > 0) {
+                // Draw custom layout - only draw enabled sources
+                layoutToUse.forEach((layout: any) => {
+                  // Only draw if the source is enabled
+                  if (layout.enabled !== false) {
+                    const video = allVideoElements[layout.deviceId];
+                    if (video && video.readyState >= 2) {
+                      const x = (layout.x / 100) * canvas.width;
+                      const y = (layout.y / 100) * canvas.height;
+                      const width = (layout.width / 100) * canvas.width;
+                      const height = (layout.height / 100) * canvas.height;
+                      ctx.drawImage(video, x, y, width, height);
+                    }
+                  }
+                });
+              } else {
+                // Fallback to PIP - only show enabled streams
+                const enabledStreams = allStreams.filter(([deviceId, stream]) => {
+                  const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
+                  return layout ? layout.enabled !== false : true; // Default to enabled if not found
+                });
+                
+                if (enabledStreams.length > 0) {
+                  const [mainDeviceId, mainStream] = enabledStreams[0];
+                  const mainVideo = allVideoElements[mainDeviceId];
+                  if (mainVideo && mainVideo.readyState >= 2) {
+                    ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
+                  }
+                }
+              }
+              break;
+          }
+        } catch (error) {
+          console.error('Error drawing to canvas:', error);
+        }
+        
+        requestAnimationFrame(animate);
+      };
+
+      // Get canvas stream
+      const canvasStream = canvas.captureStream(30); // 30 FPS
+
+      // Start streaming with canvas stream
+      await startStream("admin", judul, canvasStream);
+
+      // Store references for cleanup
+      setStreamingState(prev => ({
+        ...prev,
+        isStreaming: true,
+        localStream: canvasStream,
+        status: `Streaming ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`
+      }));
+
+      // Store animate function reference for real-time updates
+      streamingAnimateRef.current = animate;
+      
+      // Start animation loop
+      animate();
+
+      updateStatus(`Streaming ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
+
+    } catch (error: any) {
+      console.error("Error starting multi-camera streaming:", error);
+      updateStatus(error.message || "Gagal memulai streaming multi-kamera.");
+    }
+  }, [startStream, updateStatus]);
+
   const updateRecordingLayout = useCallback((newLayout: any[]) => {
     currentRecordingLayout.current = newLayout;
     setRecordingLayoutVersion(prev => prev + 1); // Trigger re-render
     updateStatus("Layout recording telah diupdate!");
   }, []);
+
+  const updateStreamingLayout = useCallback((newLayout: any[]) => {
+    console.log('Updating streaming layout:', newLayout);
+    // Update current streaming layout
+    currentStreamingLayout.current = newLayout;
+    setStreamingLayoutVersion(prev => prev + 1); // Trigger re-render
+    
+    // Save to localStorage for streaming layout
+    localStorage.setItem('streamingLayout', JSON.stringify(newLayout));
+    console.log('Streaming layout updated, version:', streamingLayoutVersion + 1);
+    updateStatus("Layout streaming telah diupdate!");
+  }, [streamingLayoutVersion, updateStatus]);
 
   const value = {
     streamingState,
@@ -1282,7 +1579,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSelectedKelas,
     setSelectedMapel,
     startMultiCameraRecording,
-    updateRecordingLayout
+    startMultiCameraStreaming,
+    updateRecordingLayout,
+    updateStreamingLayout
   };
 
   return (
