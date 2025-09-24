@@ -1449,16 +1449,30 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           switch (layoutType) {
             case 'pip':
-              // Simple Picture-in-Picture layout
+              // Picture-in-Picture layout with screen sharing as main
               if (allStreams.length > 0) {
-                // Find the first enabled stream for main layout
+                // Filter enabled streams first
                 const enabledStreams = allStreams.filter(([deviceId, stream]) => {
                   const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
                   return layout ? layout.enabled !== false : true; // Default to enabled if not found
                 });
                 
                 if (enabledStreams.length > 0) {
-                  const [mainDeviceId, mainStream] = enabledStreams[0];
+                  // Check if screen sharing is included and enabled
+                  const screenStream = enabledStreams.find(([deviceId]) => deviceId === 'screen');
+                  const cameraStreams = enabledStreams.filter(([deviceId]) => deviceId !== 'screen');
+                  
+                  let mainDeviceId: string;
+                  let mainStream: MediaStream;
+                  
+                  if (screenStream) {
+                    // If screen sharing is included, make it the main layout
+                    [mainDeviceId, mainStream] = screenStream;
+                  } else {
+                    // If no screen sharing, use first camera as main
+                    [mainDeviceId, mainStream] = enabledStreams[0];
+                  }
+                  
                   const mainVideo = allVideoElements[mainDeviceId];
                   if (mainVideo && mainVideo.readyState >= 2) {
                     ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
@@ -1466,7 +1480,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   
                   // Draw other enabled streams as PIP
                   const pipSize = Math.min(canvas.width, canvas.height) * 0.25;
-                  enabledStreams.slice(1).forEach(([deviceId, stream], index) => {
+                  const otherStreams = screenStream ? cameraStreams : enabledStreams.slice(1);
+                  
+                  otherStreams.forEach(([deviceId, stream], index) => {
                     const video = allVideoElements[deviceId];
                     if (video && video.readyState >= 2) {
                       const x = canvas.width - pipSize - 10;
@@ -1497,14 +1513,27 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   }
                 });
               } else {
-                // Fallback to PIP - only show enabled streams
+                // Fallback to PIP - prioritize screen sharing as main
                 const enabledStreams = allStreams.filter(([deviceId, stream]) => {
                   const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
                   return layout ? layout.enabled !== false : true; // Default to enabled if not found
                 });
                 
                 if (enabledStreams.length > 0) {
-                  const [mainDeviceId, mainStream] = enabledStreams[0];
+                  // Check if screen sharing is included and enabled
+                  const screenStream = enabledStreams.find(([deviceId]) => deviceId === 'screen');
+                  
+                  let mainDeviceId: string;
+                  let mainStream: MediaStream;
+                  
+                  if (screenStream) {
+                    // If screen sharing is included, make it the main layout
+                    [mainDeviceId, mainStream] = screenStream;
+                  } else {
+                    // If no screen sharing, use first camera as main
+                    [mainDeviceId, mainStream] = enabledStreams[0];
+                  }
+                  
                   const mainVideo = allVideoElements[mainDeviceId];
                   if (mainVideo && mainVideo.readyState >= 2) {
                     ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
