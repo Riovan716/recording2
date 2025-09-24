@@ -9,11 +9,11 @@ import AdminVideoListPage from './AdminVideoListPage';
 import AdminProfilePage from './AdminProfilePage';
 import { useAuth } from '../context/AuthContext';
 
-// Color palette - Blue theme to match admin login
-const VIBRANT_BLUE = '#2563EB';
+// Color palette - Light green theme (#BBF7D0)
+const LIGHT_GREEN = '#BBF7D0';
 const WHITE = '#fff';
 const GRAY_TEXT = '#64748b';
-const SHADOW = '0 4px 24px rgba(37,99,235,0.08)';
+const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
@@ -100,7 +100,7 @@ const AdminPanel: React.FC = () => {
             <span style={{
               width: 48,
               height: 48,
-              background: VIBRANT_BLUE,
+              background: LIGHT_GREEN,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',

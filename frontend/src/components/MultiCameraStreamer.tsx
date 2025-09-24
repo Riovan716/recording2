@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaCamera, FaDesktop, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaCamera, FaDesktop, FaTimes, FaSpinner, FaStar, FaTh, FaArrowsAlt, FaPlay } from 'react-icons/fa';
 import BasicLayoutEditor from './BasicLayoutEditor';
 
 interface CameraDevice {
@@ -190,6 +190,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
 
   return (
     <>
+    
       <style>
         {`
           @keyframes spin {
@@ -200,54 +201,52 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
       </style>
       <div style={{ 
         width: '100%', 
-        maxWidth: '600px', 
-        margin: '0 auto', 
+        maxWidth: '1200px', 
+        margin: '20px auto 0', 
         backgroundColor: 'white',
         fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        padding: '16px', 
-        borderBottom: '1px solid #e5e7eb' 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FaCamera style={{ fontSize: '18px', color: 'black' }} />
-          <h1 style={{ fontSize: '18px', fontWeight: '600', color: 'black', margin: 0 }}>Multi-Camera Streaming</h1>
-        </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              background: 'transparent', 
-              border: 'none', 
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px'
-            }}
-          >
-            <FaTimes style={{ fontSize: '16px', color: '#6b7280' }} />
-          </button>
-        )}
+
+
+      {/* Notification Bar */}
+      <div style={{ backgroundColor: '#facc15', padding: '8px 16px', marginTop: '16px' }}>
+        <p style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
+          Ditemukan {availableCameras.length} kamera{availableScreens.length > 0 ? ` dan ${availableScreens.length} layar` : ''}
+        </p>
       </div>
 
       {/* Content */}
       <div style={{ padding: '16px' }}>
-        {/* Status Bar */}
-        <div style={{ 
-          padding: '8px 12px', 
-          backgroundColor: '#f3f4f6', 
-          borderRadius: '6px', 
-          marginBottom: '16px',
-          fontSize: '14px',
-          color: '#374151'
-        }}>
-          {totalSources > 0 ? `Siap streaming: ${selectedCameras.length} kamera${includeScreenRecording ? ' + layar' : ''}` : 'Pilih kamera dan layar untuk streaming'}
+        {/* Judul Stream Section */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <FaStar style={{ fontSize: '14px', color: 'black' }} />
+            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Judul Stream</h3>
+            <FaCamera style={{ fontSize: '14px', color: 'black', marginLeft: 'auto' }} />
+          </div>
+          <input
+            type="text"
+            value={streamJudul}
+            onChange={(e) => setStreamJudul(e.target.value)}
+            placeholder="Masukkan judul yang sesuai"
+            style={{ 
+              width: '100%', 
+              padding: '12px', 
+              border: '1px solid #d1d5db', 
+              borderRadius: '6px', 
+              fontSize: '14px',
+              backgroundColor: 'white',
+              outline: 'none'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'black';
+              e.target.style.boxShadow = '0 0 0 1px black';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#d1d5db';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
         </div>
 
         {/* Camera Selection */}
@@ -452,7 +451,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                         }}
                       />
                       <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
-                        {screen.name}
+                        {screen.name} ({screen.type === 'screen' ? 'Layar' : 'Jendela'})
                       </span>
                     </label>
                   );
@@ -462,9 +461,10 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
           </div>
         )}
 
-        {/* Layout Selection */}
+        {/* Layout Section */}
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <FaTh style={{ fontSize: '14px', color: 'black' }} />
             <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
               Layout {includeScreenRecording ? 'Kamera & Layar' : 'Kamera'}
             </h3>
@@ -516,15 +516,14 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     justifyContent: 'center' 
                   }}>
                     <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px' }}>
-                      <rect x="2" y="2" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <rect x="14" y="14" width="8" height="8" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M14 14L6 6" stroke="currentColor" strokeWidth="1.5"/>
+                      <rect x="2" y="2" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <rect x="14" y="14" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none"/>
                     </svg>
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Picture-in-Picture</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      {includeScreenRecording ? 'Layar utama dengan kamera sebagai PIP' : 'Kamera utama dengan kamera lain sebagai PIP'}
+                      {includeScreenRecording ? 'Satu utama (kamera/layar), lainnya kecil' : 'Satu utama, lainnya kecil'}
                     </p>
                   </div>
                 </div>
@@ -541,7 +540,8 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
               backgroundColor: layoutType === 'custom' ? '#f9fafb' : 'white',
               cursor: 'pointer',
               borderRadius: '6px',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              marginBottom: '15px'
             }}
             onMouseEnter={(e) => {
               if (layoutType !== 'custom') {
@@ -573,20 +573,14 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     border: '1px solid black', 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'center' 
+                    justifyContent: 'center', 
                   }}>
-                    <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px' }}>
-                      <rect x="2" y="2" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-                      <path d="M8 6L16 6" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M8 10L16 10" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M8 14L16 14" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M8 18L16 18" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
+                    <FaArrowsAlt style={{ fontSize: '16px', color: 'black' }} />
                   </div>
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      Atur posisi dan ukuran {includeScreenRecording ? 'kamera & layar' : 'kamera'} secara manual
+                      {includeScreenRecording ? 'Atur layout kamera & layar sesuai keinginan' : 'Atur layout sesuai keinginan'}
                     </p>
                   </div>
                 </div>
@@ -594,87 +588,174 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
             </label>
           </div>
 
-          {/* Layout Editor Button */}
+          {/* Custom Layout Buttons */}
           {layoutType === 'custom' && (
-            <button
-              onClick={() => setShowLayoutEditor(true)}
-              style={{
-                width: '100%',
-                marginTop: '12px',
-                padding: '8px 16px',
-                backgroundColor: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#e5e7eb';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
-              }}
-            >
-              Edit Layout
-            </button>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <button
+                  onClick={() => {
+                    // Load saved layout before opening editor
+                    const savedLayout = localStorage.getItem('cameraLayout');
+                    if (savedLayout) {
+                      try {
+                        const parsedLayout = JSON.parse(savedLayout);
+                        setCustomLayouts(parsedLayout);
+                        setSavedLayouts(parsedLayout);
+                      } catch (error) {
+                        console.error('Error parsing saved layout:', error);
+                      }
+                    }
+                    setShowLayoutEditor(true);
+                  }}
+                  disabled={selectedCameras.length === 0}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    padding: '12px 24px', 
+                    borderRadius: '6px', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    backgroundColor: selectedCameras.length === 0 ? '#d1d5db' : '#3b82f6',
+                    color: selectedCameras.length === 0 ? '#6b7280' : 'white',
+                    border: 'none',
+                    cursor: selectedCameras.length === 0 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    flex: 1,
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedCameras.length > 0) {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedCameras.length > 0) {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                    }
+                  }}
+                >
+                  <FaArrowsAlt style={{ fontSize: '14px' }} />
+                  Atur Layout
+                </button>
+                
+                {(savedLayouts.length > 0 || customLayouts.length > 0) && (
+                  <button
+                    onClick={() => {
+                      const layoutToLoad = customLayouts.length > 0 ? customLayouts : savedLayouts;
+                      setCustomLayouts(layoutToLoad);
+                      onStatusUpdate('Layout tersimpan telah dimuat!');
+                    }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      padding: '12px 16px', 
+                      borderRadius: '6px', 
+                      fontSize: '14px', 
+                      fontWeight: '500',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                  >
+                    💾 Muat Layout
+                  </button>
+                )}
+              </div>
+              
+              {(savedLayouts.length > 0 || customLayouts.length > 0) && (
+                <div style={{ 
+                  padding: '8px 12px', 
+                  backgroundColor: '#f0f9ff', 
+                  border: '1px solid #0ea5e9', 
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#0369a1'
+                }}>
+                  Layout tersimpan tersedia ({customLayouts.length > 0 ? customLayouts.length : savedLayouts.length} kamera)
+                </div>
+              )}
+            </div>
           )}
         </div>
+     
 
-        {/* Stream Title */}
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ 
-            display: 'block', 
-            fontSize: '14px', 
-            fontWeight: '500', 
-            color: 'black', 
-            marginBottom: '8px' 
-          }}>
-            Judul Stream
-          </label>
-          <input
-            type="text"
-            value={streamJudul}
-            onChange={(e) => setStreamJudul(e.target.value)}
-            placeholder="Masukkan judul streaming..."
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px',
-              outline: 'none',
-              transition: 'border-color 0.2s'
+        {/* Mulai Streaming Button */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px' }}>
+          <button
+            onClick={handleStartStreaming}
+            disabled={
+              (selectedCameras.length === 0 && !includeScreenRecording) || 
+              !streamJudul.trim() || 
+              (layoutType === 'custom' && customLayouts.length === 0) ||
+              (includeScreenRecording && !selectedScreen)
+            }
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '12px 32px', 
+              borderRadius: '6px', 
+              fontSize: '14px', 
+              fontWeight: '500',
+              backgroundColor: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !streamJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? '#d1d5db' : '#f3f4f6',
+              color: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !streamJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? '#6b7280' : 'black',
+              border: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !streamJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? 'none' : '1px solid #d1d5db',
+              cursor: (
+                (selectedCameras.length === 0 && !includeScreenRecording) || 
+                !streamJudul.trim() || 
+                (layoutType === 'custom' && customLayouts.length === 0) ||
+                (includeScreenRecording && !selectedScreen)
+              ) ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s'
             }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'black';
+            onMouseEnter={(e) => {
+              const isValid = (
+                (selectedCameras.length > 0 || includeScreenRecording) && 
+                streamJudul.trim() && 
+                !(layoutType === 'custom' && customLayouts.length === 0) &&
+                (!includeScreenRecording || selectedScreen)
+              );
+              if (isValid) {
+                e.currentTarget.style.backgroundColor = '#e5e7eb';
+              }
             }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#d1d5db';
+            onMouseLeave={(e) => {
+              const isValid = (
+                (selectedCameras.length > 0 || includeScreenRecording) && 
+                streamJudul.trim() && 
+                !(layoutType === 'custom' && customLayouts.length === 0) &&
+                (!includeScreenRecording || selectedScreen)
+              );
+              if (isValid) {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+              }
             }}
-          />
+          >
+            <FaPlay style={{ fontSize: '14px' }} />
+            Mulai Streaming
+          </button>
         </div>
-
-        {/* Start Button */}
-        <button
-          onClick={handleStartStreaming}
-          disabled={selectedCameras.length === 0 && !includeScreenRecording}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            backgroundColor: selectedCameras.length === 0 && !includeScreenRecording ? '#d1d5db' : '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: selectedCameras.length === 0 && !includeScreenRecording ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          Mulai Streaming
-        </button>
       </div>
       </div>
 

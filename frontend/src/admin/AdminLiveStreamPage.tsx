@@ -7,20 +7,21 @@ import MultiCameraStreamer from "../components/MultiCameraStreamer";
 import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import { API_URL } from "../config";
 
-// Color palette konsisten dengan AdminPanel
-const VIBRANT_BLUE = "#2563EB";
-const SOFT_BLUE = "#DBEAFE";
+// Color palette dengan tema hijau muda (#BBF7D0)
+const LIGHT_GREEN = "#BBF7D0";
+const LIGHT_GREEN_DARK = "#86EFAC";
+const LIGHT_GREEN_LIGHT = "#DCFCE7";
 const WHITE = "#fff";
 const GRAY_TEXT = "#64748b";
 const CARD_RADIUS = 18;
-const SHADOW = "0 4px 24px rgba(37,99,235,0.08)";
+const SHADOW = "0 4px 24px rgba(187,247,208,0.12)";
 const FONT_FAMILY = "Poppins, Inter, Segoe UI, Arial, sans-serif";
 
 const LIGHT_GRAY = '#f5f5f5';
 
 const COLORS = {
-  primary: VIBRANT_BLUE,
-  primaryDark: "#1E40AF",
+  primary: LIGHT_GREEN,
+  primaryDark: LIGHT_GREEN_DARK,
   accent: "#ef4444",
   accentDark: "#dc2626",
   text: "#1e293b",
@@ -28,14 +29,15 @@ const COLORS = {
   border: "#e5e7eb",
   bg: LIGHT_GRAY,
   white: WHITE,
-  green: "#22c55e",
-  greenDark: "#16a34a",
+  green: LIGHT_GREEN,
+  greenDark: LIGHT_GREEN_DARK,
+  greenLight: LIGHT_GREEN_LIGHT,
   red: "#ef4444",
   redDark: "#dc2626",
   yellow: "#facc15",
   yellowDark: "#eab308",
-  blue: "#3b82f6",
-  blueDark: "#2563eb",
+  blue: LIGHT_GREEN,
+  blueDark: LIGHT_GREEN_DARK,
 };
 
 
@@ -369,11 +371,11 @@ const AdminLiveStreamPage: React.FC = () => {
           fontFamily: FONT_FAMILY,
         }}
       >
-        {/* Welcome Card */}
-        <div style={{
-          background: VIBRANT_BLUE,
+         {/* Welcome Card */}
+         <div style={{
+           background: LIGHT_GREEN,
           borderRadius: CARD_RADIUS,
-          color: WHITE,
+          color: '#1e293b',
           padding: isMobile ? '18px 12px' : '32px 40px',
           marginBottom: 32,
           display: 'flex',
@@ -418,23 +420,61 @@ const AdminLiveStreamPage: React.FC = () => {
           {/* Main Content */}
           <div
             style={{
-              background: COLORS.white,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: CARD_RADIUS,
-              padding: isMobile ? "16px" : "24px",
-              boxShadow: SHADOW,
+              background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+              border: 'none',
+              borderRadius: 24,
+              padding: isMobile ? "20px" : "32px",
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
+              position: 'relative',
+              overflow: 'hidden',
+              backdropFilter: 'blur(10px)',
             }}
           >
-            <h2
-              style={{
-                fontSize: "18px",
-                fontWeight: 600,
-                color: COLORS.text,
-                margin: "0 0 16px 0",
-              }}
-            >
-              Kontrol Live Streaming
-            </h2>
+            {/* Modern Background Pattern */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '200px',
+              height: '200px',
+              background: 'radial-gradient(circle, rgba(187, 247, 208, 0.1) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(50%, -50%)',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '150px',
+              height: '150px',
+              background: 'radial-gradient(circle, rgba(134, 239, 172, 0.08) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(-50%, 50%)',
+            }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <h2
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 700,
+                  color: COLORS.text,
+                  margin: "0 0 8px 0",
+                  background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Kontrol Live Streaming
+              </h2>
+              <p style={{
+                fontSize: "14px",
+                color: COLORS.subtext,
+                margin: "0 0 24px 0",
+                fontWeight: 500,
+              }}>
+                Kelola dan kontrol streaming live dengan mudah
+              </p>
+            </div>
 
             {!streamingState.isStreaming ? (
               <>
@@ -444,23 +484,36 @@ const AdminLiveStreamPage: React.FC = () => {
                   <button
                     onClick={handleStartMultiCameraStreaming}
                     style={{
-                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px',
-                      background: COLORS.primary,
-                      color: COLORS.white,
+                      gap: '10px',
+                      background: 'linear-gradient(135deg, #4ADE80 0%, #22C55E 100%)',
+                      color: "white",
                       border: 'none',
-                      borderRadius: 6,
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 500,
+                      borderRadius: 16,
+                      padding: '14px 24px',
+                      fontSize: '15px',
+                      fontWeight: 600,
                       cursor: 'pointer',
                       opacity: 1,
+                      width: 'auto',
+                      boxShadow: '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
                     }}
                   >
-                    📹 Multi-Camera Stream
+                    <span style={{ fontSize: '18px' }}>📹</span>
+                    Multi-Camera Stream
                   </button>
                 </div>
               </>
@@ -502,7 +555,7 @@ const AdminLiveStreamPage: React.FC = () => {
                     right: "-20px",
                     width: "80px",
                     height: "80px",
-                    background: "radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%)",
+                     background: "radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)",
                     borderRadius: "50%"
                   }} />
                   
@@ -613,7 +666,7 @@ const AdminLiveStreamPage: React.FC = () => {
                       left: "-30px",
                       width: "100px",
                       height: "100px",
-                      background: "radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%)",
+                      background: "radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)",
                       borderRadius: "50%"
                     }} />
                     
@@ -676,7 +729,7 @@ const AdminLiveStreamPage: React.FC = () => {
                         }}
                         style={{
                           flex: 1,
-                          background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                           background: "linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)",
                           color: COLORS.white,
                           border: "none",
                           borderRadius: 10,
@@ -689,15 +742,15 @@ const AdminLiveStreamPage: React.FC = () => {
                           justifyContent: "center",
                           gap: "8px",
                           transition: "all 0.2s ease",
-                          boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)"
+                           boxShadow: "0 4px 12px rgba(187, 247, 208, 0.3)"
                         }}
                         onMouseOver={e => {
                           e.currentTarget.style.transform = "translateY(-2px)";
-                          e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.4)";
+                           e.currentTarget.style.boxShadow = "0 6px 16px rgba(187, 247, 208, 0.4)";
                         }}
                         onMouseOut={e => {
                           e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(37, 99, 235, 0.3)";
+                           e.currentTarget.style.boxShadow = "0 4px 12px rgba(187, 247, 208, 0.3)";
                         }}
                       >
                         👁️ Buka Preview
@@ -981,8 +1034,8 @@ const AdminLiveStreamPage: React.FC = () => {
                 onClick={handleConfirmStartStream}
                 style={{
                   padding: '10px 20px',
-                  background: '#2563eb',
-                  color: 'white',
+                  background: '#BBF7D0',
+                  color: "black",
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -990,8 +1043,8 @@ const AdminLiveStreamPage: React.FC = () => {
                   cursor: 'pointer',
                   transition: 'background 0.2s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#1d4ed8'}
-                onMouseOut={e => e.currentTarget.style.background = '#2563eb'}
+                 onMouseOver={e => e.currentTarget.style.background = '#86EFAC'}
+                onMouseOut={e => e.currentTarget.style.background = '#BBF7D0'}
               >
                 Mulai Live Stream
               </button>
@@ -1029,13 +1082,84 @@ const AdminLiveStreamPage: React.FC = () => {
         }}>
           <div style={{
             backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '0',
-            maxWidth: '600px',
+            borderRadius: CARD_RADIUS,
+            padding: isMobile ? '20px' : '32px',
+            maxWidth: '1200px',
             width: '100%',
             maxHeight: '90vh',
-            overflow: 'auto'
+            overflow: 'auto',
+            boxShadow: SHADOW,
+            border: `1px solid ${COLORS.border}`,
+            margin: isMobile ? '10px' : '20px'
           }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              marginBottom: '24px',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '12px' : '0'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: isMobile ? 32 : 40,
+                  height: isMobile ? 32 : 40,
+                  borderRadius: 8,
+                  background: COLORS.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: COLORS.white,
+                }}>
+                  <span style={{ fontSize: isMobile ? 14 : 16 }}>📹</span>
+                </div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: isMobile ? '18px' : '24px',
+                  fontWeight: 700,
+                  color: COLORS.text,
+                  fontFamily: FONT_FAMILY
+                }}>
+                  Multi-Camera Streaming
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowMultiCameraStreamer(false)}
+                style={{
+                  background: COLORS.bg,
+                  color: COLORS.subtext,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 8,
+                  padding: isMobile ? '8px 12px' : '10px 16px',
+                  fontSize: isMobile ? '12px' : '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  alignSelf: isMobile ? 'flex-end' : 'auto'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = COLORS.accent;
+                  e.currentTarget.style.color = COLORS.white;
+                  e.currentTarget.style.borderColor = COLORS.accent;
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = COLORS.bg;
+                  e.currentTarget.style.color = COLORS.subtext;
+                  e.currentTarget.style.borderColor = COLORS.border;
+                }}
+              >
+                <span style={{ fontSize: 12 }}>✕</span>
+                Tutup
+              </button>
+            </div>
+
             <MultiCameraStreamer
               onStartStreaming={handleMultiCameraStartStreaming}
               onStatusUpdate={updateStatus}

@@ -3,19 +3,19 @@ import { useAuth } from "../context/AuthContext";
 import { API_URL } from "../config";
 
 // Color palette konsisten dengan AdminPanel
-const VIBRANT_BLUE = "#2563EB";
-const SOFT_BLUE = "#DBEAFE";
+const LIGHT_GREEN = "#BBF7D0";
+const SOFT_GREEN = "#DCFCE7";
 const WHITE = "#fff";
 const GRAY_TEXT = "#64748b";
 const CARD_RADIUS = 18;
-const SHADOW = "0 4px 24px rgba(37,99,235,0.08)";
+const SHADOW = "0 4px 24px rgba(187,247,208,0.12)";
 const FONT_FAMILY = "Poppins, Inter, Segoe UI, Arial, sans-serif";
 
 const LIGHT_GRAY = '#f5f5f5';
 
 const COLORS = {
-  primary: VIBRANT_BLUE,
-  primaryDark: "#1E40AF",
+  primary: LIGHT_GREEN,
+  primaryDark: "#86EFAC",
   accent: "#ef4444",
   accentDark: "#dc2626",
   text: "#1e293b",
@@ -74,6 +74,8 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [streamToDelete, setStreamToDelete] = useState<LiveStream | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -290,6 +292,17 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
       }
     });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAndSortedHistory.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedHistory = filteredAndSortedHistory.slice(startIndex, endIndex);
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, sortBy, sortOrder]);
+
   if (loading) {
     return (
       <div
@@ -326,9 +339,9 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
     >
       {/* Header */}
       <div style={{
-        background: VIBRANT_BLUE,
+        background: LIGHT_GREEN,
         borderRadius: CARD_RADIUS,
-        color: WHITE,
+        color: '#1e293b',
         padding: isMobile ? '18px 12px' : '32px 40px',
         marginBottom: 32,
         display: 'flex',
@@ -400,7 +413,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             style={{
               padding: "8px 16px",
               background: COLORS.primary,
-              color: COLORS.white,
+              color: "black",
               border: "none",
               borderRadius: 6,
               fontSize: "14px",
@@ -440,42 +453,67 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               padding: "20px 0"
             }}
           >
-            {filteredAndSortedHistory.map((stream, index) => (
+            {paginatedHistory.map((stream, index) => (
               <div
                 key={stream.id}
                 style={{
-                  background: COLORS.white,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 16,
+                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                  border: 'none',
+                  borderRadius: 24,
                   padding: 0,
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                  transition: "all 0.3s ease",
+                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
+                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                   cursor: "pointer",
                   overflow: "hidden",
-                  minHeight: "280px",
+                  minHeight: "320px",
                   display: "flex",
                   flexDirection: "column",
+                  position: 'relative',
+                  backdropFilter: 'blur(10px)',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.15)";
+                  e.currentTarget.style.transform = "translateY(-8px) scale(1.02)";
+                  e.currentTarget.style.boxShadow = '0 32px 64px rgba(0, 0, 0, 0.12), 0 16px 32px rgba(0, 0, 0, 0.08)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                  e.currentTarget.style.transform = "translateY(0) scale(1)";
+                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)';
                 }}
               >
+                {/* Modern Background Pattern */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: '120px',
+                  height: '120px',
+                  background: 'radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  transform: 'translate(30%, -30%)',
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  width: '80px',
+                  height: '80px',
+                  background: 'radial-gradient(circle, rgba(134, 239, 172, 0.1) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  transform: 'translate(-30%, 30%)',
+                }} />
+
                 {/* Preview Image/Thumbnail */}
                 <div
                   style={{
                     width: "100%",
-                    height: "140px",
-                    background: `linear-gradient(135deg, ${COLORS.primary}20, ${COLORS.blue}20)`,
+                    height: "160px",
+                    background: `linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(134, 239, 172, 0.05) 100%)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     position: "relative",
                     overflow: "hidden",
+                    borderRadius: "24px 24px 0 0",
                   }}
                 >
                   {stream.recordingPath ? (
@@ -507,43 +545,54 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                       justifyContent: "center", 
                       color: COLORS.subtext 
                     }}>
-                      <div style={{ fontSize: "32px", marginBottom: "8px" }}>📹</div>
+                      <div style={{ fontSize: "32px", marginBottom: "8px" }}>🎥</div>
                       <div style={{ fontSize: "12px", fontWeight: 500 }}>No Preview</div>
                     </div>
                   )}
                   
-                  {/* Status Badge */}
+                  {/* Modern Status Badge */}
                   <div
                     style={{
                       position: "absolute",
-                      top: "8px",
-                      right: "8px",
-                      background: stream.status === 'active' ? COLORS.red : COLORS.green,
+                      top: "12px",
+                      right: "12px",
+                      background: stream.status === 'active' 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                        : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                       color: COLORS.white,
-                      fontSize: "10px",
-                      padding: "4px 8px",
-                      borderRadius: 12,
-                      fontWeight: 600,
+                      fontSize: "11px",
+                      padding: "6px 12px",
+                      borderRadius: 20,
+                      fontWeight: 700,
                       textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      boxShadow: stream.status === 'active' 
+                        ? '0 4px 12px rgba(239, 68, 68, 0.4)' 
+                        : '0 4px 12px rgba(34, 197, 94, 0.4)',
+                      backdropFilter: 'blur(10px)',
                     }}
                   >
                     {stream.status === 'active' ? 'LIVE' : 'SAVED'}
                   </div>
                 </div>
 
-                {/* Card Content */}
-                <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column" }}>
+                {/* Modern Card Content */}
+                <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", position: 'relative', zIndex: 1 }}>
                   {/* Title */}
                   <div
                     style={{
-                      fontSize: "16px",
-                      fontWeight: 600,
+                      fontSize: "18px",
+                      fontWeight: 700,
                       color: COLORS.text,
-                      marginBottom: "8px",
+                      marginBottom: "12px",
                       lineHeight: 1.3,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+                      background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
                     }}
                   >
                     {stream.title || `Live Stream #${stream.id}`}
@@ -553,12 +602,22 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                   <div style={{ 
                     fontSize: "14px", 
                     color: COLORS.subtext,
-                    marginBottom: "12px",
+                    marginBottom: "16px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px"
+                    gap: "8px",
+                    fontWeight: 500,
                   }}>
-                    <span style={{ fontSize: "12px" }}>📅</span>
+                    <span style={{ 
+                      fontSize: "14px",
+                      background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>📆</span>
                     {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
                       day: "2-digit",
                       month: "2-digit", 
@@ -566,11 +625,11 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     })}
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Modern Action Buttons */}
                   <div
                     style={{
                       display: "flex",
-                      gap: "8px",
+                      gap: "12px",
                       marginTop: "auto",
                     }}
                   >
@@ -585,84 +644,174 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                       }}
                       style={{
                         flex: 1,
-                        padding: "10px 12px",
-                        background: COLORS.primary,
-                        color: COLORS.white,
+                        padding: "12px 16px",
+                        background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
+                        color: '#1e293b',
                         border: "none",
-                        borderRadius: 8,
-                        fontSize: "13px",
-                        fontWeight: 600,
+                        borderRadius: 16,
+                        fontSize: "14px",
+                        fontWeight: 700,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "6px",
-                        transition: "all 0.2s",
+                        gap: "8px",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: '0 4px 12px rgba(187, 247, 208, 0.3)',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = COLORS.primaryDark;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(187, 247, 208, 0.4)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = COLORS.primary;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(187, 247, 208, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "14px" }}>⬇️</span>
+                      <span style={{ fontSize: "16px" }}>📥</span>
                       Download
                     </button>
                     
                     <button
                       onClick={() => handlePlayVideo(stream)}
                       style={{
-                        width: "44px",
-                        height: "44px",
-                        background: COLORS.green,
+                        width: "48px",
+                        height: "48px",
+                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                         color: COLORS.white,
                         border: "none",
-                        borderRadius: 8,
+                        borderRadius: 16,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.2s",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = COLORS.greenDark;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(34, 197, 94, 0.4)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = COLORS.green;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "16px" }}>▶️</span>
+                      <span style={{ fontSize: "18px" }}>▶</span>
                     </button>
 
                     <button
                       onClick={() => handleDeleteStream(stream)}
                       style={{
-                        width: "44px",
-                        height: "44px",
-                        background: COLORS.red,
+                        width: "48px",
+                        height: "48px",
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: COLORS.white,
                         border: "none",
-                        borderRadius: 8,
+                        borderRadius: 16,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.2s",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = COLORS.redDark;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.4)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = COLORS.red;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "16px" }}>🗑️</span>
+                      <span style={{ fontSize: "18px" }}>🗑</span>
                     </button>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            marginTop: '24px',
+            padding: '16px 0'
+          }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                background: currentPage === 1 ? '#f3f4f6' : COLORS.white,
+                color: currentPage === 1 ? COLORS.subtext : '#1e293b',
+                fontSize: '16px',
+                fontWeight: 500,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                boxShadow: currentPage === 1 ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                border: `1px solid ${COLORS.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ←
+            </button>
+            
+            <div style={{
+              display: 'flex',
+              gap: '4px',
+              alignItems: 'center'
+            }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    background: currentPage === page ? COLORS.primary : COLORS.white,
+                    color: currentPage === page ? '#1e293b' : COLORS.subtext,
+                    fontSize: '14px',
+                    fontWeight: currentPage === page ? 600 : 500,
+                    cursor: 'pointer',
+                    boxShadow: currentPage === page ? '0 2px 8px rgba(187, 247, 208, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    border: `1px solid ${currentPage === page ? COLORS.primary : COLORS.border}`,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                background: currentPage === totalPages ? '#f3f4f6' : COLORS.white,
+                color: currentPage === totalPages ? COLORS.subtext : '#1e293b',
+                fontSize: '16px',
+                fontWeight: 500,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                boxShadow: currentPage === totalPages ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                border: `1px solid ${COLORS.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              →
+            </button>
           </div>
         )}
       </div>
@@ -688,10 +837,10 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             style={{
               background: COLORS.white,
               borderRadius: 12,
-              padding: "24px",
-              maxWidth: "90vw",
-              maxHeight: "90vh",
-              width: "100%",
+              padding: "16px",
+              maxWidth: "800px",
+              maxHeight: "80vh",
+              width: "90%",
               position: "relative",
             }}
           >
@@ -722,8 +871,8 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             {/* Video Title */}
             <h3
               style={{
-                margin: "0 0 16px 0",
-                fontSize: "18px",
+                margin: "0 0 12px 0",
+                fontSize: "16px",
                 fontWeight: 600,
                 color: COLORS.text,
               }}
@@ -735,7 +884,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             <div
               style={{
                 width: "100%",
-                maxWidth: "800px",
                 margin: "0 auto",
               }}
             >
@@ -744,7 +892,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                 autoPlay
                 style={{
                   width: "100%",
-                  height: "auto",
+                  maxHeight: "400px",
                   borderRadius: 8,
                   border: `1px solid ${COLORS.border}`,
                 }}
@@ -761,22 +909,13 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             {/* Video Info */}
             <div
               style={{
-                marginTop: "16px",
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-                gap: "16px",
-                fontSize: "14px",
+                marginTop: "12px",
+                fontSize: "13px",
                 color: COLORS.subtext,
               }}
             >
               <div>
                 <strong>Tanggal:</strong> {selectedVideo.startTime && formatDate(selectedVideo.startTime)}
-              </div>
-              <div>
-                <strong>Durasi:</strong> {selectedVideo.duration ? formatDuration(selectedVideo.duration) : 'N/A'}
-              </div>
-              <div>
-                <strong>Penonton:</strong> {selectedVideo.viewers || 0}
               </div>
             </div>
           </div>

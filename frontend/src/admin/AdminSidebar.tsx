@@ -3,17 +3,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const COLORS = {
-  sidebarBg: '#2563EB', // Vibrant Blue
-  sidebarText: '#FFFFFF', // White
-  sidebarActiveBg: '#1E40AF', // Darker Blue
-  sidebarActiveText: '#FFFFFF', // White
-  sidebarHoverBg: '#1E40AF', // Darker Blue
-  divider: '#1E40AF', // Darker Blue
-  logout: '#2563EB', // Vibrant Blue
-  logoutText: '#FFFFFF', // White
-  icon: '#FFFFFF', // White
-  iconActive: '#2563EB', // Vibrant Blue
-  logoText: '#FFFFFF', // White
+  sidebarBg: '#BBF7D0', // Light Green
+  sidebarText: '#1E293B', // Dark Gray for better contrast
+  sidebarActiveBg: '#86EFAC', // Darker Green
+  sidebarActiveText: '#1E293B', // Dark Gray
+  sidebarHoverBg: '#86EFAC', // Darker Green
+  divider: '#86EFAC', // Darker Green
+  logout: '#BBF7D0', // Light Green
+  logoutText: '#1E293B', // Dark Gray
+  icon: '#1E293B', // Dark Gray
+  iconActive: '#BBF7D0', // Light Green
+  logoText: '#1E293B', // Dark Gray
 };
 
 const menu = [

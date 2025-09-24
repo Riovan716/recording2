@@ -4,18 +4,18 @@ import ModalNotifikasi from '../components/ModalNotifikasi';
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
-const VIBRANT_BLUE = '#2563EB';
+const LIGHT_GREEN = '#BBF7D0';
 const WHITE = '#fff';
 const GRAY_TEXT = '#64748b';
 const CARD_RADIUS = 18;
-const SHADOW = '0 4px 24px rgba(37,99,235,0.08)';
+const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
 const FONT_FAMILY = 'Poppins, Inter, Segoe UI, Arial, sans-serif';
 
 const LIGHT_GRAY = '#f5f5f5';
 
 const COLORS = {
-  primary: VIBRANT_BLUE,
-  primaryDark: '#1E40AF',
+  primary: LIGHT_GREEN,
+  primaryDark: '#86EFAC',
   accent: '#ef4444',
   accentDark: '#dc2626',
   text: '#1e293b',
@@ -180,9 +180,9 @@ const AdminProfilePage: React.FC = () => {
     }}>
         {/* Welcome Card */}
         <div style={{
-          background: VIBRANT_BLUE,
+          background: LIGHT_GREEN,
           borderRadius: CARD_RADIUS,
-          color: WHITE,
+          color: '#1e293b',
           padding: isMobile ? '18px 12px' : '32px 40px',
           marginBottom: 32,
           display: 'flex',
@@ -221,7 +221,7 @@ const AdminProfilePage: React.FC = () => {
                 width: 80,
                 height: 80,
                 borderRadius: '50%',
-                background: VIBRANT_BLUE,
+                background: LIGHT_GREEN,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

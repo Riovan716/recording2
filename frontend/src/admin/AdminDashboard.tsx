@@ -11,10 +11,10 @@ interface Stats {
 
 
 const COLORS = {
-  primary: '#3b82f6',
+  primary: '#BBF7D0',
   green: '#22c55e',
   yellow: '#eab308',
-  accent: '#8b5cf6',
+  accent: '#BBF7D0',
   text: '#1e293b',
   subtext: '#64748b',
   border: '#e2e8f0',
@@ -23,7 +23,7 @@ const COLORS = {
   success: '#10b981',
   warning: '#f59e0b',
   error: '#ef4444',
-  info: '#06b6d4',
+  info: '#BBF7D0',
 };
 
 const AdminDashboard: React.FC = () => {
@@ -98,7 +98,7 @@ const AdminDashboard: React.FC = () => {
       {/* Header */}
       <div style={{ 
         marginBottom: '40px',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
         borderRadius: '20px',
         padding: '32px',
         color: 'white',
@@ -130,18 +130,16 @@ const AdminDashboard: React.FC = () => {
             fontSize: '36px', 
             fontWeight: 800, 
             margin: '0 0 12px 0',
-            background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            color: '#1e293b'
           }}>
             Dashboard Admin
           </h1>
           <p style={{ 
             fontSize: '18px', 
-            color: 'rgba(255, 255, 255, 0.9)', 
+            color: '#1e293b', 
             margin: 0,
-            fontWeight: 500
+            fontWeight: 500,
+            opacity: 0.8
           }}>
             Selamat datang kembali, {user?.name || 'Admin'}! • {todayFormatted}
           </p>
@@ -180,7 +178,7 @@ const AdminDashboard: React.FC = () => {
             right: '-20px',
             width: '80px',
             height: '80px',
-            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
             borderRadius: '50%',
             opacity: 0.1
           }} />
@@ -189,11 +187,11 @@ const AdminDashboard: React.FC = () => {
               width: '56px',
               height: '56px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+              background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)'
+              boxShadow: '0 8px 16px rgba(187, 247, 208, 0.3)'
             }}>
               <FaVideo size={24} color="white" />
             </div>
@@ -289,7 +287,7 @@ const AdminDashboard: React.FC = () => {
             right: '-20px',
             width: '80px',
             height: '80px',
-            background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+            background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
             borderRadius: '50%',
             opacity: 0.1
           }} />
@@ -298,11 +296,11 @@ const AdminDashboard: React.FC = () => {
               width: '56px',
               height: '56px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+              background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(139, 92, 246, 0.3)'
+              boxShadow: '0 8px 16px rgba(187, 247, 208, 0.3)'
             }}>
               <FaEye size={24} color="white" />
             </div>

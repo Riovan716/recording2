@@ -8,19 +8,19 @@ import BasicLayoutEditor from '../components/BasicLayoutEditor';
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
-const VIBRANT_BLUE = '#2563EB';
-const SOFT_BLUE = '#DBEAFE';
+const LIGHT_GREEN = '#BBF7D0';
+const SOFT_GREEN = '#DCFCE7';
 const WHITE = '#fff';
 const GRAY_TEXT = '#64748b';
 const CARD_RADIUS = 18;
-const SHADOW = '0 4px 24px rgba(37,99,235,0.08)';
+const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
 const FONT_FAMILY = 'Poppins, Inter, Segoe UI, Arial, sans-serif';
 
 const LIGHT_GRAY = '#f5f5f5';
 
 const COLORS = {
-  primary: VIBRANT_BLUE,
-  primaryDark: '#1E40AF',
+  primary: LIGHT_GREEN,
+  primaryDark: '#86EFAC',
   accent: '#ef4444',
   accentDark: '#dc2626',
   text: '#1e293b',
@@ -287,84 +287,147 @@ const AdminRecordingPage: React.FC = () => {
       </style>
       
       <div style={{ 
-        padding: '32px 32px 32px 32px', 
-        background: COLORS.bg, 
+        padding: isMobile ? "16px 16px 16px 16px" : "32px 120px 32px 32px",
+        maxWidth: "100%",
+        overflowX: "hidden",
+        background: COLORS.bg,
         fontFamily: FONT_FAMILY,
-        maxWidth: '100%',
-        overflowX: 'hidden',
       }}>
-        {/* Welcome Card */}
-        <div style={{
-          background: VIBRANT_BLUE,
-          borderRadius: CARD_RADIUS,
-          color: WHITE,
-          padding: isMobile ? '18px 12px' : '32px 40px',
-          marginBottom: 32,
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: SHADOW,
-          minHeight: 120,
-        }}>
-          <div>
-            <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Video Recording</div>
-            <div style={{ fontSize: 16, opacity: 0.9 }}>
-              Selamat datang, {user?.name || 'Admin'}! Buat dan kelola video pembelajaran Anda dengan mudah.
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: "24px",
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+          {/* Welcome Card */}
+          <div style={{
+            background: LIGHT_GREEN,
+            borderRadius: CARD_RADIUS,
+            color: '#1e293b',
+            padding: isMobile ? '18px 12px' : '32px 40px',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: SHADOW,
+            minHeight: 120,
+          }}>
+            <div>
+              <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Video Recording</div>
+              <div style={{ fontSize: 16, opacity: 0.9 }}>
+                Selamat datang, {user?.name || 'Admin'}! Buat dan kelola video pembelajaran Anda dengan mudah.
+              </div>
             </div>
+            <span style={{ height: 100, fontSize: 100, objectFit: 'contain', marginLeft: isMobile ? 0 : 32, marginTop: isMobile ? 18 : 0, display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 4px 24px #0002)' }}>🎥</span>
           </div>
-          <span style={{ height: 100, fontSize: 100, objectFit: 'contain', marginLeft: isMobile ? 0 : 32, marginTop: isMobile ? 18 : 0, display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 4px 24px #0002)' }}>🎥</span>
-        </div>
-
-        {/* Recording Controls */}
+          {/* Recording Controls */}
         <div style={{
-          background: COLORS.white,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: CARD_RADIUS,
-          padding: '20px',
-          boxShadow: SHADOW,
+          background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+          border: 'none',
+          borderRadius: 24,
+          padding: isMobile ? "20px" : "32px",
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
           width: '100%',
           marginBottom: '24px',
+          position: 'relative',
+          overflow: 'hidden',
+          backdropFilter: 'blur(10px)',
         }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: COLORS.text, margin: '0 0 16px 0' }}>
-              Buat Video Recording
-            </h2>
+            {/* Modern Background Pattern */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '200px',
+              height: '200px',
+              background: 'radial-gradient(circle, rgba(187, 247, 208, 0.1) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(50%, -50%)',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '150px',
+              height: '150px',
+              background: 'radial-gradient(circle, rgba(134, 239, 172, 0.08) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(-50%, 50%)',
+            }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <h2 style={{ 
+                fontSize: "24px",
+                fontWeight: 700,
+                color: COLORS.text,
+                margin: "0 0 8px 0",
+                background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Buat Video Recording
+              </h2>
+              <p style={{
+                fontSize: "14px",
+                color: COLORS.subtext,
+                margin: "0 0 24px 0",
+                fontWeight: 500,
+              }}>
+                Buat dan kelola recording video dengan mudah
+              </p>
+            </div>
             
             
 
             {/* Recording Buttons */}
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
-              {!(streamingState.isRecording || streamingState.isScreenRecording) ? (
-                <>
-               
-                  <button
-                    onClick={handleStartMultiCameraRecording}
-                    disabled={streamingState.isRecording || streamingState.isScreenRecording}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      background: COLORS.white,
-                      color: COLORS.primary,
-                      border: `1px solid ${COLORS.primary}`,
-                      borderRadius: 6,
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      opacity: 1,
-                    }}
-                  >
-                    <FaCamera size={14} />
-                    recording
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px', marginBottom: '16px' }}>
+                {!(streamingState.isRecording || streamingState.isScreenRecording) ? (
+                  <>
+                 
+                    <button
+                      onClick={handleStartMultiCameraRecording}
+                      disabled={streamingState.isRecording || streamingState.isScreenRecording}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        background: 'linear-gradient(135deg, #4ADE80 0%, #22C55E 100%)',
+                        color: "white",
+                        border: 'none',
+                        borderRadius: 16,
+                        padding: '14px 24px',
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        opacity: 1,
+                        width: 'auto',
+                        boxShadow: '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
+                      }}
+                    >
+                      <span style={{ fontSize: '18px' }}>🎥</span>
+                      Multi-Camera Recording
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
                     onClick={handleStopRecording}
                     style={{
                       flex: 1,
@@ -433,8 +496,9 @@ const AdminRecordingPage: React.FC = () => {
                       🎨 Edit Layout
                     </button>
                   )}
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Upload Buttons */}
@@ -914,6 +978,7 @@ const AdminRecordingPage: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </>
   );

@@ -4,8 +4,8 @@ import { FaSearch, FaVideo, FaDownload, FaTrash, FaCalendar, FaUser, FaBook, FaF
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
-const VIBRANT_BLUE = '#2563EB';
-const SOFT_BLUE = '#DBEAFE';
+const LIGHT_GREEN = '#BBF7D0';
+const SOFT_GREEN = '#DCFCE7';
 const WHITE = '#fff';
 const GRAY_TEXT = '#64748b';
 const LIGHT_GRAY = '#f8fafc';
@@ -32,8 +32,7 @@ const AdminVideoListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordingsPerPage] = useState(12);
-  const [selectedRecordings, setSelectedRecordings] = useState<number[]>([]);
+  const [recordingsPerPage] = useState(8);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<any>(null);
@@ -76,42 +75,25 @@ const AdminVideoListPage: React.FC = () => {
   const paginatedRecordings = filteredRecordings.slice(startIndex, endIndex);
 
 
-  const handleSelectRecording = (id: number) => {
-    setSelectedRecordings(prev => 
-      prev.includes(id) 
-        ? prev.filter(recId => recId !== id)
-        : [...prev, id]
-    );
-  };
 
   const handlePlayVideo = (recording: any) => {
     setCurrentVideo(recording);
     setShowVideoModal(true);
   };
 
-  const handleSelectAll = () => {
-    if (selectedRecordings.length === paginatedRecordings.length) {
-      setSelectedRecordings([]);
-    } else {
-      setSelectedRecordings(paginatedRecordings.map(rec => rec.id));
-    }
-  };
-
-  const handleDeleteSelected = async () => {
+  const handleDeleteVideo = async (recording: any) => {
     try {
-      for (const id of selectedRecordings) {
-        await fetch(`${API_URL}/api/recording/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-      }
-      setSelectedRecordings([]);
+      await fetch(`${API_URL}/api/recording/${recording.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       setShowDeleteModal(false);
+      setCurrentVideo(null);
       fetchRecordings();
     } catch (error) {
-      console.error('Error deleting recordings:', error);
+      console.error('Error deleting recording:', error);
     }
   };
 
@@ -149,7 +131,7 @@ const AdminVideoListPage: React.FC = () => {
             width: '40px', 
             height: '40px', 
             border: '4px solid #f3f3f3',
-            borderTop: '4px solid VIBRANT_BLUE',
+            borderTop: '4px solid LIGHT_GREEN',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
@@ -169,9 +151,9 @@ const AdminVideoListPage: React.FC = () => {
     }}>
       {/* Header */}
       <div style={{
-        background: VIBRANT_BLUE,
+        background: LIGHT_GREEN,
         borderRadius: 18,
-        color: WHITE,
+        color: '#1e293b',
         padding: '32px 40px',
         marginBottom: 32,
         display: 'flex',
@@ -218,25 +200,7 @@ const AdminVideoListPage: React.FC = () => {
           boxShadow: SHADOW,
           border: `1px solid ${BORDER_COLOR}`
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, VIBRANT_BLUE, #1d4ed8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <FaVideo size={20} color="white" />
-            </div>
-            <div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1e293b' }}>
-                {recordings.length}
-              </div>
-              <div style={{ fontSize: '14px', color: GRAY_TEXT }}>Total Video</div>
-            </div>
-          </div>
+        
         </div>
       </div>
 
@@ -285,7 +249,7 @@ const AdminVideoListPage: React.FC = () => {
                 transition: 'border-color 0.2s ease',
                 boxSizing: 'border-box'
               }}
-              onFocus={e => e.target.style.borderColor = VIBRANT_BLUE}
+              onFocus={e => e.target.style.borderColor = LIGHT_GREEN}
               onBlur={e => e.target.style.borderColor = BORDER_COLOR}
             />
           </div>
@@ -308,83 +272,81 @@ const AdminVideoListPage: React.FC = () => {
             />
           </div>
 
-          {/* Bulk Actions */}
-          {selectedRecordings.length > 0 && (
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 16px',
-                background: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'background 0.2s ease'
-              }}
-              onMouseOver={e => e.currentTarget.style.background = '#dc2626'}
-              onMouseOut={e => e.currentTarget.style.background = '#ef4444'}
-            >
-              <FaTrash size={14} />
-              Hapus ({selectedRecordings.length})
-            </button>
-          )}
         </div>
       </div>
 
       {/* Video Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         gap: '20px',
-        marginBottom: '32px'
+        marginBottom: '32px',
+        maxWidth: '1200px',
+        margin: '0 auto 32px auto'
       }}>
         {paginatedRecordings.map(recording => (
           <div
             key={recording.id}
             style={{
-              background: WHITE,
-              borderRadius: CARD_RADIUS,
-              boxShadow: SHADOW,
-              border: `1px solid ${BORDER_COLOR}`,
-              overflow: 'hidden',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
+              background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+              border: 'none',
+              borderRadius: 24,
+              padding: 0,
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
+              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+              cursor: "pointer",
+              overflow: "hidden",
+              minHeight: "300px",
+              maxWidth: "320px",
+              display: "flex",
+              flexDirection: "column",
+              position: 'relative',
+              backdropFilter: 'blur(10px)',
             }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 25px -5px rgba(0, 0, 0, 0.1)';
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-8px) scale(1.02)";
+              e.currentTarget.style.boxShadow = '0 32px 64px rgba(0, 0, 0, 0.12), 0 16px 32px rgba(0, 0, 0, 0.08)';
             }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = SHADOW;
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) scale(1)";
+              e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)';
             }}
           >
-            {/* Checkbox */}
+            {/* Modern Background Pattern */}
             <div style={{
               position: 'absolute',
-              top: '12px',
-              left: '12px',
-              zIndex: 1
-            }}>
-              <input
-                type="checkbox"
-                checked={selectedRecordings.includes(recording.id)}
-                onChange={() => handleSelectRecording(recording.id)}
-                style={{
-                  width: '18px',
-                  height: '18px',
-                  cursor: 'pointer'
-                }}
-              />
-            </div>
+              top: 0,
+              right: 0,
+              width: '120px',
+              height: '120px',
+              background: 'radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(30%, -30%)',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '80px',
+              height: '80px',
+              background: 'radial-gradient(circle, rgba(134, 239, 172, 0.1) 0%, transparent 70%)',
+              borderRadius: '50%',
+              transform: 'translate(-30%, 30%)',
+            }} />
 
-            {/* Video Thumbnail */}
-            <div style={{ position: 'relative', height: '180px', background: '#000' }}>
+            {/* Preview Image/Thumbnail */}
+            <div
+              style={{
+                width: "100%",
+                height: "140px",
+                background: `linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(134, 239, 172, 0.05) 100%)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
               <video
                 src={`${API_URL}/api/recording/download/${recording.filename}`}
                 style={{
@@ -411,12 +373,19 @@ const AdminVideoListPage: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div style={{ padding: '16px' }}>
+            <div style={{ 
+              padding: '16px', 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column',
+              position: 'relative',
+              zIndex: 1
+            }}>
               <h3 style={{
-                fontSize: '16px',
-                fontWeight: 600,
+                fontSize: '14px',
+                fontWeight: 700,
                 color: '#1e293b',
-                margin: '0 0 8px 0',
+                margin: '0 0 10px 0',
                 lineHeight: 1.4,
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -426,55 +395,138 @@ const AdminVideoListPage: React.FC = () => {
                 {recording.judul}
               </h3>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: GRAY_TEXT }}>
-                  <FaCalendar size={12} />
-                  <span>{new Date(recording.uploadedAt).toLocaleDateString('id-ID')}</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <a
-                  href={`${API_URL}/api/recording/download/${recording.filename}`}
-                  download
-                  style={{
-                    flex: 1,
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '8px', 
+                marginBottom: '16px',
+                flex: 1
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  fontSize: '13px', 
+                  color: '#64748b',
+                  fontWeight: 500
+                }}>
+                  <span style={{
+                    background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    background: VIBRANT_BLUE,
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    transition: 'background 0.2s ease'
+                  }}>📆</span>
+                  {new Date(recording.uploadedAt).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "2-digit", 
+                    year: "numeric"
+                  })}
+                </div>
+              </div>
+
+              {/* Modern Action Buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  marginTop: "auto",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    const link = `${API_URL}/api/recording/download/${recording.filename}`;
+                    window.open(link, '_blank');
                   }}
-                  onMouseOver={e => e.currentTarget.style.background = '#1d4ed8'}
-                  onMouseOut={e => e.currentTarget.style.background = VIBRANT_BLUE}
+                  style={{
+                    flex: 1,
+                    padding: "10px 12px",
+                    background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
+                    color: '#1e293b',
+                    border: "none",
+                    borderRadius: 12,
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: '0 4px 12px rgba(187, 247, 208, 0.3)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(187, 247, 208, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(187, 247, 208, 0.3)';
+                  }}
                 >
-                  <FaDownload size={12} />
+                  <span style={{ fontSize: "14px" }}>📥</span>
                   Download
-                </a>
+                </button>
+                
                 <button
                   onClick={() => handlePlayVideo(recording)}
                   style={{
-                    padding: '8px 12px',
-                    background: '#10b981',
+                    width: "40px",
+                    height: "40px",
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                     color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease'
+                    border: "none",
+                    borderRadius: 12,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)',
                   }}
-                  onMouseOver={e => e.currentTarget.style.background = '#059669'}
-                  onMouseOut={e => e.currentTarget.style.background = '#10b981'}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(34, 197, 94, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
+                  }}
                 >
-                  <FaPlay size={12} />
+                  <span style={{ fontSize: "16px" }}>▶</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setCurrentVideo(recording);
+                    setShowDeleteModal(true);
+                  }}
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    border: "none",
+                    borderRadius: 12,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+                  }}
+                >
+                  <span style={{ fontSize: "14px" }}>🗑</span>
                 </button>
               </div>
             </div>
@@ -499,14 +551,17 @@ const AdminVideoListPage: React.FC = () => {
               borderRadius: '8px',
               background: currentPage === 1 ? '#f3f4f6' : WHITE,
               color: currentPage === 1 ? GRAY_TEXT : '#1e293b',
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: 500,
               cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
               boxShadow: currentPage === 1 ? 'none' : SHADOW,
-              border: `1px solid ${BORDER_COLOR}`
+              border: `1px solid ${BORDER_COLOR}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            Sebelumnya
+            ←
           </button>
 
           <div style={{
@@ -518,7 +573,7 @@ const AdminVideoListPage: React.FC = () => {
           }}>
             <span>Halaman</span>
             <span style={{
-              background: VIBRANT_BLUE,
+              background: LIGHT_GREEN,
               color: 'white',
               padding: '6px 12px',
               borderRadius: '6px',
@@ -537,14 +592,17 @@ const AdminVideoListPage: React.FC = () => {
               borderRadius: '8px',
               background: currentPage === totalPages ? '#f3f4f6' : WHITE,
               color: currentPage === totalPages ? GRAY_TEXT : '#1e293b',
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: 500,
               cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
               boxShadow: currentPage === totalPages ? 'none' : SHADOW,
-              border: `1px solid ${BORDER_COLOR}`
+              border: `1px solid ${BORDER_COLOR}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            Selanjutnya
+            →
           </button>
         </div>
       )}
@@ -585,11 +643,14 @@ const AdminVideoListPage: React.FC = () => {
               margin: '0 0 20px 0',
               lineHeight: 1.5
             }}>
-              Apakah Anda yakin ingin menghapus {selectedRecordings.length} video yang dipilih? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus video "{currentVideo?.judul}"? Tindakan ini tidak dapat dibatalkan.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCurrentVideo(null);
+                }}
                 style={{
                   padding: '10px 20px',
                   border: `1px solid ${BORDER_COLOR}`,
@@ -604,7 +665,7 @@ const AdminVideoListPage: React.FC = () => {
                 Batal
               </button>
               <button
-                onClick={handleDeleteSelected}
+                onClick={() => currentVideo && handleDeleteVideo(currentVideo)}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
@@ -684,10 +745,10 @@ const AdminVideoListPage: React.FC = () => {
           <div style={{
             background: WHITE,
             borderRadius: '12px',
-            padding: '20px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            width: '100%',
+            padding: '16px',
+            maxWidth: '800px',
+            maxHeight: '80vh',
+            width: '90%',
             position: 'relative'
           }}>
             {/* Close Button */}
@@ -710,8 +771,8 @@ const AdminVideoListPage: React.FC = () => {
 
             {/* Video Title */}
             <h3 style={{
-              margin: '0 0 20px 0',
-              fontSize: '18px',
+              margin: '0 0 16px 0',
+              fontSize: '16px',
               fontWeight: 600,
               color: '#1e293b'
             }}>
@@ -723,7 +784,7 @@ const AdminVideoListPage: React.FC = () => {
               controls
               style={{
                 width: '100%',
-                maxHeight: '70vh',
+                maxHeight: '400px',
                 borderRadius: '8px'
               }}
             >
@@ -733,11 +794,11 @@ const AdminVideoListPage: React.FC = () => {
 
             {/* Video Info */}
             <div style={{
-              marginTop: '16px',
+              marginTop: '12px',
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '16px',
-              fontSize: '14px',
+              gap: '12px',
+              fontSize: '13px',
               color: GRAY_TEXT
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -761,7 +822,7 @@ const AdminVideoListPage: React.FC = () => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '10px 20px',
-                  background: VIBRANT_BLUE,
+                  background: LIGHT_GREEN,
                   color: 'white',
                   textDecoration: 'none',
                   borderRadius: '8px',
@@ -769,8 +830,8 @@ const AdminVideoListPage: React.FC = () => {
                   fontWeight: 500,
                   transition: 'background 0.2s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#1d4ed8'}
-                onMouseOut={e => e.currentTarget.style.background = VIBRANT_BLUE}
+                onMouseOver={e => e.currentTarget.style.background = '#86EFAC'}
+                onMouseOut={e => e.currentTarget.style.background = LIGHT_GREEN}
               >
                 <FaDownload size={14} />
                 Download Video
