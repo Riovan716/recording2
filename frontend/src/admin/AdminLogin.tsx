@@ -103,7 +103,7 @@ const AdminLogin = () => {
       {/* Brand text and logo - Centered above form */}
       <div style={{
         position: 'absolute',
-        top: isMobile ? '6%' : '8%',
+        top: isMobile ? '4%' : '5%',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 10,
@@ -126,6 +126,7 @@ const AdminLogin = () => {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.5rem',
+          marginBottom: '10rem',
         }}>
           <span style={{
             color: '#000000',
@@ -157,7 +158,7 @@ const AdminLogin = () => {
           width: '100%',
           maxWidth: '400px',
           background: '#fff',
-          borderRadius: 18,
+          borderRadius: 16,
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)',
           border: `1.5px solid ${LIGHT_GREEN}22`,
           padding: isMobile ? '2rem 1.5rem' : '3rem 2.5rem',
@@ -270,7 +271,7 @@ const AdminLogin = () => {
             type="submit"
             style={{
               width: '100%',
-              background: LIGHT_GREEN,
+              background: '#059669',
               color: '#fff',
               border: 'none',
               borderRadius: 10,
@@ -278,23 +279,23 @@ const AdminLogin = () => {
               fontSize: 17,
               padding: '15px 0',
               marginTop: 8,
-              boxShadow: '0 4px 16px rgba(187, 247, 208, 0.4), 0 2px 8px rgba(187, 247, 208, 0.2)',
+              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.4), 0 2px 8px rgba(5, 150, 105, 0.2)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               letterSpacing: '0.1px',
               transform: 'translateY(0)',
             }}
             onMouseOver={e => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.color = LIGHT_GREEN;
+              e.currentTarget.style.background = '#047857';
+              e.currentTarget.style.color = '#fff';
               e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(187, 247, 208, 0.5), 0 3px 12px rgba(187, 247, 208, 0.3)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(4, 120, 87, 0.5), 0 3px 12px rgba(4, 120, 87, 0.3)';
             }}
             onMouseOut={e => {
-              e.currentTarget.style.background = LIGHT_GREEN;
+              e.currentTarget.style.background = '#059669';
               e.currentTarget.style.color = '#fff';
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(187, 247, 208, 0.4), 0 2px 8px rgba(187, 247, 208, 0.2)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(5, 150, 105, 0.4), 0 2px 8px rgba(5, 150, 105, 0.2)';
             }}
           >
             Masuk

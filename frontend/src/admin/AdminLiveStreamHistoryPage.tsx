@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { FaSearch, FaCalendar } from "react-icons/fa";
 import { API_URL } from "../config";
 
 // Color palette konsisten dengan AdminPanel
@@ -66,9 +67,10 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'ended'>('all');
   const [sortBy, setSortBy] = useState<'startTime' | 'duration' | 'viewers'>('startTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<LiveStream | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -76,6 +78,11 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDate]);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -262,8 +269,16 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   // Filter and sort data
   const filteredAndSortedHistory = liveStreamHistory
     .filter(stream => {
-      if (filterStatus === 'all') return true;
-      return stream.status === filterStatus;
+      // Search term filter
+      const searchMatch = !searchTerm || 
+        (stream.title && stream.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (stream.id && stream.id.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      // Date filter
+      const dateMatch = !filterDate || 
+        (stream.startTime && new Date(stream.startTime).toDateString() === new Date(filterDate).toDateString());
+      
+      return searchMatch && dateMatch;
     })
     .sort((a, b) => {
       let aValue: any, bValue: any;
@@ -301,7 +316,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
   // Reset to first page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, sortBy, sortOrder]);
+  }, [sortBy, sortOrder]);
 
   if (loading) {
     return (
@@ -426,6 +441,79 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
           >
             🔄 Refresh
           </button>
+        </div>
+        
+        {/* Search and Filter Controls */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          marginBottom: '20px',
+          padding: '16px',
+          background: COLORS.white,
+          borderRadius: CARD_RADIUS,
+          boxShadow: SHADOW,
+        }}>
+          {/* Search Input */}
+          <div style={{ 
+            position: 'relative', 
+            flex: '1 1 250px',
+            minWidth: '200px',
+            maxWidth: '400px'
+          }}>
+            <FaSearch style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: COLORS.subtext,
+              fontSize: '14px'
+            }} />
+            <input
+              type="text"
+              placeholder="Cari berdasarkan judul atau ID..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 36px',
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                outline: 'none',
+                transition: 'border-color 0.2s ease',
+                boxSizing: 'border-box',
+                background: COLORS.white,
+                color: COLORS.text
+              }}
+              onFocus={e => e.target.style.borderColor = COLORS.primary}
+              onBlur={e => e.target.style.borderColor = COLORS.border}
+            />
+          </div>
+
+          {/* Date Filter */}
+          <div style={{ flex: '0 0 auto' }}>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              style={{
+                padding: '10px 12px',
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                outline: 'none',
+                transition: 'border-color 0.2s ease',
+                background: COLORS.white,
+                color: COLORS.text,
+                cursor: 'pointer'
+              }}
+              onFocus={e => e.target.style.borderColor = COLORS.primary}
+              onBlur={e => e.target.style.borderColor = COLORS.border}
+            />
+          </div>
+
         </div>
         
         {filteredAndSortedHistory.length === 0 ? (
