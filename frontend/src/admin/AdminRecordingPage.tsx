@@ -287,7 +287,7 @@ const AdminRecordingPage: React.FC = () => {
       </style>
       
       <div style={{ 
-        padding: isMobile ? "16px 16px 16px 16px" : "32px 120px 32px 32px",
+        padding: isMobile ? "16px" : "32px",
         maxWidth: "100%",
         overflowX: "hidden",
         background: COLORS.bg,
@@ -300,6 +300,7 @@ const AdminRecordingPage: React.FC = () => {
             gap: "24px",
             maxWidth: "1200px",
             margin: "0 auto",
+            padding: isMobile ? "0" : "0 88px 0 0",
           }}
         >
           {/* Welcome Card */}
@@ -314,6 +315,7 @@ const AdminRecordingPage: React.FC = () => {
             justifyContent: 'space-between',
             boxShadow: SHADOW,
             minHeight: 120,
+            width: '100%',
           }}>
             <div>
               <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -329,7 +331,7 @@ const AdminRecordingPage: React.FC = () => {
           background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
           border: 'none',
           borderRadius: 24,
-          padding: isMobile ? "20px" : "32px",
+          padding: isMobile ? "20px" : "32px 40px",
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
           width: '100%',
           marginBottom: '24px',

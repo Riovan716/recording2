@@ -631,22 +631,16 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                       display: "flex",
                       gap: "12px",
                       marginTop: "auto",
+                      justifyContent: "center",
                     }}
                   >
                     <button
-                      onClick={() => {
-                        // Download functionality
-                        if (stream.recordingPath) {
-                          window.open(`${API_URL}${stream.recordingPath}`, '_blank');
-                        } else {
-                          window.open(`${API_URL}/api/livestream/download/${stream.id}`, '_blank');
-                        }
-                      }}
+                      onClick={() => handlePlayVideo(stream)}
                       style={{
                         flex: 1,
                         padding: "12px 16px",
-                        background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
-                        color: '#1e293b',
+                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                        color: COLORS.white,
                         border: "none",
                         borderRadius: 16,
                         fontSize: "14px",
@@ -656,35 +650,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "8px",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        boxShadow: '0 4px 12px rgba(187, 247, 208, 0.3)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(187, 247, 208, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(187, 247, 208, 0.3)';
-                      }}
-                    >
-                      <span style={{ fontSize: "16px" }}>📥</span>
-                      Download
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePlayVideo(stream)}
-                      style={{
-                        width: "48px",
-                        height: "48px",
-                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: 16,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)',
                       }}
@@ -697,7 +662,8 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "18px" }}>▶</span>
+                      <span style={{ fontSize: "16px" }}>▶</span>
+                      Play Video
                     </button>
 
                     <button

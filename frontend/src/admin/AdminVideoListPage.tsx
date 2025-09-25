@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FaSearch, FaVideo, FaDownload, FaTrash, FaCalendar, FaUser, FaBook, FaFilter, FaPlay } from 'react-icons/fa';
+import { FaSearch, FaVideo, FaTrash, FaCalendar, FaUser, FaBook, FaFilter, FaPlay } from 'react-icons/fa';
 import { API_URL } from '../config';
 
 // Color palette konsisten dengan AdminPanel
@@ -68,11 +68,16 @@ const AdminVideoListPage: React.FC = () => {
     return matchSearch && matchDate;
   });
 
-  // Pagination
+  // Pagination logic
   const totalPages = Math.ceil(filteredRecordings.length / recordingsPerPage);
   const startIndex = (currentPage - 1) * recordingsPerPage;
   const endIndex = startIndex + recordingsPerPage;
   const paginatedRecordings = filteredRecordings.slice(startIndex, endIndex);
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDate]);
 
 
 
@@ -433,18 +438,16 @@ const AdminVideoListPage: React.FC = () => {
                   display: "flex",
                   gap: "12px",
                   marginTop: "auto",
+                  justifyContent: "center",
                 }}
               >
                 <button
-                  onClick={() => {
-                    const link = `${API_URL}/api/recording/download/${recording.filename}`;
-                    window.open(link, '_blank');
-                  }}
+                  onClick={() => handlePlayVideo(recording)}
                   style={{
                     flex: 1,
                     padding: "10px 12px",
-                    background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
-                    color: '#1e293b',
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    color: 'white',
                     border: "none",
                     borderRadius: 12,
                     fontSize: "12px",
@@ -454,35 +457,6 @@ const AdminVideoListPage: React.FC = () => {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: '0 4px 12px rgba(187, 247, 208, 0.3)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(187, 247, 208, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(187, 247, 208, 0.3)';
-                  }}
-                >
-                  <span style={{ fontSize: "14px" }}>📥</span>
-                  Download
-                </button>
-                
-                <button
-                  onClick={() => handlePlayVideo(recording)}
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                    color: 'white',
-                    border: "none",
-                    borderRadius: 12,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)',
                   }}
@@ -495,7 +469,8 @@ const AdminVideoListPage: React.FC = () => {
                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
                   }}
                 >
-                  <span style={{ fontSize: "16px" }}>▶</span>
+                  <span style={{ fontSize: "14px" }}>▶</span>
+                  Play Video
                 </button>
 
                 <button
@@ -540,21 +515,22 @@ const AdminVideoListPage: React.FC = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '12px',
-          marginTop: '32px'
+          gap: '8px',
+          marginTop: '24px',
+          padding: '16px 0'
         }}>
           <button
             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
             style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
+              padding: '8px 12px',
+              borderRadius: '6px',
               background: currentPage === 1 ? '#f3f4f6' : WHITE,
               color: currentPage === 1 ? GRAY_TEXT : '#1e293b',
               fontSize: '16px',
               fontWeight: 500,
               cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-              boxShadow: currentPage === 1 ? 'none' : SHADOW,
+              boxShadow: currentPage === 1 ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
               border: `1px solid ${BORDER_COLOR}`,
               display: 'flex',
               alignItems: 'center',
@@ -566,36 +542,43 @@ const AdminVideoListPage: React.FC = () => {
 
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
-            color: GRAY_TEXT
+            gap: '4px',
+            alignItems: 'center'
           }}>
-            <span>Halaman</span>
-            <span style={{
-              background: LIGHT_GREEN,
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontWeight: 600
-            }}>
-              {currentPage}
-            </span>
-            <span>dari {totalPages}</span>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  background: currentPage === page ? LIGHT_GREEN : WHITE,
+                  color: currentPage === page ? '#1e293b' : GRAY_TEXT,
+                  fontSize: '14px',
+                  fontWeight: currentPage === page ? 600 : 500,
+                  cursor: 'pointer',
+                  boxShadow: currentPage === page ? '0 2px 8px rgba(187, 247, 208, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+                  border: `1px solid ${currentPage === page ? LIGHT_GREEN : BORDER_COLOR}`,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {page}
+              </button>
+            ))}
           </div>
 
           <button
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
             style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
+              padding: '8px 12px',
+              borderRadius: '6px',
               background: currentPage === totalPages ? '#f3f4f6' : WHITE,
               color: currentPage === totalPages ? GRAY_TEXT : '#1e293b',
               fontSize: '16px',
               fontWeight: 500,
               cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-              boxShadow: currentPage === totalPages ? 'none' : SHADOW,
+              boxShadow: currentPage === totalPages ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
               border: `1px solid ${BORDER_COLOR}`,
               display: 'flex',
               alignItems: 'center',
@@ -807,36 +790,6 @@ const AdminVideoListPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{
-              marginTop: '20px',
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end'
-            }}>
-              <a
-                href={`${API_URL}/api/recording/download/${currentVideo.filename}`}
-                download
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  background: LIGHT_GREEN,
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#86EFAC'}
-                onMouseOut={e => e.currentTarget.style.background = LIGHT_GREEN}
-              >
-                <FaDownload size={14} />
-                Download Video
-              </a>
-            </div>
           </div>
         </div>
       )}
