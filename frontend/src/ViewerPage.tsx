@@ -42,6 +42,7 @@ const ViewerPage: React.FC = () => {
   const [viewers, setViewers] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
@@ -283,6 +284,13 @@ const ViewerPage: React.FC = () => {
                 rtpParameters: audioConsumer.rtpParameters
               });
               console.log('Audio consumer created successfully:', audioConsumerLocal);
+              
+              // Ensure audio track is enabled
+              if (audioConsumerLocal.track) {
+                audioConsumerLocal.track.enabled = true;
+                console.log('Audio track enabled:', audioConsumerLocal.track.enabled);
+              }
+              
               tracks.push(audioConsumerLocal.track);
             } catch (error) {
               console.error('Error creating audio consumer:', error);
@@ -300,6 +308,23 @@ const ViewerPage: React.FC = () => {
             console.log('Video tracks:', stream.getVideoTracks());
             console.log('Audio tracks:', stream.getAudioTracks());
             
+            // Log audio track details
+            const audioTracks = stream.getAudioTracks();
+            if (audioTracks.length > 0) {
+              console.log('Audio track details:', audioTracks.map(track => ({
+                id: track.id,
+                kind: track.kind,
+                enabled: track.enabled,
+                muted: track.muted,
+                readyState: track.readyState,
+                label: track.label
+              })));
+              setHasAudio(true);
+            } else {
+              console.warn('No audio tracks found in stream!');
+              setHasAudio(false);
+            }
+            
             // Set connection status to true since we have a valid stream
             setIsConnected(true);
             
@@ -309,8 +334,34 @@ const ViewerPage: React.FC = () => {
             // Wait a bit for the stream to be ready
             setTimeout(() => {
               if (videoRef.current) {
+                // Ensure audio is not muted
+                videoRef.current.muted = false;
+                videoRef.current.volume = 1.0;
+                
                 videoRef.current.play().then(() => {
                   console.log('Video started playing successfully');
+                  console.log('Audio enabled:', !videoRef.current?.muted);
+                  console.log('Volume:', videoRef.current?.volume);
+                  
+                  // Additional audio verification
+                  const srcObject = videoRef.current?.srcObject;
+                  if (srcObject && 'getAudioTracks' in srcObject) {
+                    const audioTracks = (srcObject as MediaStream).getAudioTracks();
+                    if (audioTracks && audioTracks.length > 0) {
+                      console.log('Audio tracks in video element:', audioTracks.length);
+                      audioTracks.forEach((track: MediaStreamTrack, index: number) => {
+                        console.log(`Audio track ${index}:`, {
+                          enabled: track.enabled,
+                          muted: track.muted,
+                          readyState: track.readyState
+                        });
+                      });
+                    } else {
+                      console.warn('No audio tracks found in video element!');
+                    }
+                  } else {
+                    console.warn('No audio tracks found in video element!');
+                  }
                 }).catch((error) => {
                   console.error('Error playing video:', error);
                   console.log('Trying to play with user interaction...');
@@ -639,6 +690,14 @@ const ViewerPage: React.FC = () => {
             <span>Dimulai: {formatTime(streamData.startTime)}</span>
             <span>•</span>
             <span>{viewers} penonton</span>
+            {hasAudio && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  🔊 Audio tersedia
+                </span>
+              </>
+            )}
           </div>
         </div>
         
@@ -716,6 +775,7 @@ const ViewerPage: React.FC = () => {
               autoPlay
               controls
               playsInline
+              muted={false}
               style={{
                 width: '100%',
                 height: '100%',

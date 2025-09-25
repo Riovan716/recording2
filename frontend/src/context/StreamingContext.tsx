@@ -123,13 +123,34 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateStatus('Memulai kamera...');
     
     try {
+      // Check audio permission first
+      try {
+        const audioPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        console.log('Audio permission status:', audioPermission.state);
+        
+        if (audioPermission.state === 'denied') {
+          console.warn('Audio permission denied, user needs to enable microphone access');
+          updateStatus('Izin mikrofon diperlukan untuk audio. Silakan aktifkan akses mikrofon.');
+        }
+      } catch (permissionError) {
+        console.log('Permission API not supported, continuing...');
+      }
       let stream: MediaStream;
       if (customStream) {
         stream = customStream;
       } else {
+        // Explicitly request audio with better constraints
         stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 44100
+          }
         });
       }
 
@@ -183,6 +204,64 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (!videoTrack) {
         throw new Error("No video track available");
       }
+      
+      // Check if we have audio track
+      if (!audioTrack) {
+        console.warn("No audio track available, trying to get audio separately...");
+        
+        // Try to get audio separately
+        try {
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 44100
+            }
+          });
+          
+          const separateAudioTrack = audioStream.getAudioTracks()[0];
+          if (separateAudioTrack) {
+            console.log("Got separate audio track:", separateAudioTrack);
+            // Add the audio track to the main stream
+            stream.addTrack(separateAudioTrack);
+            console.log("Added separate audio track to stream");
+          }
+        } catch (audioError: any) {
+          console.error("Failed to get separate audio track:", audioError);
+          
+          // Provide specific error messages
+          if (audioError.name === 'NotAllowedError') {
+            console.error("Audio access denied by user");
+            updateStatus("Akses mikrofon ditolak. Silakan izinkan akses mikrofon untuk audio.");
+          } else if (audioError.name === 'NotFoundError') {
+            console.error("No audio device found");
+            updateStatus("Tidak ada mikrofon yang ditemukan. Periksa perangkat audio Anda.");
+          } else {
+            console.warn("Continuing without audio...");
+            updateStatus("Audio tidak tersedia, melanjutkan tanpa audio...");
+          }
+        }
+      }
+      
+      // Get audio track again after potential addition
+      const finalAudioTrack = stream.getAudioTracks()[0];
+      
+      // Ensure audio track is enabled if available
+      if (finalAudioTrack) {
+        finalAudioTrack.enabled = true;
+        console.log('Audio track enabled for streaming:', finalAudioTrack.enabled);
+        console.log('Audio track details:', {
+          id: finalAudioTrack.id,
+          kind: finalAudioTrack.kind,
+          enabled: finalAudioTrack.enabled,
+          muted: finalAudioTrack.muted,
+          readyState: finalAudioTrack.readyState,
+          label: finalAudioTrack.label
+        });
+      } else {
+        console.warn("Still no audio track available after retry");
+      }
 
       console.log('Producing video track...');
       videoProducerRef.current = await producerTransport.produce({
@@ -190,14 +269,29 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       console.log("videoTrack produced:", videoTrack, "producerId:", videoProducerRef.current.id);
       
-      if (audioTrack) {
+      if (finalAudioTrack) {
         console.log('Producing audio track...');
-        audioProducerRef.current = await producerTransport.produce({
-          track: audioTrack,
+        console.log('Audio track details:', {
+          id: finalAudioTrack.id,
+          kind: finalAudioTrack.kind,
+          enabled: finalAudioTrack.enabled,
+          muted: finalAudioTrack.muted,
+          readyState: finalAudioTrack.readyState,
+          label: finalAudioTrack.label
         });
-        console.log("audioTrack produced:", audioTrack, "producerId:", audioProducerRef.current.id);
+        
+        audioProducerRef.current = await producerTransport.produce({
+          track: finalAudioTrack,
+        });
+        console.log("audioTrack produced:", finalAudioTrack, "producerId:", audioProducerRef.current.id);
       } else {
         console.error("No audio track available!");
+        console.log("Available tracks:", stream.getTracks().map(track => ({
+          kind: track.kind,
+          enabled: track.enabled,
+          muted: track.muted,
+          label: track.label
+        })));
       }
 
       // 5. Start recording the stream for local storage
@@ -1551,6 +1645,38 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Get canvas stream
       const canvasStream = canvas.captureStream(30); // 30 FPS
+
+      // Add audio to canvas stream for multi-camera streaming
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 44100
+          }
+        });
+        
+        const audioTrack = audioStream.getAudioTracks()[0];
+        if (audioTrack) {
+          canvasStream.addTrack(audioTrack);
+          console.log('Added audio track to canvas stream for multi-camera streaming');
+        }
+      } catch (audioError: any) {
+        console.error("Failed to get audio for multi-camera streaming:", audioError);
+        
+        // Provide specific error messages
+        if (audioError.name === 'NotAllowedError') {
+          console.error("Audio access denied by user for multi-camera streaming");
+          updateStatus("Akses mikrofon ditolak untuk multi-camera streaming.");
+        } else if (audioError.name === 'NotFoundError') {
+          console.error("No audio device found for multi-camera streaming");
+          updateStatus("Tidak ada mikrofon yang ditemukan untuk multi-camera streaming.");
+        } else {
+          console.warn("Continuing multi-camera streaming without audio...");
+          updateStatus("Audio tidak tersedia untuk multi-camera streaming, melanjutkan tanpa audio...");
+        }
+      }
 
       // Start streaming with canvas stream
       await startStream("admin", judul, canvasStream);
