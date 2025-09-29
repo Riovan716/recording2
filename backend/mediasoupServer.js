@@ -30,13 +30,41 @@ const recordings = {}; // { [roomId]: { isRecording: boolean, startTime: Date, f
         kind: 'audio',
         mimeType: 'audio/opus',
         clockRate: 48000,
-        channels: 2
+        channels: 2,
+        parameters: {
+          minptime: 10,
+          useinbandfec: 1
+        }
       },
       {
         kind: 'video',
         mimeType: 'video/VP8',
         clockRate: 90000,
-        parameters: {}
+        parameters: {
+          'x-google-start-bitrate': 1000,
+          'x-google-max-bitrate': 3000,
+          'x-google-min-bitrate': 500
+        }
+      },
+      {
+        kind: 'video',
+        mimeType: 'video/VP9',
+        clockRate: 90000,
+        parameters: {
+          'x-google-start-bitrate': 1000,
+          'x-google-max-bitrate': 3000,
+          'x-google-min-bitrate': 500
+        }
+      },
+      {
+        kind: 'video',
+        mimeType: 'video/H264',
+        clockRate: 90000,
+        parameters: {
+          'packetization-mode': 1,
+          'profile-level-id': '42e01f',
+          'level-asymmetry-allowed': 1
+        }
       }
     ]
   });
@@ -62,7 +90,11 @@ io.on('connection', socket => {
         listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
-        preferUdp: true
+        preferUdp: true,
+        initialAvailableOutgoingBitrate: 1000000,
+        minimumAvailableOutgoingBitrate: 600000,
+        maxSctpMessageSize: 262144,
+        appData: { role: 'producer' }
       });
       
       // Store transport for this client
@@ -137,7 +169,11 @@ io.on('connection', socket => {
         listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
-        preferUdp: true
+        preferUdp: true,
+        initialAvailableOutgoingBitrate: 1000000,
+        minimumAvailableOutgoingBitrate: 600000,
+        maxSctpMessageSize: 262144,
+        appData: { role: 'consumer' }
       });
       
       // Store transport for this client
@@ -201,7 +237,8 @@ io.on('connection', socket => {
           const consumer = await transport.consume({
             producerId: prod.id,
             rtpCapabilities,
-            paused: false
+            paused: false,
+            preferredLayers: kind === 'video' ? { spatialLayer: 2, temporalLayer: 2 } : undefined
           });
           const consumerData = {
             id: consumer.id,

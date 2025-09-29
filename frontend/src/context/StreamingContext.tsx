@@ -139,17 +139,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (customStream) {
         stream = customStream;
       } else {
-        // Explicitly request audio with better constraints
+        // Explicitly request audio with better constraints for low latency
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 60 },
+            facingMode: 'user'
           },
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 44100
+            sampleRate: 48000,
+            channelCount: 2
           }
         });
       }
@@ -266,6 +269,11 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('Producing video track...');
       videoProducerRef.current = await producerTransport.produce({
         track: videoTrack,
+        codecOptions: {
+          videoGoogleStartBitrate: 1000,
+          videoGoogleMaxBitrate: 3000,
+          videoGoogleMinBitrate: 500
+        }
       });
       console.log("videoTrack produced:", videoTrack, "producerId:", videoProducerRef.current.id);
       
@@ -282,6 +290,12 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         audioProducerRef.current = await producerTransport.produce({
           track: finalAudioTrack,
+          codecOptions: {
+            opusStereo: true,
+            opusFec: true,
+            opusDtx: true,
+            opusMaxPlaybackRate: 48000
+          }
         });
         console.log("audioTrack produced:", finalAudioTrack, "producerId:", audioProducerRef.current.id);
       } else {
@@ -294,9 +308,11 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })));
       }
 
-      // 5. Start recording the stream for local storage
+      // 5. Start recording the stream for local storage with optimized settings
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus'
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 2500000,
+        audioBitsPerSecond: 128000
       });
 
       const chunks: Blob[] = [];
@@ -334,7 +350,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       };
 
-      mediaRecorder.start(1000); // Record in 1-second chunks
+      mediaRecorder.start(500); // Record in 500ms chunks for better responsiveness
       console.log('Live stream recording started');
 
       // Update state
@@ -1112,8 +1128,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Additional delay to ensure all videos are ready
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Create canvas stream
-      const canvasStream = canvas.captureStream(30); // 30 FPS
+      // Create canvas stream with optimized settings
+      const canvasStream = canvas.captureStream(60); // 60 FPS for smoother streaming
 
       // Combine canvas video with audio
       const combinedStream = new MediaStream();
@@ -1643,8 +1659,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         requestAnimationFrame(animate);
       };
 
-      // Get canvas stream
-      const canvasStream = canvas.captureStream(30); // 30 FPS
+      // Get canvas stream with optimized settings
+      const canvasStream = canvas.captureStream(60); // 60 FPS for smoother streaming
 
       // Add audio to canvas stream for multi-camera streaming
       try {

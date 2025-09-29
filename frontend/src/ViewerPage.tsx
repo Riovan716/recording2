@@ -43,6 +43,8 @@ const ViewerPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [hasAudio, setHasAudio] = useState(false);
+  const [networkQuality, setNetworkQuality] = useState<'good' | 'fair' | 'poor'>('good');
+  const [currentBitrate, setCurrentBitrate] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
@@ -50,6 +52,7 @@ const ViewerPage: React.FC = () => {
   const consumerRef = useRef<any>(null);
   const audioConsumerRef = useRef<any>(null);
   const consumerTransportRef = useRef<any>(null);
+  const networkMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (streamId) {
@@ -66,6 +69,9 @@ const ViewerPage: React.FC = () => {
       }
       if (audioConsumerRef.current) {
         audioConsumerRef.current.close();
+      }
+      if (networkMonitorRef.current) {
+        clearInterval(networkMonitorRef.current);
       }
     };
   }, [streamId]);
@@ -140,6 +146,39 @@ const ViewerPage: React.FC = () => {
     }
   };
 
+  // Network quality monitoring
+  const startNetworkMonitoring = () => {
+    if (networkMonitorRef.current) {
+      clearInterval(networkMonitorRef.current);
+    }
+    
+    networkMonitorRef.current = setInterval(() => {
+      if (consumerRef.current && consumerTransportRef.current) {
+        try {
+          const stats = consumerRef.current.getStats();
+          if (stats && stats.length > 0) {
+            const videoStats = stats.find((stat: any) => stat.type === 'inbound-rtp' && stat.kind === 'video');
+            if (videoStats) {
+              const bitrate = videoStats.bytesReceived * 8 / 1000; // kbps
+              setCurrentBitrate(bitrate);
+              
+              // Determine network quality based on bitrate and packet loss
+              if (bitrate > 2000 && (!videoStats.packetsLost || videoStats.packetsLost < 5)) {
+                setNetworkQuality('good');
+              } else if (bitrate > 1000 && (!videoStats.packetsLost || videoStats.packetsLost < 15)) {
+                setNetworkQuality('fair');
+              } else {
+                setNetworkQuality('poor');
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error getting network stats:', error);
+        }
+      }
+    }, 2000); // Check every 2 seconds
+  };
+
   const connectToStream = async () => {
     try {
       // Set timeout for WebRTC connection
@@ -212,7 +251,7 @@ const ViewerPage: React.FC = () => {
         });
         
         // Wait a bit for transport to be ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Consume video stream with retry
         console.log('Attempting to consume stream for room:', streamId);
@@ -223,7 +262,7 @@ const ViewerPage: React.FC = () => {
         while (retryCount < maxRetries && (!consumeParams || consumeParams.error)) {
           if (retryCount > 0) {
             console.log(`Retry ${retryCount} for consume...`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
           }
           
           consumeParams = await new Promise((resolve) => {
@@ -331,12 +370,20 @@ const ViewerPage: React.FC = () => {
             videoRef.current.srcObject = stream;
             console.log('Assigned stream to video element');
             
+            // Start network monitoring for adaptive bitrate
+            startNetworkMonitoring();
+            
             // Wait a bit for the stream to be ready
             setTimeout(() => {
               if (videoRef.current) {
                 // Ensure audio is not muted
                 videoRef.current.muted = false;
                 videoRef.current.volume = 1.0;
+                
+                // Optimize video element for low latency
+                if ('webkitVideoDecodedByteCount' in videoRef.current) {
+                  (videoRef.current as any).webkitVideoDecodedByteCount = 0;
+                }
                 
                 videoRef.current.play().then(() => {
                   console.log('Video started playing successfully');
@@ -397,7 +444,7 @@ const ViewerPage: React.FC = () => {
                   }
                 });
               }
-            }, 1000);
+            }, 500);
           } else if (videoConsumer && !videoConsumer.producerId) {
             console.log('Video consumer found but missing producerId');
             setError('Error: Video consumer tidak memiliki producerId. Silakan coba lagi.');
@@ -654,13 +701,13 @@ const ViewerPage: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#000',
+      background: '#ffffff',
       fontFamily: FONT_FAMILY,
-      color: COLORS.white,
+      color: COLORS.text,
     }}>
       {/* Header */}
       <div style={{
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: 'rgba(255, 255, 255, 0.95)',
         padding: '16px 20px',
         position: 'fixed',
         top: 0,
@@ -670,37 +717,8 @@ const ViewerPage: React.FC = () => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        borderBottom: '1px solid #e5e7eb',
       }}>
-        <div>
-          <h1 style={{
-            fontSize: '20px',
-            fontWeight: 600,
-            margin: '0 0 4px 0',
-            color: COLORS.white,
-          }}>
-            {streamData.title}
-          </h1>
-          <div style={{
-            fontSize: '14px',
-            color: '#ccc',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px'
-          }}>
-            <span>Dimulai: {formatTime(streamData.startTime)}</span>
-            <span>•</span>
-            <span>{viewers} penonton</span>
-            {hasAudio && (
-              <>
-                <span>•</span>
-                <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  🔊 Audio tersedia
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -726,24 +744,6 @@ const ViewerPage: React.FC = () => {
             }} />
             {getStatusText(streamData.status)}
           </div>
-          
-          <button
-            onClick={handleFullscreen}
-            style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              color: COLORS.white,
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            {isFullscreen ? '⤓' : '⤢'} {isFullscreen ? 'Keluar' : 'Fullscreen'}
-          </button>
         </div>
       </div>
 
@@ -756,7 +756,7 @@ const ViewerPage: React.FC = () => {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          background: '#000'
+          background: '#ffffff'
         }}
       >
         {streamData.status === 'active' ? (
@@ -767,7 +767,8 @@ const ViewerPage: React.FC = () => {
             aspectRatio: '16/9',
             background: '#000',
             borderRadius: isFullscreen ? '0' : '12px',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
           }}>
             {/* Live Stream Video */}
             <video
@@ -776,6 +777,7 @@ const ViewerPage: React.FC = () => {
               controls
               playsInline
               muted={false}
+              preload="none"
               style={{
                 width: '100%',
                 height: '100%',
@@ -797,6 +799,12 @@ const ViewerPage: React.FC = () => {
               onPause={() => {
                 console.log('Video paused');
               }}
+              onWaiting={() => {
+                console.log('Video buffering...');
+              }}
+              onStalled={() => {
+                console.log('Video stalled');
+              }}
             >
               Browser Anda tidak mendukung video player.
             </video>
@@ -808,11 +816,13 @@ const ViewerPage: React.FC = () => {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: COLORS.white,
+                background: 'rgba(255, 255, 255, 0.95)',
+                color: COLORS.text,
                 padding: '20px',
                 borderRadius: '8px',
-                textAlign: 'center'
+                textAlign: 'center',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
               }}>
                 <div style={{ fontSize: '18px', marginBottom: '8px' }}>🔄</div>
                 <div>Menghubungkan ke live stream...</div>
@@ -870,7 +880,8 @@ const ViewerPage: React.FC = () => {
             aspectRatio: '16/9',
             background: '#000',
             borderRadius: isFullscreen ? '0' : '12px',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
           }}>
             <video
               ref={videoRef}
@@ -909,10 +920,11 @@ const ViewerPage: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             height: '400px',
-            background: '#111',
+            background: '#f8f9fa',
             borderRadius: '12px',
             color: COLORS.subtext,
-            fontSize: '18px'
+            fontSize: '18px',
+            border: '1px solid #e5e7eb'
           }}>
             Live stream sudah berakhir dan tidak ada recording tersedia
           </div>
@@ -921,14 +933,15 @@ const ViewerPage: React.FC = () => {
 
       {/* Footer Info */}
       <div style={{
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: 'rgba(248, 249, 250, 0.95)',
         padding: '20px',
         textAlign: 'center',
-        color: '#ccc',
-        fontSize: '14px'
+        color: COLORS.subtext,
+        fontSize: '14px',
+        borderTop: '1px solid #e5e7eb'
       }}>
         <p style={{ margin: '0 0 8px 0' }}>
-          Powered by Education Platform
+          Powered by Umalo
         </p>
         <p style={{ margin: 0, fontSize: '12px' }}>
           © 2025 - Semua hak dilindungi
