@@ -198,6 +198,17 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       producerTransport.on("connectionstatechange", (state) => {
         console.log('Producer transport connection state:', state);
+        if (state === 'disconnected' || state === 'failed') {
+          console.error('Producer transport disconnected, attempting to reconnect...');
+          updateStatus('Koneksi terputus, mencoba menyambung kembali...');
+          // Attempt to restart stream
+          setTimeout(() => {
+            if (streamingState.isStreaming) {
+              console.log('Attempting to restart stream...');
+              startStream(kelas, title, customStream);
+            }
+          }, 2000);
+        }
       });
 
       // 4. Produce video & audio
@@ -270,12 +281,18 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       videoProducerRef.current = await producerTransport.produce({
         track: videoTrack,
         codecOptions: {
-          videoGoogleStartBitrate: 1000,
-          videoGoogleMaxBitrate: 3000,
-          videoGoogleMinBitrate: 500
+          videoGoogleStartBitrate: 1500, // Balanced for stability
+          videoGoogleMaxBitrate: 3000,   // Balanced for stability
+          videoGoogleMinBitrate: 500     // Lower minimum for better adaptation
         }
       });
       console.log("videoTrack produced:", videoTrack, "producerId:", videoProducerRef.current.id);
+      
+      // Simplified producer event listeners
+      videoProducerRef.current.on('transportclose', () => {
+        console.log('Video producer transport closed');
+        updateStatus('Video producer transport terputus');
+      });
       
       if (finalAudioTrack) {
         console.log('Producing audio track...');
@@ -292,12 +309,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           track: finalAudioTrack,
           codecOptions: {
             opusStereo: true,
-            opusFec: true,
+            opusFec: true, // Enable FEC for stability
             opusDtx: true,
-            opusMaxPlaybackRate: 48000
+            opusMaxPlaybackRate: 48000,
+            opusPtime: 10, // Back to 10ms for stability
+            opusMaxAverageBitrate: 128000
           }
         });
         console.log("audioTrack produced:", finalAudioTrack, "producerId:", audioProducerRef.current.id);
+        
+        // Simplified audio producer event listeners
+        audioProducerRef.current.on('transportclose', () => {
+          console.log('Audio producer transport closed');
+          updateStatus('Audio producer transport terputus');
+        });
       } else {
         console.error("No audio track available!");
         console.log("Available tracks:", stream.getTracks().map(track => ({
@@ -314,6 +339,77 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000
       });
+      
+      // Stream monitoring with delay prevention
+      const streamMonitor = setInterval(async () => {
+        const videoTrack = stream.getVideoTracks()[0];
+        const audioTrack = stream.getAudioTracks()[0];
+        
+        if (videoTrack && videoTrack.readyState === 'ended') {
+          console.error('Video track ended unexpectedly');
+          updateStatus('Video track berakhir, mencoba restart...');
+          clearInterval(streamMonitor);
+          
+          // Try to recover the video track first
+          try {
+            if (videoTrack.readyState === 'ended') {
+              // Attempt to restart the track
+              const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  width: { ideal: 1280, max: 1920 },
+                  height: { ideal: 720, max: 1080 },
+                  frameRate: { ideal: 30, max: 60 },
+                  facingMode: 'user'
+                },
+                audio: false
+              });
+              
+              const newVideoTrack = newStream.getVideoTracks()[0];
+              if (newVideoTrack && videoProducerRef.current) {
+                // Replace the track
+                await videoProducerRef.current.replaceTrack({ track: newVideoTrack });
+                console.log('Video track replaced successfully');
+                updateStatus('Video track diperbaiki');
+              }
+            }
+          } catch (recoveryError) {
+            console.error('Failed to recover video track:', recoveryError);
+            // Full restart as fallback
+            setTimeout(() => {
+              if (streamingState.isStreaming) {
+                startStream(kelas, title, customStream);
+              }
+            }, 2000);
+          }
+        }
+        
+        if (audioTrack && audioTrack.readyState === 'ended') {
+          console.error('Audio track ended unexpectedly');
+          updateStatus('Audio track berakhir');
+        }
+        
+        // Prevent delay accumulation by refreshing producers
+        const currentTime = Date.now();
+        const streamStartTime = streamingState.recordingStartTime || currentTime;
+        const streamDuration = currentTime - streamStartTime;
+        
+        // Refresh stream every 10 minutes to prevent delay (more stable)
+        if (streamDuration > 0 && streamDuration % 600000 < 10000) { // Every 10 minutes
+          console.log('Performing gentle stream refresh to prevent delay accumulation...');
+          updateStatus('Memperbarui stream untuk mencegah delay...');
+          
+          // Gentle refresh without pausing - just check connection
+          if (videoProducerRef.current && videoProducerRef.current.paused) {
+            console.log('Video producer was paused, resuming...');
+            videoProducerRef.current.resume();
+          }
+          
+          if (audioProducerRef.current && audioProducerRef.current.paused) {
+            console.log('Audio producer was paused, resuming...');
+            audioProducerRef.current.resume();
+          }
+        }
+      }, 10000); // Check every 10 seconds
 
       const chunks: Blob[] = [];
       mediaRecorder.ondataavailable = (event) => {
@@ -323,6 +419,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       mediaRecorder.onstop = async () => {
+        clearInterval(streamMonitor); // Clear monitoring interval
         const videoBlob = new Blob(chunks, { type: 'video/webm' });
         
         // Upload recording to backend
@@ -350,7 +447,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       };
 
-      mediaRecorder.start(500); // Record in 500ms chunks for better responsiveness
+      mediaRecorder.start(1000); // Record in 1s chunks for stability
       console.log('Live stream recording started');
 
       // Update state
@@ -362,7 +459,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         liveStreamRecorder: mediaRecorder,
         status: 'Live streaming berjalan!',
         selectedKelas: kelas,
-        selectedMapel: title
+        selectedMapel: title,
+        recordingStartTime: Date.now() // Track stream start time for delay monitoring
       }));
 
       console.log('Stream state updated, isStreaming:', true, 'roomId:', roomId);

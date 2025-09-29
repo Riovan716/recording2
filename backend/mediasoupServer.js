@@ -32,8 +32,12 @@ const recordings = {}; // { [roomId]: { isRecording: boolean, startTime: Date, f
         clockRate: 48000,
         channels: 2,
         parameters: {
-          minptime: 10,
-          useinbandfec: 1
+          minptime: 10, // Back to 10ms for stability
+          useinbandfec: 1, // Enable FEC for stability
+          maxplaybackrate: 48000,
+          maxaveragebitrate: 128000,
+          stereo: 1,
+          dtx: 1
         }
       },
       {
@@ -41,29 +45,11 @@ const recordings = {}; // { [roomId]: { isRecording: boolean, startTime: Date, f
         mimeType: 'video/VP8',
         clockRate: 90000,
         parameters: {
-          'x-google-start-bitrate': 1000,
-          'x-google-max-bitrate': 3000,
-          'x-google-min-bitrate': 500
-        }
-      },
-      {
-        kind: 'video',
-        mimeType: 'video/VP9',
-        clockRate: 90000,
-        parameters: {
-          'x-google-start-bitrate': 1000,
-          'x-google-max-bitrate': 3000,
-          'x-google-min-bitrate': 500
-        }
-      },
-      {
-        kind: 'video',
-        mimeType: 'video/H264',
-        clockRate: 90000,
-        parameters: {
-          'packetization-mode': 1,
-          'profile-level-id': '42e01f',
-          'level-asymmetry-allowed': 1
+          'x-google-start-bitrate': 1500, // Balanced for stability
+          'x-google-max-bitrate': 3000,   // Balanced for stability
+          'x-google-min-bitrate': 500,    // Lower minimum for better adaptation
+          'x-google-max-framerate': 30,   // Limit framerate for stability
+          'x-google-max-quantization': 40 // Higher quantization for stability
         }
       }
     ]
@@ -91,8 +77,8 @@ io.on('connection', socket => {
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
-        initialAvailableOutgoingBitrate: 1000000,
-        minimumAvailableOutgoingBitrate: 600000,
+        initialAvailableOutgoingBitrate: 2000000, // Balanced for stability
+        minimumAvailableOutgoingBitrate: 1000000, // Balanced minimum
         maxSctpMessageSize: 262144,
         appData: { role: 'producer' }
       });
@@ -170,8 +156,8 @@ io.on('connection', socket => {
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
-        initialAvailableOutgoingBitrate: 1000000,
-        minimumAvailableOutgoingBitrate: 600000,
+        initialAvailableOutgoingBitrate: 2000000, // Balanced for stability
+        minimumAvailableOutgoingBitrate: 1000000, // Balanced minimum
         maxSctpMessageSize: 262144,
         appData: { role: 'consumer' }
       });
@@ -237,8 +223,7 @@ io.on('connection', socket => {
           const consumer = await transport.consume({
             producerId: prod.id,
             rtpCapabilities,
-            paused: false,
-            preferredLayers: kind === 'video' ? { spatialLayer: 2, temporalLayer: 2 } : undefined
+            paused: false
           });
           const consumerData = {
             id: consumer.id,

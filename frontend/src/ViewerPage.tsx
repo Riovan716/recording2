@@ -45,6 +45,7 @@ const ViewerPage: React.FC = () => {
   const [hasAudio, setHasAudio] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [currentBitrate, setCurrentBitrate] = useState(0);
+  const [streamStartTime, setStreamStartTime] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
@@ -53,6 +54,7 @@ const ViewerPage: React.FC = () => {
   const audioConsumerRef = useRef<any>(null);
   const consumerTransportRef = useRef<any>(null);
   const networkMonitorRef = useRef<NodeJS.Timeout | null>(null);
+  const bufferResetRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (streamId) {
@@ -72,6 +74,9 @@ const ViewerPage: React.FC = () => {
       }
       if (networkMonitorRef.current) {
         clearInterval(networkMonitorRef.current);
+      }
+      if (bufferResetRef.current) {
+        clearInterval(bufferResetRef.current);
       }
     };
   }, [streamId]);
@@ -170,13 +175,82 @@ const ViewerPage: React.FC = () => {
               } else {
                 setNetworkQuality('poor');
               }
+              
+              // Check for stream issues and delay accumulation
+              if (bitrate === 0 || videoStats.packetsLost > 50) {
+                console.warn('Stream quality degraded, attempting recovery...');
+                setError('Kualitas stream menurun. Mencoba perbaikan...');
+                // Attempt to reconnect
+                setTimeout(() => {
+                  if (streamId) {
+                    connectToStream();
+                  }
+                }, 3000);
+              }
+              
+              // Check for delay accumulation (high packet loss or low bitrate)
+              if (videoStats.packetsLost > 20 || bitrate < 500) {
+                console.warn('Delay accumulation detected, attempting recovery...');
+                // Gentle recovery without aggressive buffer reset
+                if (videoRef.current && videoRef.current.readyState >= 2) {
+                  const buffered = videoRef.current.buffered;
+                  if (buffered.length > 0) {
+                    const bufferEnd = buffered.end(buffered.length - 1);
+                    const currentTime = videoRef.current.currentTime;
+                    const bufferSize = bufferEnd - currentTime;
+                    
+                    // Only reset if buffer is really large (> 15 seconds)
+                    if (bufferSize > 15) {
+                      console.log('Large buffer detected, performing gentle reset...');
+                      videoRef.current.currentTime = bufferEnd - 5; // Keep 5 seconds buffer
+                    }
+                  }
+                }
+              }
             }
           }
         } catch (error) {
           console.warn('Error getting network stats:', error);
         }
       }
-    }, 2000); // Check every 2 seconds
+    }, 5000); // Check every 5 seconds (reduced frequency)
+  };
+
+  // Buffer reset to prevent delay accumulation - STABLE VERSION
+  const startBufferReset = () => {
+    if (bufferResetRef.current) {
+      clearInterval(bufferResetRef.current);
+    }
+    
+    bufferResetRef.current = setInterval(() => {
+      if (streamStartTime && videoRef.current) {
+        const currentTime = Date.now();
+        const streamDuration = currentTime - streamStartTime;
+        
+        // Reset buffer every 5 minutes to prevent delay accumulation (more stable)
+        if (streamDuration > 0 && streamDuration % 300000 < 10000) { // Every 5 minutes
+          console.log('Performing gentle buffer reset to prevent delay...');
+          
+          // Gentle buffer reset without disrupting playback
+          if (videoRef.current && videoRef.current.readyState >= 2) {
+            // Only reset if video is playing and has data
+            const currentTime = videoRef.current.currentTime;
+            const buffered = videoRef.current.buffered;
+            
+            // Check if buffer is getting too large (> 10 seconds)
+            if (buffered.length > 0) {
+              const bufferEnd = buffered.end(buffered.length - 1);
+              const bufferSize = bufferEnd - currentTime;
+              
+              if (bufferSize > 10) {
+                console.log('Buffer too large, performing gentle reset...');
+                videoRef.current.currentTime = bufferEnd - 2; // Keep 2 seconds buffer
+              }
+            }
+          }
+        }
+      }
+    }, 30000); // Check every 30 seconds (less aggressive)
   };
 
   const connectToStream = async () => {
@@ -340,12 +414,14 @@ const ViewerPage: React.FC = () => {
           consumerRef.current = videoConsumerRef;
           audioConsumerRef.current = audioConsumerLocal;
           
-          if (tracks.length > 0 && videoRef.current) {
-            const stream = new MediaStream(tracks);
-            console.log('Created MediaStream with tracks:', tracks.length);
-            console.log('MediaStream tracks:', stream.getTracks());
-            console.log('Video tracks:', stream.getVideoTracks());
-            console.log('Audio tracks:', stream.getAudioTracks());
+              if (tracks.length > 0 && videoRef.current) {
+                const stream = new MediaStream(tracks);
+                console.log('Created MediaStream with tracks:', tracks.length);
+                console.log('MediaStream tracks:', stream.getTracks());
+                console.log('Video tracks:', stream.getVideoTracks());
+                console.log('Audio tracks:', stream.getAudioTracks());
+                
+                // Simplified track handling
             
             // Log audio track details
             const audioTracks = stream.getAudioTracks();
@@ -373,6 +449,12 @@ const ViewerPage: React.FC = () => {
             // Start network monitoring for adaptive bitrate
             startNetworkMonitoring();
             
+            // Set stream start time for delay monitoring
+            setStreamStartTime(Date.now());
+            
+            // Start periodic buffer reset to prevent delay accumulation
+            startBufferReset();
+            
             // Wait a bit for the stream to be ready
             setTimeout(() => {
               if (videoRef.current) {
@@ -389,6 +471,11 @@ const ViewerPage: React.FC = () => {
                   console.log('Video started playing successfully');
                   console.log('Audio enabled:', !videoRef.current?.muted);
                   console.log('Volume:', videoRef.current?.volume);
+                  
+                  // Reset buffer to prevent delay
+                  if (videoRef.current) {
+                    videoRef.current.currentTime = 0;
+                  }
                   
                   // Additional audio verification
                   const srcObject = videoRef.current?.srcObject;
@@ -463,6 +550,15 @@ const ViewerPage: React.FC = () => {
       socketRef.current.on('disconnect', () => {
         console.log('Disconnected from MediaSoup server');
         setIsConnected(false);
+        setError('Koneksi ke server terputus. Mencoba menyambung kembali...');
+        
+        // Attempt to reconnect
+        setTimeout(() => {
+          if (streamId) {
+            console.log('Attempting to reconnect...');
+            connectToStream();
+          }
+        }, 3000);
       });
       
       // Listen for new producers
@@ -783,6 +879,17 @@ const ViewerPage: React.FC = () => {
                 height: '100%',
                 objectFit: 'cover'
               }}
+              // Low latency optimizations
+              onLoadedData={() => {
+                // Reset buffer to prevent delay
+                if (videoRef.current) {
+                  videoRef.current.currentTime = 0;
+                  // Set low latency buffer settings
+                  if ('webkitVideoDecodedByteCount' in videoRef.current) {
+                    (videoRef.current as any).webkitVideoDecodedByteCount = 0;
+                  }
+                }
+              }}
               onError={(e) => {
                 console.error('Video load error:', e);
                 setError('Gagal memuat video live stream');
@@ -804,6 +911,19 @@ const ViewerPage: React.FC = () => {
               }}
               onStalled={() => {
                 console.log('Video stalled');
+              }}
+              onSuspend={() => {
+                console.log('Video suspended');
+              }}
+              onAbort={() => {
+                console.log('Video aborted');
+                setError('Video stream terputus. Mencoba menyambung kembali...');
+                // Attempt to reconnect
+                setTimeout(() => {
+                  if (streamId) {
+                    connectToStream();
+                  }
+                }, 2000);
               }}
             >
               Browser Anda tidak mendukung video player.

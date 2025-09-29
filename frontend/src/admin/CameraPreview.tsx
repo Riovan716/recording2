@@ -77,12 +77,19 @@ const CameraPreview: React.FC<CameraPreviewProps> = ({
         autoPlay
         muted
         playsInline
+        preload="none"
         style={{
           width: '100%',
           height: '100%',
           objectFit: 'contain',
           display: 'block',
           borderRadius: fullScreen ? '0' : '14px'
+        }}
+        onLoadedData={() => {
+          // Reset buffer to prevent delay accumulation
+          if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+          }
         }}
       />
       
