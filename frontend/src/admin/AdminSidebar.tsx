@@ -33,9 +33,14 @@ const menu = [
     // Video recording icon
     <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
   ) },
+ 
   { label: 'Daftar Video', path: '/admin/dashboard/videos', icon: (
     // Video list icon
     <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="8" r="1"/></svg>
+  ) },
+  { label: 'camera', path: '/admin/dashboard/camera-preview', icon: (
+    // Camera preview icon
+    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="3"/></svg>
   ) },
   { label: 'Profile', path: '/admin/dashboard/profile', icon: (
     // User profile icon

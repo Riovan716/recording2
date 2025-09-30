@@ -134,6 +134,7 @@ const AdminRecordingPage: React.FC = () => {
   const [recordingLayouts, setRecordingLayouts] = useState<any[]>([]);
   const [recordingCameras, setRecordingCameras] = useState<any[]>([]);
   const [recordingScreenSource, setRecordingScreenSource] = useState<any>(null);
+  const [currentRecordingLayoutType, setCurrentRecordingLayoutType] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -167,6 +168,7 @@ const AdminRecordingPage: React.FC = () => {
       setRecordingCameras([]);
       setRecordingScreenSource(null);
       setRecordingLayouts([]);
+      setCurrentRecordingLayoutType('');
     }
   }, [streamingState.isRecording, streamingState.isScreenRecording]);
 
@@ -248,6 +250,9 @@ const AdminRecordingPage: React.FC = () => {
       if (screenSource) {
         setRecordingScreenSource(screenSource);
       }
+      
+      // Store the layout type for this recording session
+      setCurrentRecordingLayoutType(layoutType);
       
       // Start multi-camera recording with canvas composition
       await startMultiCameraRecording(selectedCameras, layoutType, judul, customLayout, screenSource);
@@ -451,8 +456,8 @@ const AdminRecordingPage: React.FC = () => {
                     {streamingState.isRecording ? 'Stop Recording' : 'Stop Screen Recording'}
                   </button>
                   
-                  {/* Edit Layout Button - Only show for multi-camera recording */}
-                  {streamingState.isRecording && (
+                  {/* Edit Layout Button - Only show for multi-camera recording with custom layout */}
+                  {streamingState.isRecording && currentRecordingLayoutType === 'custom' && (
                     <button
                       onClick={() => {
                         // Load current layout from localStorage
@@ -509,7 +514,6 @@ const AdminRecordingPage: React.FC = () => {
                 <button
                   onClick={handleUpload}
                   style={{
-                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -518,10 +522,12 @@ const AdminRecordingPage: React.FC = () => {
                     color: COLORS.white,
                     border: 'none',
                     borderRadius: 6,
-                    padding: '12px 16px',
+                    padding: '12px 24px',
                     fontSize: '14px',
                     fontWeight: 600,
                     cursor: 'pointer',
+                    minWidth: '140px',
+                    maxWidth: '200px',
                   }}
                 >
                   <FaUpload size={14} />

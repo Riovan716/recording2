@@ -5,6 +5,7 @@ import AdminDashboard from './AdminDashboard';
 import AdminLiveStreamPage from './AdminLiveStreamPage';
 import AdminLiveStreamHistoryPage from './AdminLiveStreamHistoryPage';
 import AdminRecordingPage from './AdminRecordingPage';
+import AdminCameraPreviewPage from './AdminCameraPreviewPage';
 import AdminVideoListPage from './AdminVideoListPage';
 import AdminProfilePage from './AdminProfilePage';
 import { useAuth } from '../context/AuthContext';
@@ -124,6 +125,7 @@ const AdminPanel: React.FC = () => {
           <Route path="livestream" element={<AdminLiveStreamPage />} />
           <Route path="livestream-history" element={<AdminLiveStreamHistoryPage />} />
           <Route path="recording" element={<AdminRecordingPage />} />
+          <Route path="camera-preview" element={<AdminCameraPreviewPage />} />
           <Route path="videos" element={<AdminVideoListPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
         </Routes>
