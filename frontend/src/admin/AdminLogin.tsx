@@ -94,7 +94,7 @@ const AdminLogin = () => {
       }}>
         <svg width="120%" height="120%" viewBox="0 0 960 500" fill="none">
           <path d="M0,300 Q400,200 400,300 T800,200 L800,600 L0,600 Z" fill="#10B981"/>
-          <path d="M0,400 Q200,300 400,400 T800,400 L800,600 L0,600 Z" fill="#059669" opacity="0.5"/>
+          <path d="M0,400 Q200,300 400,400 T800,400 L800,600 L0,600 Z" fill="#059669" opacity="1"/>
         </svg>
       </div>
 
@@ -119,7 +119,7 @@ const AdminLogin = () => {
           textShadow: '0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1)',
           filter: 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15))',
         }}>
-          Class Cast
+          Snap Room
         </h2>
         <div style={{
           display: 'flex',

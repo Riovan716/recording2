@@ -238,7 +238,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                     fontWeight: 500,
                     opacity: 0.8
                   }}>
-                    Cast Platform
+                    Snap Room
                   </div>
                 </div>
               </div>
@@ -491,7 +491,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                   fontWeight: 1000,
                   opacity: 0.9
                 }}>
-                  Cast Platform
+                  Snap Room
                 </div>
               </div>
             </>

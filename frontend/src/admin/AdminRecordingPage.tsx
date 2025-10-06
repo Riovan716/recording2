@@ -303,7 +303,7 @@ const AdminRecordingPage: React.FC = () => {
             display: "grid",
             gridTemplateColumns: "1fr",
             gap: "24px",
-            maxWidth: "1200px",
+            maxWidth: "1400px",
             margin: "0 auto",
             padding: isMobile ? "0" : "0 88px 0 0",
           }}

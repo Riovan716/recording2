@@ -513,7 +513,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               onBlur={e => e.target.style.borderColor = COLORS.border}
             />
           </div>
-
         </div>
         
         {filteredAndSortedHistory.length === 0 ? (
@@ -533,259 +532,286 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div 
-            style={{ 
-              display: "grid", 
-              gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-              gap: "20px",
-              padding: "20px 0"
-            }}
-          >
-            {paginatedHistory.map((stream, index) => (
-              <div
-                key={stream.id}
-                style={{
-                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                  border: 'none',
-                  borderRadius: 24,
-                  padding: 0,
-                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
-                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                  cursor: "pointer",
-                  overflow: "hidden",
-                  minHeight: "320px",
-                  display: "flex",
-                  flexDirection: "column",
-                  position: 'relative',
-                  backdropFilter: 'blur(10px)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-8px) scale(1.02)";
-                  e.currentTarget.style.boxShadow = '0 32px 64px rgba(0, 0, 0, 0.12), 0 16px 32px rgba(0, 0, 0, 0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0) scale(1)";
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)';
-                }}
-              >
-                {/* Modern Background Pattern */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: '120px',
-                  height: '120px',
-                  background: 'radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)',
-                  borderRadius: '50%',
-                  transform: 'translate(30%, -30%)',
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: '80px',
-                  height: '80px',
-                  background: 'radial-gradient(circle, rgba(134, 239, 172, 0.1) 0%, transparent 70%)',
-                  borderRadius: '50%',
-                  transform: 'translate(-30%, 30%)',
-                }} />
+          <>
+            {/* Table Header */}
+            <div style={{
+              background: COLORS.white,
+              borderRadius: "12px 12px 0 0",
+              border: `1px solid ${COLORS.border}`,
+              borderBottom: "none",
+              overflow: "hidden"
+            }}>
+              <div style={{
+                display: isMobile ? "none" : "grid",
+                gridTemplateColumns: "120px 1fr 140px 100px",
+                gap: "12px",
+                padding: "16px 20px",
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                fontWeight: 600,
+                color: COLORS.text,
+                fontSize: "14px",
+                borderBottom: `1px solid ${COLORS.border}`
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  Thumbnail
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Title
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Date & Time
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Actions
+                </div>
+              </div>
+            </div>
 
-                {/* Preview Image/Thumbnail */}
+            {/* Table Body */}
+            <div style={{
+              background: COLORS.white,
+              borderRadius: "0 0 12px 12px",
+              border: `1px solid ${COLORS.border}`,
+              borderTop: "none",
+              overflow: "hidden"
+            }}>
+              {paginatedHistory.map((stream, index) => (
                 <div
+                  key={stream.id}
                   style={{
-                    width: "100%",
-                    height: "160px",
-                    background: `linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(134, 239, 172, 0.05) 100%)`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    overflow: "hidden",
-                    borderRadius: "24px 24px 0 0",
+                    display: isMobile ? "block" : "grid",
+                    gridTemplateColumns: "120px 1fr 140px 100px",
+                    gap: "12px",
+                    padding: "16px 20px",
+                    borderBottom: index < paginatedHistory.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer",
+                    background: "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  {stream.recordingPath ? (
-                    <video
+                  {/* Thumbnail for Desktop */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "70px",
+                    borderRadius: "8px",
+                    background: `linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(134, 239, 172, 0.05) 100%)`,
+                    position: "relative",
+                    overflow: "hidden",
+                  }}>
+                    {stream.recordingPath ? (
+                      <video
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          borderRadius: "8px",
+                        }}
+                        muted
+                        preload="metadata"
+                        src={`${API_URL}${stream.recordingPath}`}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: ${COLORS.subtext};">
+                              <div style="font-size: 24px;">📹</div>
+                            </div>
+                          `;
+                        }}
+                      />
+                    ) : (
+                      <div style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        color: COLORS.subtext 
+                      }}>
+                        <span style={{ fontSize: "24px" }}>🎥</span>
+                      </div>
+                    )}
+                    
+                    {/* Status Badge */}
+                    <div
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
+                        position: "absolute",
+                        top: "4px",
+                        right: "4px",
+                        background: stream.status === 'active' 
+                          ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                          : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                        color: COLORS.white,
+                        fontSize: "9px",
+                        padding: "2px 6px",
+                        borderRadius: 8,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.3px",
+                        boxShadow: stream.status === 'active' 
+                          ? '0 2px 6px rgba(239, 68, 68, 0.4)' 
+                          : '0 2px 6px rgba(34, 197, 94, 0.4)',
                       }}
-                      muted
-                      preload="metadata"
-                      src={`${API_URL}${stream.recordingPath}`}
-                      onError={(e) => {
-                        // Fallback to placeholder if video fails to load
-                        e.currentTarget.style.display = "none";
-                        e.currentTarget.parentElement!.innerHTML = `
-                          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: ${COLORS.subtext};">
-                            <div style="font-size: 32px; margin-bottom: 8px;">📹</div>
-                            <div style="font-size: 12px; font-weight: 500;">Video Preview</div>
-                          </div>
-                        `;
-                      }}
-                    />
-                  ) : (
-                    <div style={{ 
-                      display: "flex", 
-                      flexDirection: "column", 
-                      alignItems: "center", 
-                      justifyContent: "center", 
-                      color: COLORS.subtext 
-                    }}>
-                      <div style={{ fontSize: "32px", marginBottom: "8px" }}>🎥</div>
-                      <div style={{ fontSize: "12px", fontWeight: 500 }}>No Preview</div>
+                    >
+                      {stream.status === 'active' ? 'LIVE' : 'SAVED'}
                     </div>
-                  )}
-                  
-                  {/* Modern Status Badge */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "12px",
-                      right: "12px",
-                      background: stream.status === 'active' 
-                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
-                        : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                      color: COLORS.white,
-                      fontSize: "11px",
-                      padding: "6px 12px",
-                      borderRadius: 20,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      boxShadow: stream.status === 'active' 
-                        ? '0 4px 12px rgba(239, 68, 68, 0.4)' 
-                        : '0 4px 12px rgba(34, 197, 94, 0.4)',
-                      backdropFilter: 'blur(10px)',
-                    }}
-                  >
-                    {stream.status === 'active' ? 'LIVE' : 'SAVED'}
                   </div>
-                </div>
 
-                {/* Modern Card Content */}
-                <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", position: 'relative', zIndex: 1 }}>
-                  {/* Title */}
-                  <div
-                    style={{
-                      fontSize: "18px",
+                  {/* Title & Info */}
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    minHeight: "70px",
+                    padding: isMobile ? "0 0 12px 0" : "0"
+                  }}>
+                    <div style={{
+                      fontSize: "16px",
                       fontWeight: 700,
                       color: COLORS.text,
-                      marginBottom: "12px",
+                      marginBottom: isMobile ? "4px" : "6px",
                       lineHeight: 1.3,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                  >
-                    {stream.title || `Live Stream #${stream.id}`}
+                      whiteSpace: isMobile ? "normal" : "nowrap",
+                    }}>
+                      {stream.title || `Live Stream #${stream.id}`}
+                    </div>
+                    
+                    {isMobile && (
+                      <>
+                        <div style={{ 
+                          fontSize: "12px", 
+                          color: COLORS.subtext,
+                          marginBottom: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}>
+                          <span style={{ fontSize: "12px" }}>📅</span>
+                          {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "2-digit", 
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </div>
+                        
+                      </>
+                    )}
                   </div>
 
-                  {/* Date */}
-                  <div style={{ 
-                    fontSize: "14px", 
-                    color: COLORS.subtext,
-                    marginBottom: "16px",
+                  {/* Date & Time */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    fontSize: "13px",
+                    color: COLORS.text,
+                  }}>
+                    <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                      {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "2-digit", 
+                        year: "numeric"
+                      })}
+                    </div>
+                    <div style={{ color: COLORS.subtext, fontSize: "11px" }}>
+                      {stream.startTime && new Date(stream.startTime).toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </div>
+                  </div>
+
+
+                  {/* Actions */}
+                  <div style={{
                     display: "flex",
+                    justifyContent: isMobile ? "flex-start" : "center",
                     alignItems: "center",
                     gap: "8px",
-                    fontWeight: 500,
+                    flexWrap: "wrap",
                   }}>
-                    <span style={{ 
-                      fontSize: "14px",
-                      background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>📆</span>
-                    {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
-                      day: "2-digit",
-                      month: "2-digit", 
-                      year: "numeric"
-                    })}
-                  </div>
-
-                  {/* Modern Action Buttons */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "12px",
-                      marginTop: "auto",
-                      justifyContent: "center",
-                    }}
-                  >
                     <button
                       onClick={() => handlePlayVideo(stream)}
                       style={{
-                        flex: 1,
-                        padding: "12px 16px",
+                        padding: isMobile ? "8px 12px" : "6px 10px",
                         background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                         color: COLORS.white,
                         border: "none",
-                        borderRadius: 16,
-                        fontSize: "14px",
-                        fontWeight: 700,
+                        borderRadius: isMobile ? 12 : 6,
+                        fontSize: "12px",
+                        fontWeight: 600,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "8px",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)',
+                        gap: "4px",
+                        transition: "all 0.3s ease",
+                        boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)',
+                        flex: isMobile ? "1 1 auto" : "0 0 auto",
+                        minWidth: isMobile ? "50px" : "50px",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(34, 197, 94, 0.4)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(34, 197, 94, 0.4)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
+                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(34, 197, 94, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "16px" }}>▶</span>
-                      Play Video
+                      <span style={{ fontSize: "12px" }}>▶</span>
+                      {isMobile && "Play"}
                     </button>
 
                     <button
                       onClick={() => handleDeleteStream(stream)}
                       style={{
-                        width: "48px",
-                        height: "48px",
+                        padding: isMobile ? "8px 12px" : "6px 10px",
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: COLORS.white,
                         border: "none",
-                        borderRadius: 16,
+                        borderRadius: isMobile ? 12 : 6,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                        transition: "all 0.3s ease",
+                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        flex: isMobile ? "1 1 auto" : "0 0 auto",
+                        minWidth: isMobile ? "120px" : "50px",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.4)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(239, 68, 68, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "18px" }}>🗑</span>
+                      <span style={{ fontSize: "12px" }}>🗑</span>
+                      {isMobile && "Delete"}
                     </button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}
@@ -1119,16 +1145,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     alignItems: "center",
                     gap: "8px",
                     transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!deleting) {
-                      e.currentTarget.style.background = COLORS.redDark;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!deleting) {
-                      e.currentTarget.style.background = COLORS.red;
-                    }
                   }}
                 >
                   {deleting ? (
