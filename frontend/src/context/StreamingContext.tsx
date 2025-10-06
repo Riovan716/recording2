@@ -90,10 +90,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // This effect will trigger when streamingLayoutVersion changes
     // The animate function will automatically pick up the new layout
     console.log('Streaming layout version changed:', streamingLayoutVersion);
-    if (streamingAnimateRef.current) {
-      // Force a re-render by calling animate
-      streamingAnimateRef.current();
-    }
+    // No need to call animate here as it's already running in a loop
+    // The layout change will be picked up by the next frame
   }, [streamingLayoutVersion]);
 
   useEffect(() => {
@@ -544,6 +542,14 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (streamingState.localStream) {
         streamingState.localStream.getTracks().forEach(track => track.stop());
       }
+      
+      // Clean up any video elements that might be in the DOM
+      const videoElements = document.querySelectorAll('video[style*="display: none"]');
+      videoElements.forEach(video => {
+        if (video.parentNode) {
+          video.parentNode.removeChild(video);
+        }
+      });
 
       // Notify backend
       if (streamingState.roomId) {
@@ -557,6 +563,11 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
 
+      // Call cleanup function if available
+      if (streamingAnimateRef.current) {
+        streamingAnimateRef.current();
+      }
+      
       // Clear streaming animate reference
       streamingAnimateRef.current = null;
       
@@ -1178,6 +1189,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         video.playsInline = true;
         video.style.width = '320px';
         video.style.height = '240px';
+        video.style.display = 'none';
         videoElements[deviceId] = video;
       });
 
@@ -1191,6 +1203,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         screenVideoElement.playsInline = true;
         screenVideoElement.style.width = '320px';
         screenVideoElement.style.height = '240px';
+        screenVideoElement.style.display = 'none';
       }
 
       // Wait for videos to load and start playing
@@ -1227,7 +1240,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Create canvas stream with optimized settings
-      const canvasStream = canvas.captureStream(60); // 60 FPS for smoother streaming
+      const canvasStream = canvas.captureStream(30); // 30 FPS to match animation FPS and reduce CPU usage
 
       // Combine canvas video with audio
       const combinedStream = new MediaStream();
@@ -1244,29 +1257,44 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
 
-      // Animation function to draw cameras and screen to canvas
-      const drawCamerasToCanvas = () => {
+      // Optimized animation function to draw cameras and screen to canvas
+      let isRecordingAnimating = true;
+      let lastRecordingFrameTime = 0;
+      const recordingTargetFPS = 30; // Limit to 30 FPS for recording
+      const recordingFrameInterval = 1000 / recordingTargetFPS;
+      
+      // Pre-calculate active streams to avoid filtering every frame
+      const activeStreams = Object.entries(cameraStreams).filter(([deviceId]) => 
+        selectedCameras.includes(deviceId)
+      );
+      const allStreams = [...activeStreams];
+      if (screenStream && screenVideoElement) {
+        allStreams.push(['screen', screenStream]);
+      }
+      
+      const allVideoElements = { ...videoElements };
+      if (screenVideoElement) {
+        allVideoElements['screen'] = screenVideoElement;
+      }
+      
+      const drawCamerasToCanvas = (currentTime: number) => {
+        if (!isRecordingAnimating) return;
+        
+        // Frame rate limiting for recording
+        if (currentTime - lastRecordingFrameTime < recordingFrameInterval) {
+          requestAnimationFrame(drawCamerasToCanvas);
+          return;
+        }
+        lastRecordingFrameTime = currentTime;
+        
         try {
           // Clear canvas
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          const activeStreams = Object.entries(cameraStreams).filter(([deviceId]) => 
-            selectedCameras.includes(deviceId)
-          );
-
-          // Create combined streams array including screen if available
-          const allStreams = [...activeStreams];
-          if (screenStream && screenVideoElement) {
-            allStreams.push(['screen', screenStream]);
-          }
-
-          if (allStreams.length === 0) return;
-
-          // Create combined video elements object
-          const allVideoElements = { ...videoElements };
-          if (screenVideoElement) {
-            allVideoElements['screen'] = screenVideoElement;
+          if (allStreams.length === 0) {
+            requestAnimationFrame(drawCamerasToCanvas);
+            return;
           }
 
           switch (layoutType) {
@@ -1286,6 +1314,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch (error) {
           console.error('Error drawing to canvas:', error);
         }
+        
+        requestAnimationFrame(drawCamerasToCanvas);
       };
 
       // Layout drawing functions
@@ -1402,16 +1432,17 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       // Store animation frame reference for cleanup
-      let animationFrameId: number;
-      let isRecordingActive = true;
+      let animationFrameId: number | null = null;
       
       // Start animation loop
       const animate = () => {
-        if (!isRecordingActive) return;
+        if (!isRecordingAnimating) return;
         
-        drawCamerasToCanvas();
-        animationFrameId = requestAnimationFrame(animate);
+        animationFrameId = requestAnimationFrame(drawCamerasToCanvas);
       };
+      
+      // Start the animation loop
+      animate();
 
       // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
@@ -1446,8 +1477,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const videoUrl = URL.createObjectURL(videoBlob);
         
         // Stop animation loop
-        isRecordingActive = false;
-        if (animationFrameId) {
+        isRecordingAnimating = false;
+        if (animationFrameId !== null) {
           cancelAnimationFrame(animationFrameId);
         }
         
@@ -1464,6 +1495,19 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         audioStreams.forEach(stream => {
           stream.getTracks().forEach(track => track.stop());
         });
+        
+        // Clean up video elements (they're not in DOM, just stop their streams)
+        Object.values(videoElements).forEach(video => {
+          if (video.srcObject) {
+            const stream = video.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+          }
+        });
+        
+        if (screenVideoElement && screenVideoElement.srcObject) {
+          const stream = screenVideoElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
         
         setStreamingState(prev => ({
           ...prev,
@@ -1494,8 +1538,6 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         status: `Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`
       }));
 
-      // Start animation loop
-      animate();
 
       updateStatus(`Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
 
@@ -1615,6 +1657,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         video.autoplay = true;
         video.muted = true;
         video.style.display = 'none';
+        video.playsInline = true;
+        // Add to DOM temporarily for streaming
         document.body.appendChild(video);
         videoElements[deviceId] = video;
       }
@@ -1626,6 +1670,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         screenVideoElement.autoplay = true;
         screenVideoElement.muted = true;
         screenVideoElement.style.display = 'none';
+        screenVideoElement.playsInline = true;
+        // Add to DOM temporarily for streaming
         document.body.appendChild(screenVideoElement);
       }
 
@@ -1640,16 +1686,43 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentStreamingLayout.current = customLayout;
       }
 
-      // Animation function for canvas composition
-      const animate = () => {
-        // Use streamingLayoutVersion to ensure layout updates are reflected
-        const currentLayoutVersion = streamingLayoutVersion;
-        if (!ctx) return;
+      // Animation function for canvas composition with performance optimizations
+      let isAnimating = true;
+      let lastFrameTime = 0;
+      const targetFPS = 30; // Limit to 30 FPS to reduce CPU usage
+      const frameInterval = 1000 / targetFPS;
+      
+      // Pre-calculate enabled streams to avoid filtering every frame
+      let cachedEnabledStreams: [string, MediaStream][] = [];
+      let lastLayoutVersion = -1;
+      
+      const updateCachedStreams = () => {
+        if (lastLayoutVersion !== streamingLayoutVersion) {
+          cachedEnabledStreams = activeStreams.filter(([deviceId, stream]) => {
+            const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
+            return layout ? layout.enabled !== false : true;
+          });
+          lastLayoutVersion = streamingLayoutVersion;
+        }
+      };
+      
+      const animate = (currentTime: number) => {
+        if (!isAnimating || !ctx) return;
         
+        // Frame rate limiting
+        if (currentTime - lastFrameTime < frameInterval) {
+          requestAnimationFrame(animate);
+          return;
+        }
+        lastFrameTime = currentTime;
+        
+        // Update cached streams only when layout changes
+        updateCachedStreams();
+        
+        // Clear canvas once per frame
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         try {
-          const allStreams = [...activeStreams];
           const allVideoElements = { ...videoElements };
           if (screenVideoElement) {
             allVideoElements['screen'] = screenVideoElement;
@@ -1657,96 +1730,14 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           switch (layoutType) {
             case 'pip':
-              // Picture-in-Picture layout with screen sharing as main
-              if (allStreams.length > 0) {
-                // Filter enabled streams first
-                const enabledStreams = allStreams.filter(([deviceId, stream]) => {
-                  const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
-                  return layout ? layout.enabled !== false : true; // Default to enabled if not found
-                });
-                
-                if (enabledStreams.length > 0) {
-                  // Check if screen sharing is included and enabled
-                  const screenStream = enabledStreams.find(([deviceId]) => deviceId === 'screen');
-                  const cameraStreams = enabledStreams.filter(([deviceId]) => deviceId !== 'screen');
-                  
-                  let mainDeviceId: string;
-                  let mainStream: MediaStream;
-                  
-                  if (screenStream) {
-                    // If screen sharing is included, make it the main layout
-                    [mainDeviceId, mainStream] = screenStream;
-                  } else {
-                    // If no screen sharing, use first camera as main
-                    [mainDeviceId, mainStream] = enabledStreams[0];
-                  }
-                  
-                  const mainVideo = allVideoElements[mainDeviceId];
-                  if (mainVideo && mainVideo.readyState >= 2) {
-                    ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
-                  }
-                  
-                  // Draw other enabled streams as PIP
-                  const pipSize = Math.min(canvas.width, canvas.height) * 0.25;
-                  const otherStreams = screenStream ? cameraStreams : enabledStreams.slice(1);
-                  
-                  otherStreams.forEach(([deviceId, stream], index) => {
-                    const video = allVideoElements[deviceId];
-                    if (video && video.readyState >= 2) {
-                      const x = canvas.width - pipSize - 10;
-                      const y = 10 + (index * (pipSize + 10));
-                      ctx.drawImage(video, x, y, pipSize, pipSize);
-                    }
-                  });
-                }
-              }
+              drawPictureInPictureLayout(ctx, canvas.width, canvas.height, cachedEnabledStreams, allVideoElements);
               break;
             case 'custom':
-              // Use current streaming layout if available, otherwise use initial customLayout
-              // currentLayoutVersion ensures we get the latest layout
               const layoutToUse = currentStreamingLayout.current.length > 0 ? currentStreamingLayout.current : (customLayout || []);
               if (layoutToUse.length > 0) {
-                // Draw custom layout - only draw enabled sources
-                layoutToUse.forEach((layout: any) => {
-                  // Only draw if the source is enabled
-                  if (layout.enabled !== false) {
-                    const video = allVideoElements[layout.deviceId];
-                    if (video && video.readyState >= 2) {
-                      const x = (layout.x / 100) * canvas.width;
-                      const y = (layout.y / 100) * canvas.height;
-                      const width = (layout.width / 100) * canvas.width;
-                      const height = (layout.height / 100) * canvas.height;
-                      ctx.drawImage(video, x, y, width, height);
-                    }
-                  }
-                });
+                drawCustomLayout(ctx, canvas.width, canvas.height, layoutToUse, allVideoElements);
               } else {
-                // Fallback to PIP - prioritize screen sharing as main
-                const enabledStreams = allStreams.filter(([deviceId, stream]) => {
-                  const layout = currentStreamingLayout.current.find(l => l.deviceId === deviceId);
-                  return layout ? layout.enabled !== false : true; // Default to enabled if not found
-                });
-                
-                if (enabledStreams.length > 0) {
-                  // Check if screen sharing is included and enabled
-                  const screenStream = enabledStreams.find(([deviceId]) => deviceId === 'screen');
-                  
-                  let mainDeviceId: string;
-                  let mainStream: MediaStream;
-                  
-                  if (screenStream) {
-                    // If screen sharing is included, make it the main layout
-                    [mainDeviceId, mainStream] = screenStream;
-                  } else {
-                    // If no screen sharing, use first camera as main
-                    [mainDeviceId, mainStream] = enabledStreams[0];
-                  }
-                  
-                  const mainVideo = allVideoElements[mainDeviceId];
-                  if (mainVideo && mainVideo.readyState >= 2) {
-                    ctx.drawImage(mainVideo, 0, 0, canvas.width, canvas.height);
-                  }
-                }
+                drawPictureInPictureLayout(ctx, canvas.width, canvas.height, cachedEnabledStreams, allVideoElements);
               }
               break;
           }
@@ -1756,9 +1747,64 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         requestAnimationFrame(animate);
       };
+      
+      // Optimized drawing functions
+      const drawPictureInPictureLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, streams: [string, MediaStream][], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        if (streams.length === 0) return;
+        
+        // Check if screen sharing is included and enabled
+        const screenStream = streams.find(([deviceId]) => deviceId === 'screen');
+        const cameraStreams = streams.filter(([deviceId]) => deviceId !== 'screen');
+        
+        let mainDeviceId: string;
+        
+        if (screenStream) {
+          [mainDeviceId] = screenStream;
+        } else {
+          [mainDeviceId] = streams[0];
+        }
+        
+        const mainVideo = videos[mainDeviceId];
+        if (mainVideo && mainVideo.readyState >= 2) {
+          ctx.drawImage(mainVideo, 0, 0, canvasWidth, canvasHeight);
+        }
+        
+        // Draw other enabled streams as PIP
+        const pipSize = Math.min(canvasWidth, canvasHeight) * 0.25;
+        const otherStreams = screenStream ? cameraStreams : streams.slice(1);
+        
+        otherStreams.forEach(([deviceId], index) => {
+          const video = videos[deviceId];
+          if (video && video.readyState >= 2) {
+            const x = canvasWidth - pipSize - 10;
+            const y = 10 + (index * (pipSize + 10));
+            ctx.drawImage(video, x, y, pipSize, pipSize);
+          }
+        });
+      };
+      
+      const drawCustomLayout = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, layouts: any[], videos: { [deviceId: string]: HTMLVideoElement }) => {
+        if (layouts.length === 0) return;
+        
+        // Sort layouts by zIndex to draw in correct order
+        const sortedLayouts = [...layouts].sort((a, b) => a.zIndex - b.zIndex);
+        
+        sortedLayouts.filter(layout => layout.enabled !== false).forEach(layout => {
+          const video = videos[layout.deviceId];
+          if (!video || video.readyState < 2) return;
+          
+          // Convert percentage to pixel coordinates
+          const x = (layout.x / 100) * canvasWidth;
+          const y = (layout.y / 100) * canvasHeight;
+          const width = (layout.width / 100) * canvasWidth;
+          const height = (layout.height / 100) * canvasHeight;
+          
+          ctx.drawImage(video, x, y, width, height);
+        });
+      };
 
       // Get canvas stream with optimized settings
-      const canvasStream = canvas.captureStream(60); // 60 FPS for smoother streaming
+      const canvasStream = canvas.captureStream(30); // 30 FPS to match animation FPS and reduce CPU usage
 
       // Add audio to canvas stream for multi-camera streaming
       try {
@@ -1803,11 +1849,46 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         status: `Streaming ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`
       }));
 
-      // Store animate function reference for real-time updates
-      streamingAnimateRef.current = animate;
+      // Store cleanup function for streaming
+      const cleanupStreaming = () => {
+        isAnimating = false;
+        // Clean up camera streams
+        Object.values(cameraStreams).forEach(stream => {
+          stream.getTracks().forEach(track => track.stop());
+        });
+        
+        // Clean up screen stream
+        if (screenStream) {
+          screenStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Clean up video elements from DOM and stop their streams
+        Object.values(videoElements).forEach(video => {
+          if (video.parentNode) {
+            video.parentNode.removeChild(video);
+          }
+          if (video.srcObject) {
+            const stream = video.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+          }
+        });
+        
+        if (screenVideoElement) {
+          if (screenVideoElement.parentNode) {
+            screenVideoElement.parentNode.removeChild(screenVideoElement);
+          }
+          if (screenVideoElement.srcObject) {
+            const stream = screenVideoElement.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }
+      };
+      
+      // Store cleanup function reference
+      streamingAnimateRef.current = cleanupStreaming;
       
       // Start animation loop
-      animate();
+      requestAnimationFrame(animate);
 
       updateStatus(`Streaming ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
 
