@@ -943,18 +943,30 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
-      // Get screen stream with system audio
+      // Get screen stream with system audio and memory optimization
       let screenStream: MediaStream;
       try {
         updateStatus("Meminta izin untuk screen recording...");
         screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 15, max: 30 } // Reduced frame rate for memory optimization
           },
           audio: true, // This will capture system audio if user allows it
         });
         updateStatus("Screen stream berhasil didapatkan...");
+        
+        // Optimize screen stream for memory management
+        const videoTrack = screenStream.getVideoTracks()[0];
+        if (videoTrack) {
+          // Apply constraints to reduce memory usage
+          await videoTrack.applyConstraints({
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 15, max: 30 }
+          });
+        }
       } catch (getDisplayMediaError: any) {
         console.error("getDisplayMedia error:", getDisplayMediaError);
         
@@ -1232,8 +1244,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             // Use web browser's getDisplayMedia with specific constraints based on screenSource type
             let displayMediaOptions: any = {
               video: {
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                frameRate: { ideal: 30, max: 60 }
               },
               audio: false // We'll handle audio separately
             };
@@ -1253,6 +1266,17 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
           
           updateStatus("Screen stream berhasil didapatkan...");
+          
+          // Optimize screen stream for memory management
+          const videoTrack = screenStream.getVideoTracks()[0];
+          if (videoTrack) {
+            // Apply constraints to reduce memory usage
+            await videoTrack.applyConstraints({
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              frameRate: { ideal: 15, max: 30 }
+            });
+          }
         } catch (error: any) {
           console.error("Error accessing screen:", error);
           throw new Error(`Gagal mengakses layar: ${error.message}`);
@@ -1270,16 +1294,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Continue without audio if it fails
       }
 
-      // Create canvas for composition
+      // Create canvas for composition with optimized size for memory management
       const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
+      canvas.width = 1280; // Optimized size for memory management
+      canvas.height = 720;  // Optimized size for memory management
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         throw new Error('Canvas context tidak tersedia');
       }
+      
+      // Optimize canvas for better memory management
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'medium';
 
-      // Create video elements for each camera
+      // Create video elements for each camera with memory optimization
       const videoElements: { [deviceId: string]: HTMLVideoElement } = {};
       Object.entries(cameraStreams).forEach(([deviceId, stream]) => {
         const video = document.createElement('video');
@@ -1290,10 +1318,13 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         video.style.width = '320px';
         video.style.height = '240px';
         video.style.display = 'none';
+        // Optimize video element for memory management
+        video.preload = 'none';
+        video.controls = false;
         videoElements[deviceId] = video;
       });
 
-      // Create video element for screen stream
+      // Create video element for screen stream with memory optimization
       let screenVideoElement: HTMLVideoElement | null = null;
       if (screenStream) {
         screenVideoElement = document.createElement('video');
@@ -1304,6 +1335,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         screenVideoElement.style.width = '320px';
         screenVideoElement.style.height = '240px';
         screenVideoElement.style.display = 'none';
+        // Optimize screen video element for memory management
+        screenVideoElement.preload = 'none';
+        screenVideoElement.controls = false;
       }
 
       // Wait for videos to load and start playing
@@ -1340,7 +1374,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Create canvas stream with optimized settings and memory management
-      const canvasStream = canvas.captureStream(30); // 30 FPS to match animation FPS and reduce CPU usage
+      const canvasStream = canvas.captureStream(15); // Reduced to 15 FPS to save memory
       
       // Store canvas reference for cleanup
       const canvasRef = canvas;
@@ -1363,7 +1397,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Optimized animation function to draw cameras and screen to canvas
       let isRecordingAnimating = true;
       let lastRecordingFrameTime = 0;
-      const recordingTargetFPS = 30; // Limit to 30 FPS for recording
+      const recordingTargetFPS = 15; // Reduced to 15 FPS for screen sharing to save memory
       const recordingFrameInterval = 1000 / recordingTargetFPS;
       
       // Pre-calculate active streams to avoid filtering every frame
@@ -1742,8 +1776,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             // Use web browser's getDisplayMedia with specific constraints based on screenSource type
             let displayMediaOptions: any = {
               video: {
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                frameRate: { ideal: 30, max: 60 }
               },
               audio: false // We'll handle audio separately
             };
@@ -1763,22 +1798,37 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
           
           updateStatus("Screen stream berhasil didapatkan...");
+          
+          // Optimize screen stream for memory management
+          const videoTrack = screenStream.getVideoTracks()[0];
+          if (videoTrack) {
+            // Apply constraints to reduce memory usage
+            await videoTrack.applyConstraints({
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              frameRate: { ideal: 15, max: 30 }
+            });
+          }
         } catch (error: any) {
           console.error("Error getting screen stream:", error);
           throw new Error(`Gagal mendapatkan screen stream: ${error.message}`);
         }
       }
 
-      // Create canvas for composition
+      // Create canvas for composition with optimized size for memory management
       const canvas = document.createElement('canvas');
-      canvas.width = 1920;
-      canvas.height = 1080;
+      canvas.width = 1280; // Reduced from 1920 to save memory
+      canvas.height = 720;  // Reduced from 1080 to save memory
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         throw new Error("Gagal membuat canvas context");
       }
+      
+      // Optimize canvas for better memory management
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'medium';
 
-      // Create video elements for each stream
+      // Create video elements for each stream with memory optimization
       const videoElements: { [deviceId: string]: HTMLVideoElement } = {};
       for (const [deviceId, stream] of Object.entries(cameraStreams)) {
         const video = document.createElement('video');
@@ -1787,6 +1837,10 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         video.muted = true;
         video.style.display = 'none';
         video.playsInline = true;
+        // Optimize video element for memory management
+        video.preload = 'none';
+        video.playsInline = true;
+        video.controls = false;
         // Add to DOM temporarily for streaming
         document.body.appendChild(video);
         videoElements[deviceId] = video;
@@ -1800,6 +1854,10 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         screenVideoElement.muted = true;
         screenVideoElement.style.display = 'none';
         screenVideoElement.playsInline = true;
+        // Optimize screen video element for memory management
+        screenVideoElement.preload = 'none';
+        screenVideoElement.playsInline = true;
+        screenVideoElement.controls = false;
         // Add to DOM temporarily for streaming
         document.body.appendChild(screenVideoElement);
       }
@@ -1818,7 +1876,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Animation function for canvas composition with performance optimizations
       let isAnimating = true;
       let lastFrameTime = 0;
-      const targetFPS = 30; // Limit to 30 FPS to reduce CPU usage
+      const targetFPS = 15; // Reduced from 30 to 15 FPS for screen sharing to save memory
       const frameInterval = 1000 / targetFPS;
       
       // Pre-calculate enabled streams to avoid filtering every frame
@@ -1937,7 +1995,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       // Get canvas stream with optimized settings and memory management
-      const canvasStream = canvas.captureStream(30); // 30 FPS to match animation FPS and reduce CPU usage
+      const canvasStream = canvas.captureStream(15); // Reduced to 15 FPS to match animation FPS and save memory
       
       // Store canvas reference for cleanup
       const canvasRef = canvas;
