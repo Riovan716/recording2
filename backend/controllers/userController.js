@@ -237,12 +237,18 @@ const login = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     
     if (!user) {
-      return res.status(401).json({ error: 'Email atau password salah' });
+      return res.status(401).json({ 
+        error: 'Email tidak terdaftar',
+        errorType: 'EMAIL_NOT_FOUND'
+      });
     }
     
     // Check password (in production, use bcrypt for hashing)
     if (user.password !== password) {
-      return res.status(401).json({ error: 'Email atau password salah' });
+      return res.status(401).json({ 
+        error: 'Password salah',
+        errorType: 'INVALID_PASSWORD'
+      });
     }
     
     // Create JWT token

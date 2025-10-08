@@ -85,6 +85,20 @@ const AdminCameraPreviewPage: React.FC = () => {
     setIsFullscreen(isFullscreen === deviceId ? null : deviceId);
   };
 
+  // Handle escape key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -379,6 +393,72 @@ const AdminCameraPreviewPage: React.FC = () => {
                   fullScreen={isFullscreen === streamData.deviceId}
                 />
                 
+                {/* Fullscreen Exit Button - Top Center */}
+                {isFullscreen === streamData.deviceId && (
+                  <button
+                    onClick={() => toggleFullscreen(streamData.deviceId)}
+                    style={{
+                      position: 'absolute',
+                      top: '80px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(239, 68, 68, 0.9)',
+                      color: 'white',
+                      border: '3px solid rgba(255, 255, 255, 0.8)',
+                      borderRadius: '16px',
+                      padding: '16px 24px',
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      zIndex: 10001,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 8px 32px rgba(239, 68, 68, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3)',
+                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(220, 38, 38, 1)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 1)';
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(220, 38, 38, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(239, 68, 68, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3)';
+                    }}
+                    title="Keluar dari Full Screen (ESC)"
+                  >
+                    <span style={{ fontSize: '18px' }}>⤓</span>
+                    <span>KELUAR DARI FULLSCREEN</span>
+                  </button>
+                )}
+
+                {/* ESC Instruction Text - Top Left */}
+                {isFullscreen === streamData.deviceId && (
+                  <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    left: '220px',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    zIndex: 99999,
+                    textAlign: 'left',
+                    border: '2px solid rgba(255, 255, 255, 0.5)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                    minWidth: '200px',
+                    background: 'transparent'
+                  }}>
+                    Tekan ESC untuk keluar dari fullscreen
+                  </div>
+                )}
+                 
                 {/* Camera Controls */}
                 <div style={{
                   position: 'absolute',
@@ -388,9 +468,10 @@ const AdminCameraPreviewPage: React.FC = () => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  background: 'rgba(0, 0, 0, 0.7)',
+                  background: 'transparent',
                   borderRadius: '8px',
-                  padding: '8px 12px'
+                  padding: '8px 12px',
+                  zIndex: isFullscreen === streamData.deviceId ? 10000 : 'auto'
                 }}>
                   <div style={{
                     color: 'white',
@@ -404,29 +485,33 @@ const AdminCameraPreviewPage: React.FC = () => {
                     <button
                       onClick={() => toggleFullscreen(streamData.deviceId)}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.2)',
+                        background: 'transparent',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
                         padding: '6px 8px',
                         fontSize: '12px',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        fontWeight: isFullscreen === streamData.deviceId ? '600' : '400'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.transform = 'scale(1.1)';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.transform = 'scale(1)';
                       }}
+                      title={isFullscreen === streamData.deviceId ? 'Keluar dari Full Screen' : 'Masuk ke Full Screen'}
                     >
-                      {isFullscreen === streamData.deviceId ? '⤓' : '⤢'}
+                      {isFullscreen === streamData.deviceId ? '⤓ Keluar' : '⤢ Fullscreen'}
                     </button>
                     
                     <button
                       onClick={() => stopCameraStream(streamData.deviceId)}
                       style={{
-                        background: 'rgba(239, 68, 68, 0.8)',
+                        background: 'transparent',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -436,10 +521,12 @@ const AdminCameraPreviewPage: React.FC = () => {
                         transition: 'all 0.2s ease'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 1)';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.transform = 'scale(1.1)';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)';
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
                       Stop

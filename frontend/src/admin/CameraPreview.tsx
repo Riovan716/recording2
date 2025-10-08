@@ -191,18 +191,21 @@ const CameraPreview: React.FC<CameraPreviewProps> = ({
       {streamTitle && !isLoading && !hasError && (
         <div style={{
           position: 'absolute',
-          top: '12px',
-          right: '12px',
-          background: 'rgba(0, 0, 0, 0.7)',
+          top: fullScreen ? '20px' : '12px',
+          right: fullScreen ? '220px' : '20px',
+          background: 'transparent',
           color: 'white',
-          padding: '6px 12px',
+          padding: fullScreen ? '8px 16px' : '6px 12px',
           borderRadius: '8px',
-          fontSize: '12px',
+          fontSize: fullScreen ? '14px' : '12px',
           fontWeight: '500',
-          maxWidth: '200px',
+          maxWidth: fullScreen ? '300px' : '200px',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          zIndex: fullScreen ? 10002 : 'auto',
+          border: fullScreen ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
+          boxShadow: fullScreen ? '0 4px 16px rgba(0, 0, 0, 0.3)' : 'none'
         }}>
           {streamTitle}
         </div>
@@ -248,40 +251,6 @@ const CameraPreview: React.FC<CameraPreviewProps> = ({
         </div>
       )}
       
-      {/* Full Screen Toggle Button */}
-      {!isLoading && !hasError && (
-        <button
-          onClick={() => window.location.reload()} // Simple way to exit fullscreen
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: fullScreen ? '12px' : '12px',
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px',
-            fontSize: '16px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            zIndex: 10
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
-            e.currentTarget.style.transform = 'scale(1.1)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-          title={fullScreen ? 'Keluar dari Full Screen' : 'Masuk ke Full Screen'}
-        >
-          {fullScreen ? '⤓' : '⤢'}
-        </button>
-      )}
       
       {/* Add CSS animations */}
       <style>

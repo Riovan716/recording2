@@ -54,7 +54,14 @@ const AdminLogin = () => {
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Login gagal');
+        // Handle specific error messages
+        if (errorData.errorType === 'EMAIL_NOT_FOUND') {
+          setError('Email tidak terdaftar dalam sistem');
+        } else if (errorData.errorType === 'INVALID_PASSWORD') {
+          setError('Password yang Anda masukkan salah');
+        } else {
+          setError(errorData.error || 'Login gagal');
+        }
       }
     } catch (error) {
       setError('Terjadi kesalahan pada server');

@@ -32,7 +32,7 @@ const COLORS = {
 };
 
 const AdminProfilePage: React.FC = () => {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, updateUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -45,6 +45,8 @@ const AdminProfilePage: React.FC = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -62,6 +64,17 @@ const AdminProfilePage: React.FC = () => {
     }
   }, [user]);
 
+  // Check for changes whenever formData changes
+  useEffect(() => {
+    if (user) {
+      const hasFormChanges = (
+        formData.name.trim() !== (user.name || '') || 
+        formData.email.trim() !== (user.email || '')
+      );
+      setHasChanges(hasFormChanges);
+    }
+  }, [formData, user]);
+
   const isMobile = windowWidth < 768;
 
   const showAlert = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
@@ -70,17 +83,68 @@ const AdminProfilePage: React.FC = () => {
     setShowAlertModal(true);
   };
 
+  const validateEmail = (email: string) => {
+    if (!email.trim()) {
+      setEmailError('');
+      return true;
+    }
+    
+    if (!email.includes('@')) {
+      setEmailError("Please include an '@' in the email address. '" + email + "' is missing an '@'.");
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setEmailError("Format email tidak valid. pastikan memasukkan alamat email yang valid");
+      return false;
+    }
+    
+    setEmailError('');
+    return true;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Validate email in real-time
+    if (name === 'email') {
+      validateEmail(value);
+    }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!hasChanges) {
+      showAlert('Tidak ada perubahan yang perlu disimpan', 'info');
+      setLoading(false);
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.name.trim()) {
+      showAlert('Nama tidak boleh kosong', 'error');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      showAlert('Email tidak boleh kosong', 'error');
+      setLoading(false);
+      return;
+    }
+
+    // Check if email has validation errors
+    if (emailError) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/users/profile`, {
@@ -90,14 +154,19 @@ const AdminProfilePage: React.FC = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email
+          name: formData.name.trim(),
+          email: formData.email.trim()
         })
       });
 
       if (response.ok) {
+        const responseData = await response.json();
+        // Update user context with new data
+        updateUser({
+          name: responseData.name,
+          email: responseData.email
+        });
         showAlert('Profil berhasil diperbarui!', 'success');
-        // Update user context if needed
       } else {
         const errorData = await response.json();
         showAlert(errorData.error || 'Gagal memperbarui profil', 'error');
@@ -284,30 +353,53 @@ const AdminProfilePage: React.FC = () => {
                       width: '100%',
                       padding: '12px 16px',
                       borderRadius: 8,
-                      border: `1px solid ${COLORS.border}`,
+                      border: `1px solid ${emailError ? '#ef4444' : COLORS.border}`,
                       fontSize: '14px',
                       outline: 'none',
                       transition: 'border-color 0.2s',
                     }}
-                    onFocus={(e) => e.target.style.borderColor = COLORS.primary}
-                    onBlur={(e) => e.target.style.borderColor = COLORS.border}
+                    onFocus={(e) => e.target.style.borderColor = emailError ? '#ef4444' : COLORS.primary}
+                    onBlur={(e) => e.target.style.borderColor = emailError ? '#ef4444' : COLORS.border}
                   />
+                  {emailError && (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #f59e0b',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      color: '#92400e',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '16px' }}>⚠️</span>
+                      <span>{emailError}</span>
+                    </div>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !hasChanges}
                   style={{
                     width: '100%',
-                    background: loading ? '#f1f5f9' : COLORS.primary,
-                    color: loading ? COLORS.subtext : COLORS.white,
+                    background: loading 
+                      ? '#f1f5f9' 
+                      : hasChanges 
+                        ? '#10b981' // Bright green when changes exist
+                        : '#9ca3af', // Gray when no changes
+                    color: COLORS.white,
                     border: 'none',
                     borderRadius: 8,
                     padding: '12px 16px',
                     fontSize: '14px',
                     fontWeight: 600,
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: (loading || !hasChanges) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s',
+                    opacity: hasChanges ? 1 : 0.7,
+                    boxShadow: hasChanges ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none',
                   }}
                 >
                   {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
