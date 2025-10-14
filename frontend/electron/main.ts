@@ -2,6 +2,7 @@ import { app, BrowserWindow, session, ipcMain, desktopCapturer } from "electron"
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -69,6 +70,8 @@ function createWindow() {
       // allowFileAccess: true, // Deprecated property
       // allowFileAccessFromFileURLs: true, // Deprecated property
       // allowUniversalAccessFromFileURLs: true, // Deprecated property
+      // Ensure proper script execution
+      enableBlinkFeatures: 'CSSColorSchemeUARendering',
     },
   });
 
@@ -131,29 +134,40 @@ function createWindow() {
     return true;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
+  // Always try to load from Vite dev server first
+  const devUrl = VITE_DEV_SERVER_URL || 'http://localhost:5173';
+  console.log("[main] Attempting to load from dev server:", devUrl);
+  
+  win.loadURL(devUrl).catch((err) => {
+    console.error("[main] Failed to load from dev server:", err);
+    
+    // Fallback to production build
     const indexPath = path.join(RENDERER_DIST, "index.html");
-    console.log("[main] RENDERER_DIST:", RENDERER_DIST);
-    console.log("[main] Loading index.html from:", indexPath);
+    console.log("[main] Fallback: Loading index.html from:", indexPath);
     console.log("[main] File exists:", fs.existsSync(indexPath));
-    console.log("[main] File size:", fs.statSync(indexPath).size, "bytes");
     
-    // Use absolute path and proper protocol
-    const fileUrl = `file://${indexPath.replace(/\\/g, '/')}`;
-    console.log("[main] Loading with URL:", fileUrl);
-    
-    win.loadURL(fileUrl).catch((err) => {
-      console.error("[main] Failed to load URL:", err);
-      // Fallback to loadFile
-      if (win && !win.isDestroyed()) {
-        win.loadFile(indexPath).catch((err2) => {
-          console.error("[main] Failed to load file:", err2);
+    if (fs.existsSync(indexPath)) {
+      console.log("[main] File size:", fs.statSync(indexPath).size, "bytes");
+      
+      // Use absolute path and proper protocol
+      const fileUrl = `file://${indexPath.replace(/\\/g, '/')}`;
+      console.log("[main] Loading with URL:", fileUrl);
+      
+      win?.loadFile(indexPath).catch((err2) => {
+        console.error("[main] Failed to load file:", err2);
+        
+        // Last resort: try to load the dev server again
+        win?.loadURL('http://localhost:5173').catch(() => {
+          console.error("[main] All loading attempts failed");
         });
-      }
-    });
-  }
+      });
+    } else {
+      console.error("[main] Production build not found, trying dev server");
+      win?.loadURL('http://localhost:5173').catch(() => {
+        console.error("[main] Dev server also not available");
+      });
+    }
+  });
 
   win.webContents.once("did-finish-load", () => {
     console.log("[main] Page finished loading");
@@ -177,6 +191,57 @@ function createWindow() {
     console.error("  Error Code:", errorCode);
     console.error("  Error Description:", errorDescription);
     console.error("  Validated URL:", validatedURL);
+    
+    // Show error page with details
+    if (win && !win.isDestroyed()) {
+      // Create a temporary HTML file instead of using data URL
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Loading Error</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+            .error-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .error-title { color: #e74c3c; font-size: 24px; margin-bottom: 16px; }
+            .error-details { background: #f8f9fa; padding: 16px; border-radius: 4px; font-family: monospace; }
+            .retry-btn { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <div class="error-container">
+            <div class="error-title">🚫 Application Loading Failed</div>
+            <p>The application failed to load. This might be due to:</p>
+            <ul>
+              <li>Development server not running</li>
+              <li>Network connectivity issues</li>
+              <li>Firewall blocking the connection</li>
+            </ul>
+            <div class="error-details">
+              <strong>Error Code:</strong> ${errorCode}<br>
+              <strong>Description:</strong> ${errorDescription}<br>
+              <strong>URL:</strong> ${validatedURL}
+            </div>
+            <button class="retry-btn" onclick="window.location.reload()">Retry Loading</button>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Write error HTML to a temporary file
+      const tempDir = os.tmpdir();
+      const errorFilePath = path.join(tempDir, 'electron-error.html');
+      fs.writeFileSync(errorFilePath, errorHtml);
+      
+      // Load the error file
+      win?.loadFile(errorFilePath).catch((err) => {
+        console.error("[main] Failed to load error file:", err);
+        // Last resort: try to load the dev server again
+        win?.loadURL('http://localhost:5173').catch(() => {
+          console.error("[main] All loading attempts failed");
+        });
+      });
+    }
     win?.show();
   });
 
@@ -227,6 +292,18 @@ ipcMain.handle('get-screen-sources', async () => {
     }));
   } catch (error) {
     console.error("[main] Error getting screen sources:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle('open-external', async (event, url) => {
+  try {
+    console.log("[main] Opening external URL:", url);
+    const { shell } = await import('electron');
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error("[main] Error opening external URL:", error);
     throw error;
   }
 });

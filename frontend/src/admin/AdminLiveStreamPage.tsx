@@ -5,6 +5,7 @@ import CameraPreview from "./CameraPreview";
 import ModalNotifikasi from "../components/ModalNotifikasi";
 import MultiCameraStreamer from "../components/MultiCameraStreamer";
 import BasicLayoutEditor from "../components/BasicLayoutEditor";
+import YouTubeSimulcast from "../components/YouTubeSimulcast";
 import { API_URL } from "../config";
 
 // Color palette dengan tema hijau muda (#BBF7D0)
@@ -247,7 +248,7 @@ const AdminLiveStreamPage: React.FC = () => {
       await fetchStreamingStats();
       
       showAlert("Live stream berhasil dimulai!", "success");
-      setStreamTitle('');
+      // Don't reset streamTitle here - it's needed for YouTube simulcast
     } catch (error) {
       console.error("Error starting stream:", error);
       showAlert((error as Error).message || "Error memulai streaming", "error");
@@ -830,6 +831,22 @@ const AdminLiveStreamPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* YouTube Simulcast */}
+                {streamingState.isStreaming && streamingState.roomId && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <YouTubeSimulcast
+                      roomId={streamingState.roomId}
+                      streamTitle={streamingState.selectedMapel || 'Live Stream'}
+                      onSimulcastStart={(broadcastUrl) => {
+                        showAlert(`Simulcast started! YouTube URL: ${broadcastUrl}`, "success");
+                      }}
+                      onSimulcastStop={() => {
+                        showAlert("Simulcast stopped successfully", "success");
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* Edit Layout Button - Only show for multi-camera streaming */}
                 {streamingState.isStreaming && (streamingCameras.length > 0 || streamingScreenSource) && (
                   <button
@@ -1012,7 +1029,7 @@ const AdminLiveStreamPage: React.FC = () => {
               <button
                 onClick={() => {
                   setShowTitleModal(false);
-                  setStreamTitle('');
+                  // Don't reset streamTitle here - it's needed for YouTube simulcast
                 }}
                 style={{
                   padding: '10px 20px',

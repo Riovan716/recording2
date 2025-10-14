@@ -3,7 +3,6 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const recordingController = require('../controllers/recordingController');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const upload = multer({ dest: path.join(__dirname, '../uploads') });
 
@@ -27,8 +26,8 @@ router.get('/all', recordingController.listRecordings);
 router.get('/download/:filename', recordingController.downloadRecording);
 router.get('/stream/:filename', corsMiddleware, recordingController.streamRecording);
 
-// Protected routes (authentication required)
-router.post('/upload', authenticateToken, requireAdmin, upload.single('recording'), recordingController.uploadRecording);
-router.delete('/:id', authenticateToken, requireAdmin, recordingController.deleteRecording);
+// All routes are now public (no authentication required)
+router.post('/upload', upload.single('recording'), recordingController.uploadRecording);
+router.delete('/:id', recordingController.deleteRecording);
 
 module.exports = router; 

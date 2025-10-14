@@ -28,7 +28,9 @@ try {
     // Backend status
     getBackendStatus: () => electron.ipcRenderer.invoke("get-backend-status"),
     // Preview window
-    openPreviewWindow: (url) => electron.ipcRenderer.invoke("open-preview-window", url)
+    openPreviewWindow: (url) => electron.ipcRenderer.invoke("open-preview-window", url),
+    // Open external URL
+    openExternal: (url) => electron.ipcRenderer.invoke("open-external", url)
   });
   console.log("[preload] Exposing electronAPI:", electronAPI);
   electron.contextBridge.exposeInMainWorld("electronAPI", electronAPI);
@@ -47,7 +49,7 @@ try {
   console.log("[preload] APIs exposed: window.electronAPI, window.ipc, window.__PRELOAD_OK__");
 } catch (err) {
   try {
-    require("electron").ipcRenderer?.send("preload-crashed", String(err));
+    electron.ipcRenderer?.send("preload-crashed", String(err));
   } catch {
   }
   console.error("[preload] FAILED:", err);

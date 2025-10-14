@@ -5,6 +5,7 @@ const { sequelize, User, LiveStream } = require('./models');
 const userRoutes = require('./routes/users');
 const recordingRoutes = require('./routes/recording');
 const activityLogRoutes = require('./routes/activityLog');
+const youtubeSimulcastRoutes = require('./routes/youtubeSimulcast');
 
 const cors = require('cors');
 const { spawn } = require('child_process');
@@ -14,8 +15,9 @@ const config = require('./config');
 app.use(express.json());
 app.use(cors({
   origin: config.CORS_ORIGIN,
-  credentials: false // Tidak perlu credentials untuk JWT
+  credentials: false
 }));
+
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -47,6 +49,7 @@ app.use('/api/recording', recordingRoutes);
 app.use('/api/recordings', recordingRoutes);
 app.use('/api/livestream', livestreamRoutes);
 app.use('/api/activity', activityLogRoutes);
+app.use('/api/youtube', youtubeSimulcastRoutes);
 
 // Serve React app for root route
 app.get('/', (req, res) => {

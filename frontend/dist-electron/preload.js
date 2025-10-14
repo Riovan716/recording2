@@ -50,8 +50,7 @@ try {
 catch (err) {
     // Jika ada error runtime di preload, log agar terlihat di console main
     try {
-        // @ts-ignore
-        require("electron").ipcRenderer?.send("preload-crashed", String(err));
+        ipcRenderer?.send("preload-crashed", String(err));
     }
     catch { }
     console.error("[preload] FAILED:", err);

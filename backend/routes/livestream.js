@@ -3,7 +3,6 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const ctrl = require('../controllers/liveStreamController');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const upload = multer({ dest: path.join(__dirname, '../uploads') });
 
@@ -13,17 +12,17 @@ router.get('/stats', ctrl.getStats);
 router.get('/history', ctrl.getLiveStreamHistory);
 router.get('/recordings', ctrl.getRecordings);
 
-// Protected routes (authentication required)
-router.post('/start', authenticateToken, requireAdmin, ctrl.startLive);
-router.post('/stop', authenticateToken, requireAdmin, ctrl.stopLive);
-router.post('/viewers', authenticateToken, ctrl.updateViewers);
-router.post('/reset-stats', authenticateToken, requireAdmin, ctrl.resetStats);
-router.post('/sync-stats', authenticateToken, requireAdmin, ctrl.syncStats);
-router.post('/update-recording', authenticateToken, requireAdmin, ctrl.updateRecordingPath);
-router.post('/upload-recording', authenticateToken, requireAdmin, upload.single('recording'), ctrl.uploadLiveStreamRecording);
+// All routes are now public (no authentication required)
+router.post('/start', ctrl.startLive);
+router.post('/stop', ctrl.stopLive);
+router.post('/viewers', ctrl.updateViewers);
+router.post('/reset-stats', ctrl.resetStats);
+router.post('/sync-stats', ctrl.syncStats);
+router.post('/update-recording', ctrl.updateRecordingPath);
+router.post('/upload-recording', upload.single('recording'), ctrl.uploadLiveStreamRecording);
 
 // Routes with :id parameter (order matters - more specific routes first)
-router.delete('/:id', authenticateToken, requireAdmin, ctrl.deleteLiveStream);
+router.delete('/:id', ctrl.deleteLiveStream);
 router.get('/info/:id', ctrl.getStreamInfo);
 router.get('/current-stats/:id', ctrl.getCurrentStreamStats);
 router.get('/detail/:id', ctrl.getLiveStreamDetail);

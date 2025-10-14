@@ -25,10 +25,23 @@ exports.startLive = async (req, res) => {
   const { id, title } = req.body;
   
   try {
+    console.log('Starting live stream with data:', { id, title });
+    
+    // Validasi input
+    if (!id) {
+      console.log('Stream ID is missing');
+      return res.status(400).json({ 
+        error: 'Stream ID is required',
+        success: false 
+      });
+    }
+
     // Cek apakah ID sudah ada di database (untuk mencegah duplikat)
+    console.log('Checking for existing stream with ID:', id);
     const existingStream = await LiveStream.findOne({
       where: { id: id }
     });
+    console.log('Existing stream found:', existingStream ? 'Yes' : 'No');
     
     if (existingStream) {
       return res.status(400).json({ 
@@ -38,7 +51,11 @@ exports.startLive = async (req, res) => {
     }
     
     // Cek apakah ID sudah ada di memory (untuk mencegah duplikat)
-    if (!liveStreams.find(s => s.id === id)) {
+    console.log('Checking memory for existing stream with ID:', id);
+    const existingInMemory = liveStreams.find(s => s.id === id);
+    console.log('Existing in memory:', existingInMemory ? 'Yes' : 'No');
+    
+    if (!existingInMemory) {
       const newStream = { 
         id,
         title: title || `Live Stream ${id}`,
@@ -49,6 +66,7 @@ exports.startLive = async (req, res) => {
       liveStreams.push(newStream);
       
       // Simpan ke database (semua live stream otomatis tersimpan)
+      console.log('Creating live stream record in database...');
       const liveStreamRecord = await LiveStream.create({
         id,
         title: title || `Live Stream ${id}`,
@@ -57,6 +75,7 @@ exports.startLive = async (req, res) => {
         isRecording: false,
         status: 'active'
       });
+      console.log('Live stream record created successfully');
       
       console.log('Live stream automatically saved to database:', liveStreamRecord.toJSON());
       
@@ -83,7 +102,13 @@ exports.startLive = async (req, res) => {
     }
   } catch (error) {
     console.error('Error starting live stream:', error);
-    res.status(500).json({ error: 'Failed to start live stream' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to start live stream',
+      details: error.message,
+      success: false 
+    });
   }
 };
 

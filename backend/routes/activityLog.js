@@ -5,11 +5,10 @@ const {
   getActivitiesByRole, 
   manualCleanup 
 } = require('../controllers/activityLogController');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Protected routes (authentication required)
-router.get('/recent', authenticateToken, requireAdmin, getRecentActivities);
-router.get('/role/:role', authenticateToken, requireAdmin, getActivitiesByRole);
-router.delete('/cleanup', authenticateToken, requireAdmin, manualCleanup);
+// All routes are now public (no authentication required)
+router.get('/recent', getRecentActivities);
+router.get('/role/:role', getActivitiesByRole);
+router.delete('/cleanup', manualCleanup);
 
 module.exports = router; 

@@ -9,6 +9,84 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// Add express middleware for streaming endpoint
+app.use(express.json());
+app.use(express.static('public'));
+
+// Streaming endpoint for dual streaming (browser + YouTube)
+app.get('/stream/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  
+  console.log(`[MediaSoup] Streaming endpoint accessed for room: ${roomId}`);
+  
+  // Get producers for this room
+  const roomProducers = producers[roomId];
+  if (!roomProducers) {
+    console.log(`[MediaSoup] No producers found for room: ${roomId}`);
+    res.status(404).json({ error: 'Stream not found', roomId });
+    return;
+  }
+  
+  console.log(`[MediaSoup] Found producers for room: ${roomId}`, {
+    videoProducer: roomProducers.videoProducer ? 'exists' : 'missing',
+    audioProducer: roomProducers.audioProducer ? 'exists' : 'missing'
+  });
+  
+  // Set headers for streaming
+  res.writeHead(200, {
+    'Content-Type': 'video/webm',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Range',
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Transfer-Encoding': 'chunked'
+  });
+  
+  // For now, create a simple WebM stream that FFmpeg can read
+  // This is a basic implementation - in production you'd need proper MediaSoup to WebM conversion
+  
+  // Create WebM header
+  const webmHeader = Buffer.from([
+    0x1A, 0x45, 0xDF, 0xA3, // EBML header
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, // EBML version
+    0x42, 0x86, 0x81, 0x01, // DocType
+    0x42, 0xF2, 0x81, 0x01, 0x42, 0xF3, 0x81, 0x01, // DocTypeVersion, DocTypeReadVersion
+    0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6D, // DocType = "webm"
+    0x42, 0x87, 0x81, 0x02, // EBMLMaxIDLength
+    0x42, 0x85, 0x81, 0x02  // EBMLMaxSizeLength
+  ]);
+  
+  res.write(webmHeader);
+  
+  // Send a simple message indicating the stream is ready
+  const message = `MediaSoup stream ready for room: ${roomId}\n`;
+  res.write(Buffer.from(message));
+  
+  // Keep the connection alive and send periodic data
+  const interval = setInterval(() => {
+    if (res.destroyed) {
+      clearInterval(interval);
+      return;
+    }
+    
+    // Send a simple heartbeat to keep the stream alive
+    const heartbeat = Buffer.from(`heartbeat: ${Date.now()}\n`);
+    res.write(heartbeat);
+  }, 1000);
+  
+  // Clean up on disconnect
+  req.on('close', () => {
+    console.log(`[MediaSoup] Stream connection closed for room: ${roomId}`);
+    clearInterval(interval);
+  });
+  
+  req.on('error', (error) => {
+    console.error(`[MediaSoup] Stream error for room: ${roomId}:`, error);
+    clearInterval(interval);
+  });
+});
+
 let worker, router;
 // Remove global producerTransport and consumerTransports
 // let producerTransport, consumerTransports = [];

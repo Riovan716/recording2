@@ -20,7 +20,7 @@ module.exports = {
   UPLOAD_PATH: process.env.UPLOAD_PATH || './uploads',
 
   // Security
-  JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-here',
+  JWT_SECRET: process.env.JWT_SECRET || 'your_jwt_secret_key_here_1759984954468',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY || 7, // days
 

@@ -45,6 +45,27 @@ const LiveStream = sequelize.define('LiveStream', {
     allowNull: false,
     defaultValue: 'active',
   },
+  // YouTube simulcast fields
+  youtubeStreamId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'YouTube live stream ID'
+  },
+  youtubeBroadcastId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'YouTube live broadcast ID'
+  },
+  youtubeBroadcastUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'YouTube live broadcast URL'
+  },
+  youtubeStreamUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'YouTube stream URL'
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,

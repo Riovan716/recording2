@@ -443,8 +443,17 @@ const ViewerPage: React.FC = () => {
             // Set connection status to true since we have a valid stream
             setIsConnected(true);
             
-            videoRef.current.srcObject = stream;
-            console.log('Assigned stream to video element');
+            if (videoRef.current) {
+              try {
+                videoRef.current.srcObject = stream;
+                console.log('Assigned stream to video element');
+                console.log('Stream tracks:', stream.getTracks().length);
+                console.log('Video element ready state:', videoRef.current.readyState);
+              } catch (error) {
+                console.error('Error assigning stream to video element:', error);
+                setError('Gagal mengaitkan stream ke video element');
+              }
+            }
             
             // Start network monitoring for adaptive bitrate
             startNetworkMonitoring();
@@ -463,14 +472,13 @@ const ViewerPage: React.FC = () => {
                 videoRef.current.volume = 1.0;
                 
                 // Optimize video element for low latency
-                if ('webkitVideoDecodedByteCount' in videoRef.current) {
-                  (videoRef.current as any).webkitVideoDecodedByteCount = 0;
-                }
+                // Note: webkitVideoDecodedByteCount is read-only, cannot be set
                 
                 videoRef.current.play().then(() => {
                   console.log('Video started playing successfully');
                   console.log('Audio enabled:', !videoRef.current?.muted);
                   console.log('Volume:', videoRef.current?.volume);
+                  console.log('Video dimensions:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
                   
                   // Reset buffer to prevent delay
                   if (videoRef.current) {
@@ -885,9 +893,7 @@ const ViewerPage: React.FC = () => {
                 if (videoRef.current) {
                   videoRef.current.currentTime = 0;
                   // Set low latency buffer settings
-                  if ('webkitVideoDecodedByteCount' in videoRef.current) {
-                    (videoRef.current as any).webkitVideoDecodedByteCount = 0;
-                  }
+                  // Note: webkitVideoDecodedByteCount is read-only, cannot be set
                 }
               }}
               onError={(e) => {

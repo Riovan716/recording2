@@ -39,6 +39,9 @@ try {
     
     // Preview window
     openPreviewWindow: (url: string) => ipcRenderer.invoke('open-preview-window', url),
+    
+    // Open external URL
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   });
   
   console.log("[preload] Exposing electronAPI:", electronAPI);
@@ -71,8 +74,7 @@ try {
 } catch (err) {
   // Jika ada error runtime di preload, log agar terlihat di console main
   try {
-    // @ts-ignore
-    require("electron").ipcRenderer?.send("preload-crashed", String(err));
+    ipcRenderer?.send("preload-crashed", String(err));
   } catch {}
   console.error("[preload] FAILED:", err);
   // Jangan throw; biar Electron tidak mematikan proses renderer
