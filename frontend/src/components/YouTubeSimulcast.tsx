@@ -79,11 +79,12 @@ interface YouTubeSimulcastProps {
   isStreaming?: boolean; // Add streaming status
 }
 
-interface YouTubeStatus {
+interface StreamKeyStatus {
   isConfigured: boolean;
-  hasTokens: boolean;
+  hasStreamKey: boolean;
   isReady: boolean;
 }
+
 
 interface SimulcastStatus {
   isActive: boolean;
@@ -100,9 +101,9 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
   onSimulcastStop,
   isStreaming = false
 }) => {
-  const [status, setStatus] = useState<YouTubeStatus>({
-    isConfigured: false,
-    hasTokens: false,
+  const [streamKeyStatus, setStreamKeyStatus] = useState<StreamKeyStatus>({
+    isConfigured: true, // Always configured for stream key mode
+    hasStreamKey: false,
     isReady: false
   });
   const [simulcastStatus, setSimulcastStatus] = useState<SimulcastStatus>({
@@ -113,294 +114,150 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
   const [isStopping, setIsStopping] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authUrl, setAuthUrl] = useState('');
-  // Removed rate limiting state - not needed
+  const [streamKey, setStreamKey] = useState('');
+  const [showStreamKeyInput, setShowStreamKeyInput] = useState(false);
 
-  const API_URL = 'http://192.168.1.21:3000';
+  const API_URL = 'http://192.168.1.22:3000';
 
-  // Helper function to get YouTube tokens from localStorage
-  const getYouTubeTokens = () => {
+  // Helper function to get stream key from localStorage
+  const getStreamKey = () => {
     try {
-      const tokens = localStorage.getItem('youtubeTokens');
-      return tokens ? JSON.parse(tokens) : null;
+      return localStorage.getItem('youtubeStreamKey') || '';
     } catch (error) {
-      console.error('Error parsing YouTube tokens:', error);
-      return null;
+      console.error('Error getting stream key:', error);
+      return '';
     }
   };
 
-  // Helper function to create headers with YouTube tokens
-  const createHeaders = (includeTokens = true) => {
-    const headers: Record<string, string> = {
+  // Helper function to save stream key to localStorage
+  const saveStreamKey = (key: string) => {
+    try {
+      localStorage.setItem('youtubeStreamKey', key);
+      setStreamKeyStatus({
+        isConfigured: true,
+        hasStreamKey: !!key,
+        isReady: !!key
+      });
+    } catch (error) {
+      console.error('Error saving stream key:', error);
+    }
+  };
+
+  // Helper function to create headers
+  const createHeaders = () => {
+    return {
       'Content-Type': 'application/json',
     };
-    
-    if (includeTokens) {
-      const tokens = getYouTubeTokens();
-      if (tokens) {
-        headers['Authorization'] = `Bearer ${JSON.stringify(tokens)}`;
-      }
-    }
-    
-    return headers;
   };
 
-  // Reset YouTube authentication for new live stream
-  const resetYouTubeAuth = () => {
-    localStorage.removeItem('youtubeTokens');
-    localStorage.removeItem('youtubeAuthSuccess');
-    localStorage.removeItem('youtubeAuthInProgress');
-    console.log('YouTube authentication reset for new live stream');
-    showMessage('YouTube authentication reset - please authenticate again', 'info');
+  // Reset stream key
+  const resetStreamKey = () => {
+    localStorage.removeItem('youtubeStreamKey');
+    setStreamKeyStatus({
+      isConfigured: true,
+      hasStreamKey: false,
+      isReady: false
+    });
+    showMessage('Stream key reset', 'info');
   };
 
   // Removed rate limit reset - not needed
 
-  // Check if this is a new live stream and reset auth if needed
-  const checkForNewLiveStream = () => {
-    const lastRoomId = localStorage.getItem('lastYouTubeRoomId');
-    if (lastRoomId !== roomId) {
-      console.log('New live stream detected, resetting YouTube authentication');
-      resetYouTubeAuth();
-      localStorage.setItem('lastYouTubeRoomId', roomId);
-    }
-  };
 
-  // Check YouTube integration status
-  const checkStatus = async () => {
-    try {
-      // Check if we just returned from OAuth authentication
-      const authInProgress = localStorage.getItem('youtubeAuthInProgress');
-      const storedTokens = localStorage.getItem('youtubeTokens');
-      const authSuccess = localStorage.getItem('youtubeAuthSuccess');
-      
-      if (authInProgress === 'true') {
-        console.log('Returned from YouTube OAuth authentication');
-        localStorage.removeItem('youtubeAuthInProgress');
-        
-        // Wait a bit for tokens to be available
-        setTimeout(() => {
-          checkStatus();
-        }, 1000);
-        return;
-      }
-      
-      if (storedTokens && authSuccess) {
-        console.log('Found YouTube tokens in localStorage');
-        localStorage.removeItem('youtubeAuthSuccess');
-        
-        // Send tokens to backend to store in session
-        try {
-          const response = await fetch(`${API_URL}/api/youtube/auth/callback`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', // Include cookies for session
-            body: JSON.stringify({ tokens: JSON.parse(storedTokens) })
-          });
-          
-          if (response.ok) {
-            console.log('YouTube tokens stored in backend successfully');
-            showMessage('YouTube authentication successful!', 'success');
-          }
-        } catch (error) {
-          console.error('Error storing tokens in backend:', error);
-        }
-      }
-      
-      const response = await fetch(`${API_URL}/api/youtube/status`, {
-        method: 'GET',
-        headers: createHeaders(true), // Include YouTube tokens in header
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setStatus(data);
-        console.log('YouTube status:', data);
-      } else {
-        console.log('YouTube API not configured:', data.message);
-        setStatus({
-          isConfigured: false,
-          hasTokens: false,
-          isReady: false
-        });
-      }
-    } catch (error) {
-      console.error('Error checking YouTube status:', error);
-      setStatus({
-        isConfigured: false,
-        hasTokens: false,
-        isReady: false
-      });
-    }
-  };
 
   // Check simulcast status
   const checkSimulcastStatus = async () => {
     try {
+      console.log('[Frontend] Checking simulcast status for room:', roomId);
       const response = await fetch(`${API_URL}/api/youtube/simulcast/status/${roomId}`, {
+        method: 'GET',
+        headers: createHeaders(),
       });
       const data = await response.json();
+      
+      console.log('[Frontend] Simulcast status response:', data);
       
       if (data.success) {
         setSimulcastStatus(data.data);
+        console.log('[Frontend] Simulcast status updated:', data.data);
+      } else {
+        console.log('[Frontend] Simulcast status error:', data.error);
+        // Reset simulcast status if there's an error
+        setSimulcastStatus({ isActive: false });
       }
     } catch (error) {
-      console.error('Error checking simulcast status:', error);
+      console.error('[Frontend] Error checking simulcast status:', error);
+      // Reset simulcast status on error
+      setSimulcastStatus({ isActive: false });
     }
   };
 
-  // Get YouTube authorization URL (Desktop flow)
-  const getAuthUrl = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}/api/youtube/auth/url`, {
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        // For Desktop OAuth flow, open in external browser
-        console.log('Opening Google OAuth in external browser:', data.authUrl);
-        
-        // Show instructions for manual code input
-        setShowAuthModal(true);
-        setAuthUrl(data.authUrl);
-        
-        // Try to open in external browser
-        if ((window as any).electronAPI?.openExternal) {
-          (window as any).electronAPI.openExternal(data.authUrl);
-        } else {
-          // Fallback: open in new tab
-          window.open(data.authUrl, '_blank');
-        }
-        
-        // Reset loading state after opening modal
-        setIsLoading(false);
-        
-      } else {
-        showMessage(data.error || 'Failed to get YouTube authorization URL', 'error');
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Error getting auth URL:', error);
-      showMessage('Failed to get YouTube authorization URL', 'error');
-      setIsLoading(false);
-    }
-  };
 
-  // Handle manual code input (Desktop flow)
-  const handleManualCode = async (code: string) => {
-    try {
-      console.log('[Frontend] Starting manual code submission:', code);
-      setIsLoading(true);
-      
-      const response = await fetch(`${API_URL}/api/youtube/auth/manual-code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies for session
-        body: JSON.stringify({ code }),
-      });
-      
-      console.log('[Frontend] Response status:', response.status);
-      console.log('[Frontend] Response headers:', response.headers);
-      
-      const data = await response.json();
-      console.log('[Frontend] Response data:', data);
-      
-      if (data.success) {
-        console.log('[Frontend] Authentication successful');
-        
-        // Store tokens in localStorage
-        if (data.tokens) {
-          localStorage.setItem('youtubeTokens', JSON.stringify(data.tokens));
-          localStorage.setItem('youtubeAuthSuccess', 'true');
-          console.log('[Frontend] YouTube tokens stored in localStorage');
-        }
-        
-        showMessage('YouTube authentication successful!', 'success');
-        setShowAuthModal(false);
-        setAuthUrl('');
-        await checkStatus();
-        setIsLoading(false); // Ensure loading is reset after successful authentication
-      } else {
-        console.log('[Frontend] Authentication failed:', data.error);
-        showMessage(data.error || 'Failed to authenticate with YouTube', 'error');
-      }
-    } catch (error) {
-      console.error('[Frontend] Error submitting manual code:', error);
-      showMessage('Failed to authenticate with YouTube', 'error');
-    } finally {
-      console.log('[Frontend] Setting loading to false');
-      setIsLoading(false);
-    }
-  };
 
   // Removed rate limiting helper - not needed
 
-  // Start simulcast
+  // Start simulcast with stream key
   const startSimulcast = async () => {
-    if (!status.isReady) {
-      showMessage('YouTube authentication required', 'error');
+    console.log('[Frontend] Starting simulcast with stream key...');
+    
+    // Check if we have stream key
+    const currentStreamKey = getStreamKey();
+    if (!currentStreamKey) {
+      showMessage('Stream key required. Please enter your YouTube stream key first.', 'error');
+      setShowStreamKeyInput(true);
       return;
     }
 
-    // Removed rate limiting checks - not needed
-
     try {
       setIsStarting(true);
+      showMessage('Starting YouTube simulcast with stream key...', 'info');
       
-      const headers = createHeaders(true); // Include YouTube tokens
+      const headers = createHeaders();
+      console.log('[Frontend] Starting simulcast with stream key:', currentStreamKey);
       
       const response = await fetch(`${API_URL}/api/youtube/simulcast/start`, {
         method: 'POST',
         headers: headers,
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
         body: JSON.stringify({
           roomId: roomId,
-          title: streamTitle,
-          description: `Live stream: ${streamTitle}`
+          streamKey: currentStreamKey,
+          title: streamTitle
         })
       });
 
       const data = await response.json();
+      console.log('[Frontend] Simulcast start response:', data);
       
       if (data.success) {
-        showMessage(`Simulcast started! YouTube URL: ${data.data.broadcastUrl}`, 'success');
+        showMessage(`Simulcast started! Stream key: ${currentStreamKey}`, 'success');
+        
+        // Update simulcast status
         setSimulcastStatus({
           isActive: true,
-          streamId: data.data.streamId,
-          broadcastId: data.data.broadcastId,
+          streamId: data.data.streamKey,
+          broadcastId: data.data.streamKey,
           broadcastUrl: data.data.broadcastUrl,
           rtmpUrl: data.data.rtmpUrl
         });
         if (onSimulcastStart) {
           onSimulcastStart(data.data.broadcastUrl);
         }
+        
+        // Refresh status after successful start
+        setTimeout(() => {
+          checkSimulcastStatus();
+        }, 1000);
+        
       } else {
         console.error('Simulcast error:', data);
         let errorMessage = data.error || 'Failed to start simulcast';
         
-        // Handle specific YouTube API errors
-        if (data.details === 'Invalid Credentials') {
-          errorMessage = 'YouTube token expired. Please authenticate again.';
-          // Reset authentication
-          resetYouTubeAuth();
-        } else if (data.details && data.details.includes('rate limit')) {
-          errorMessage = 'YouTube API temporarily unavailable. Please try again.';
-        } else if (data.details && data.details.includes('not enabled for live streaming')) {
-          errorMessage = 'YouTube Live Streaming not enabled. Please enable it in YouTube Studio: Settings > Channel > Feature eligibility > Live streaming.';
-        } else if (data.details && data.details.includes('Resolution is required')) {
-          errorMessage = 'YouTube requires stream resolution. Please check your video settings and try again.';
-        } else if (data.details && data.details.includes('quota')) {
-          errorMessage = 'YouTube API quota exceeded. Please try again later.';
-        } else if (data.details && data.details.includes('permission')) {
-          errorMessage = 'YouTube API permission denied. Please check your account.';
-        } else if (data.details && data.details.includes('verification')) {
-          errorMessage = 'YouTube account needs verification. Please verify your account first.';
+        // Handle specific errors
+        if (data.details && data.details.includes('Invalid stream key')) {
+          errorMessage = 'Invalid stream key. Please check your YouTube stream key.';
+        } else if (data.details && data.details.includes('FFmpeg not found')) {
+          errorMessage = 'FFmpeg not found. Please install FFmpeg.';
         }
         
         showMessage(errorMessage, 'error');
@@ -418,7 +275,7 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
     try {
       setIsStopping(true);
       
-      const headers = createHeaders(true); // Include YouTube tokens
+      const headers = createHeaders();
       
       const response = await fetch(`${API_URL}/api/youtube/simulcast/stop`, {
         method: 'POST',
@@ -457,34 +314,18 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
     }, 5000);
   };
 
-  // Handle OAuth callback
-  const handleOAuthCallback = async (code: string) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}/api/youtube/auth/callback?code=${code}`, {
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        showMessage('YouTube authentication successful!', 'success');
-        setShowAuthModal(false);
-        checkStatus(); // Refresh status
-      } else {
-        showMessage(data.error || 'Authentication failed', 'error');
-      }
-    } catch (error) {
-      console.error('Error handling OAuth callback:', error);
-      showMessage('Authentication failed', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
-    // Check if this is a new live stream and reset auth if needed
-    checkForNewLiveStream();
+    // Load stream key from localStorage
+    const savedStreamKey = getStreamKey();
+    if (savedStreamKey) {
+      setStreamKeyStatus({
+        isConfigured: true,
+        hasStreamKey: true,
+        isReady: true
+      });
+    }
     
-    checkStatus();
     checkSimulcastStatus();
     
     // Ensure loading state is reset on component mount
@@ -711,26 +552,26 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>YouTube Simulcast</h3>
       </div>
 
-      {/* Status */}
+      {/* Stream Key Status */}
       <div className={`youtube-status ${
-        status.isReady ? 'status-ready' : 
-        status.isConfigured ? 'status-configured' : 
+        streamKeyStatus.isReady ? 'status-ready' : 
+        streamKeyStatus.isConfigured ? 'status-configured' : 
         'status-not-configured'
       }`}>
-        {status.isReady ? (
+        {streamKeyStatus.isReady ? (
           <>
             <FaCheck />
-            YouTube integration ready
+            Stream Key configured - Ready to stream
           </>
-        ) : status.isConfigured ? (
+        ) : streamKeyStatus.isConfigured ? (
           <>
             <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />
-            YouTube API configured, authentication required
+            Stream Key required - Enter your YouTube stream key
           </>
         ) : (
           <>
             <FaTimes />
-            YouTube API not configured
+            Stream Key not configured
           </>
         )}
       </div>
@@ -766,61 +607,18 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
 
       {/* Actions */}
       <div className="youtube-actions">
-        {!status.isConfigured ? (
-          <div style={{ color: '#6b7280', fontSize: '14px' }}>
-            Configure YouTube API credentials in environment variables
-          </div>
-        ) : !status.isReady ? (
+        {!streamKeyStatus.isReady ? (
           <>
             <button
               className="youtube-btn primary"
-              onClick={getAuthUrl}
-              disabled={isLoading}
+              onClick={() => setShowStreamKeyInput(true)}
             >
-              {isLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : <FaYoutube />}
-              {isLoading ? 'Redirecting to Google...' : 'Authenticate with YouTube'}
+              <FaYoutube />
+              Enter Stream Key
             </button>
-            {isLoading && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-                You will be redirected to Google for authentication...
-              </div>
-            )}
-            <button
-              className="youtube-btn secondary"
-              onClick={() => {
-                const testPopup = window.open(
-                  `${API_URL}/api/youtube/auth/test`,
-                  'test-callback',
-                  'width=400,height=300,scrollbars=yes,resizable=yes'
-                );
-                if (!testPopup) {
-                  showMessage('Popup blocked. Please allow popups for this site.', 'error');
-                }
-              }}
-              style={{ marginTop: '8px', fontSize: '12px', padding: '8px' }}
-            >
-              Test Callback (Debug)
-            </button>
-            <button
-              className="youtube-btn secondary"
-              onClick={() => {
-                setIsLoading(false);
-                showMessage('Loading state reset', 'info');
-              }}
-              style={{ marginTop: '8px', fontSize: '12px', padding: '8px' }}
-            >
-              Reset Loading
-            </button>
-             <button
-               className="youtube-btn secondary"
-               onClick={() => {
-                 resetYouTubeAuth();
-                 checkStatus(); // Refresh status after reset
-               }}
-               style={{ marginTop: '8px', fontSize: '12px', padding: '8px' }}
-             >
-               Reset Auth
-             </button>
+            <div style={{ color: '#6b7280', fontSize: '14px', marginTop: '8px' }}>
+              Enter your YouTube stream key to start simulcast (like OBS)
+            </div>
           </>
         ) : simulcastStatus.isActive ? (
           <>
@@ -1002,18 +800,30 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
                className="youtube-btn secondary"
                onClick={async () => {
                  try {
-                   showMessage('Testing RTMP connection to YouTube...', 'info');
+                   const currentStreamKey = getStreamKey();
+                   if (!currentStreamKey) {
+                     showMessage('Please enter stream key first', 'error');
+                     setShowStreamKeyInput(true);
+                     return;
+                   }
                    
-                   // Test RTMP connection
-                   const response = await fetch(`${API_URL}/api/youtube/test-rtmp`, {
+                   showMessage('Testing RTMP connection with stream key...', 'info');
+                   
+                   // Test RTMP connection with stream key
+                   const response = await fetch(`${API_URL}/api/youtube/test-rtmp-stream-key`, {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ roomId })
+                     body: JSON.stringify({ roomId, streamKey: currentStreamKey })
                    });
                    
                    const data = await response.json();
-                   console.log('RTMP Test Result:', data);
-                   showMessage(`RTMP Test: ${data.success ? 'CONNECTED' : 'FAILED'}`, data.success ? 'success' : 'error');
+                   console.log('RTMP Stream Key Test Result:', data);
+                   
+                   if (data.success) {
+                     showMessage(`RTMP Test: SUCCESS! FFmpeg working with stream key`, 'success');
+                   } else {
+                     showMessage(`RTMP Test: FAILED - ${data.message}`, 'error');
+                   }
                  } catch (error) {
                    console.error('Error testing RTMP:', error);
                    showMessage('Error testing RTMP connection', 'error');
@@ -1022,18 +832,17 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
                style={{ fontSize: '12px', padding: '8px', backgroundColor: '#4ecdc4' }}
                disabled={false}
              >
-               🔗 TEST RTMP CONNECTION
+               🔗 TEST RTMP WITH STREAM KEY
              </button>
              
              <button
                className="youtube-btn secondary"
                onClick={() => {
-                 resetYouTubeAuth();
-                 checkStatus(); // Refresh status after reset
+                 resetStreamKey();
                }}
                style={{ fontSize: '12px', padding: '8px' }}
              >
-               Reset Auth
+               Reset Stream Key
              </button>
              
              <button
@@ -1065,119 +874,76 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
          </div>
       </div>
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="auth-modal">
-          <div className="auth-modal-content">
-            <h3>YouTube Authentication</h3>
-            <p>
-              Click the button below to authenticate with YouTube. 
-              You will be redirected to YouTube to grant permissions.
-            </p>
-            <div className="auth-modal-buttons">
-              <button
-                className="auth-modal-btn"
-                onClick={() => setShowAuthModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="auth-modal-btn primary"
-                onClick={() => window.open(authUrl, '_blank')}
-              >
-                <FaYoutube style={{ marginRight: '8px' }} />
-                Authenticate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Code Input Modal */}
-      {showAuthModal && (
+      {/* Stream Key Input Modal */}
+      {showStreamKeyInput && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>YouTube Authentication</h3>
+              <h3>Enter YouTube Stream Key</h3>
               <button 
                 className="modal-close"
                 onClick={() => {
-                  setShowAuthModal(false);
-                  setAuthUrl('');
+                  setShowStreamKeyInput(false);
+                  setStreamKey('');
                 }}
               >
                 ×
               </button>
             </div>
             <div className="modal-body">
-              <p>Please follow these steps:</p>
-              <ol>
-                <li>Click the button below to open Google OAuth in your browser</li>
-                <li>Complete the authentication process</li>
-                <li>Copy the authorization code from the browser</li>
-                <li>Paste it in the field below</li>
-              </ol>
-              
-              <button
-                className="youtube-btn primary"
-                onClick={() => {
-                  if ((window as any).electronAPI?.openExternal) {
-                    (window as any).electronAPI.openExternal(authUrl);
-                  } else {
-                    window.open(authUrl, '_blank');
-                  }
-                }}
-                style={{ marginBottom: '16px' }}
-              >
-                <FaExternalLinkAlt />
-                Open Google OAuth
-              </button>
-              
+              <p>Enter your YouTube stream key to start simulcast (like OBS):</p>
               <div className="input-group">
-                <label htmlFor="authCode">Authorization Code:</label>
+                <label htmlFor="streamKey">Stream Key:</label>
                 <input
-                  id="authCode"
+                  id="streamKey"
                   type="text"
-                  placeholder="Paste authorization code here..."
+                  placeholder="Enter your YouTube stream key (e.g., 81ue-2scr-37ee-43zj-age7)"
+                  value={streamKey}
+                  onChange={(e) => setStreamKey(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    marginTop: '8px'
+                    marginTop: '8px',
+                    fontFamily: 'monospace'
                   }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
-                      const code = (e.target as HTMLInputElement).value.trim();
-                      if (code) {
-                        handleManualCode(code);
+                      if (streamKey.trim()) {
+                        saveStreamKey(streamKey.trim());
+                        setShowStreamKeyInput(false);
+                        showMessage('Stream key saved successfully!', 'success');
                       }
                     }
                   }}
                 />
+              </div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                You can find your stream key in YouTube Studio → Go Live → Stream
               </div>
             </div>
             <div className="modal-footer">
               <button
                 className="youtube-btn"
                 onClick={() => {
-                  const input = document.getElementById('authCode') as HTMLInputElement;
-                  const code = input.value.trim();
-                  if (code) {
-                    handleManualCode(code);
+                  if (streamKey.trim()) {
+                    saveStreamKey(streamKey.trim());
+                    setShowStreamKeyInput(false);
+                    showMessage('Stream key saved successfully!', 'success');
                   } else {
-                    showMessage('Please enter the authorization code', 'error');
+                    showMessage('Please enter a valid stream key', 'error');
                   }
                 }}
-                disabled={isLoading}
+                disabled={!streamKey.trim()}
               >
-                {isLoading ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : 'Submit Code'}
+                Save Stream Key
               </button>
               <button
                 className="youtube-btn secondary"
                 onClick={() => {
-                  setShowAuthModal(false);
-                  setAuthUrl('');
+                  setShowStreamKeyInput(false);
+                  setStreamKey('');
                 }}
               >
                 Cancel
@@ -1186,6 +952,7 @@ const YouTubeSimulcast: React.FC<YouTubeSimulcastProps> = ({
           </div>
         </div>
       )}
+
     </div>
   );
 };

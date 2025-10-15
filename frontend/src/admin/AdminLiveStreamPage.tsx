@@ -296,7 +296,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.21:3000/#/view/${roomId}`;
+    return `http://192.168.1.22:3000/#/view/${roomId}`;
   };
 
   if (loading) {
