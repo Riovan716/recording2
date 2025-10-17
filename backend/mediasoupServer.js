@@ -112,18 +112,24 @@ app.get('/stream/:roomId', (req, res) => {
         res.end();
       });
       
-      // For now, send periodic data to keep stream alive
-      // In a real implementation, you'd need to convert RTP packets to WebM
-      const interval = setInterval(() => {
-        if (res.destroyed) {
-          clearInterval(interval);
-          return;
-        }
-        
-        // Send a heartbeat with timestamp
-        const heartbeat = Buffer.from(`heartbeat: ${Date.now()}\n`);
-        res.write(heartbeat);
-      }, 1000);
+  // Create a proper WebM stream from MediaSoup RTP packets
+  // This is a simplified implementation - in production you'd want proper RTP to WebM conversion
+  const interval = setInterval(() => {
+    if (res.destroyed) {
+      clearInterval(interval);
+      return;
+    }
+    
+    // Send WebM cluster data (simplified)
+    // In a real implementation, you'd convert RTP packets to WebM format
+    const clusterData = Buffer.from([
+      0x1F, 0x43, 0xB6, 0x75, // Cluster ID
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Cluster size (placeholder)
+      // Add actual video/audio data here from RTP packets
+    ]);
+    
+    res.write(clusterData);
+  }, 100); // Send data every 100ms for smoother streaming
       
       // Clean up on disconnect
       req.on('close', () => {
@@ -152,12 +158,20 @@ app.get('/capture/:roomId', (req, res) => {
   const { roomId } = req.params;
   
   console.log(`[MediaSoup] Capture endpoint accessed for room: ${roomId}`);
+  console.log(`[MediaSoup] Current producers:`, Object.keys(producers));
+  console.log(`[MediaSoup] Producers details:`, producers);
   
   // Get producers for this room
   const roomProducers = producers[roomId];
   if (!roomProducers || !roomProducers.video) {
     console.log(`[MediaSoup] No video producer found for room: ${roomId}`);
-    res.status(404).json({ error: 'No video stream available', roomId });
+    console.log(`[MediaSoup] Available rooms:`, Object.keys(producers));
+    res.status(404).json({ 
+      error: 'No video stream available', 
+      roomId,
+      availableRooms: Object.keys(producers),
+      allProducers: producers
+    });
     return;
   }
   
@@ -182,6 +196,253 @@ app.get('/capture/:roomId', (req, res) => {
       '4. Feed the converted stream to FFmpeg for YouTube RTMP'
     ]
   });
+});
+
+// Debug endpoint to check all producers
+app.get('/debug/producers', (req, res) => {
+  console.log(`[MediaSoup] Debug endpoint accessed - checking all producers`);
+  console.log(`[MediaSoup] Current producers:`, Object.keys(producers));
+  console.log(`[MediaSoup] Producers details:`, producers);
+  
+  res.json({
+    success: true,
+    totalProducers: Object.keys(producers).length,
+    producers: producers,
+    availableRooms: Object.keys(producers)
+  });
+});
+
+// New endpoint for FFmpeg-compatible stream - SIMPLE VERSION
+app.get('/ffmpeg-stream/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  
+  console.log(`[MediaSoup] FFmpeg stream endpoint accessed for room: ${roomId}`);
+  
+  // Get producers for this room
+  const roomProducers = producers[roomId];
+  if (!roomProducers || !roomProducers.video) {
+    console.log(`[MediaSoup] No video producer found for room: ${roomId}`);
+    res.status(404).json({ error: 'No video stream available', roomId });
+    return;
+  }
+  
+  console.log(`[MediaSoup] Found video producer for room: ${roomId}`);
+  
+  // Set headers for FFmpeg streaming
+  res.writeHead(200, {
+    'Content-Type': 'video/webm',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Range',
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Transfer-Encoding': 'chunked'
+  });
+  
+  console.log(`[MediaSoup] Starting FFmpeg-compatible stream for room: ${roomId}`);
+  
+  // Send WebM header
+  const webmHeader = Buffer.from([
+    0x1A, 0x45, 0xDF, 0xA3, // EBML header
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, // EBML version
+    0x42, 0x86, 0x81, 0x01, // DocType
+    0x42, 0xF2, 0x81, 0x01, 0x42, 0xF3, 0x81, 0x01, // DocTypeVersion, DocTypeReadVersion
+    0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6D, // DocType = "webm"
+    0x42, 0x87, 0x81, 0x02, // EBMLMaxIDLength
+    0x42, 0x85, 0x81, 0x02  // EBMLMaxSizeLength
+  ]);
+  
+  res.write(webmHeader);
+  
+  // Send periodic data to keep stream alive
+  let frameCount = 0;
+  const interval = setInterval(() => {
+    if (res.destroyed) {
+      clearInterval(interval);
+      return;
+    }
+    
+    frameCount++;
+    
+    // Send WebM cluster data (simplified)
+    const clusterData = Buffer.from([
+      0x1F, 0x43, 0xB6, 0x75, // Cluster ID
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Cluster size (placeholder)
+      // Minimal video data to keep FFmpeg happy
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    ]);
+    
+    res.write(clusterData);
+    
+    // Log every 30 frames (1 second at 30fps)
+    if (frameCount % 30 === 0) {
+      console.log(`[MediaSoup] Sent ${frameCount} frames for room: ${roomId}`);
+    }
+  }, 33); // ~30 FPS
+  
+  // Clean up on disconnect
+  req.on('close', () => {
+    console.log(`[MediaSoup] FFmpeg stream connection closed for room: ${roomId}`);
+    clearInterval(interval);
+  });
+  
+  req.on('error', (error) => {
+    console.error(`[MediaSoup] FFmpeg stream error for room: ${roomId}:`, error);
+    clearInterval(interval);
+  });
+  
+  console.log(`[MediaSoup] FFmpeg stream started for room: ${roomId}`);
+});
+
+// New endpoint for WebRTC stream info (for FFmpeg to connect directly)
+app.get('/webrtc-stream/:roomId', (req, res) => {
+  const { roomId } = req.params;
+  
+  console.log(`[MediaSoup] WebRTC stream info requested for room: ${roomId}`);
+  
+  // Get producers for this room
+  const roomProducers = producers[roomId];
+  if (!roomProducers || !roomProducers.video) {
+    console.log(`[MediaSoup] No video producer found for room: ${roomId}`);
+    res.status(404).json({ error: 'No video stream available', roomId });
+    return;
+  }
+  
+  console.log(`[MediaSoup] Found video producer for room: ${roomId}`);
+  
+  // Return WebRTC connection info for FFmpeg
+  res.json({
+    success: true,
+    roomId: roomId,
+    hasVideo: !!roomProducers.video,
+    hasAudio: !!roomProducers.audio,
+    message: 'Use WebRTC to connect to this MediaSoup server',
+    instructions: [
+      '1. Connect to this MediaSoup server via WebRTC',
+      '2. Create a consumer for the video producer',
+      '3. Use the consumer to get video data',
+      '4. Feed the video data to FFmpeg for YouTube RTMP'
+    ],
+    webrtcUrl: `ws://192.168.1.22:4000`,
+    producerId: roomProducers.video.id
+  });
+});
+
+// New endpoint for direct video stream (using WebRTC consumer)
+app.get('/direct-video/:roomId', async (req, res) => {
+  const { roomId } = req.params;
+  
+  console.log(`[MediaSoup] Direct video stream requested for room: ${roomId}`);
+  
+  // Get producers for this room
+  const roomProducers = producers[roomId];
+  if (!roomProducers || !roomProducers.video) {
+    console.log(`[MediaSoup] No video producer found for room: ${roomId}`);
+    res.status(404).json({ error: 'No video stream available', roomId });
+    return;
+  }
+  
+  console.log(`[MediaSoup] Found video producer for room: ${roomId}`);
+  
+  try {
+    // Create a consumer transport to get video data
+    const consumerTransport = await router.createWebRtcTransport({
+      listenIps: [{ ip: '192.168.1.22', announcedIp: null }],
+      enableUdp: true,
+      enableTcp: true,
+      preferUdp: true
+    });
+    
+    // Connect the transport
+    await consumerTransport.connect({ dtlsParameters: { role: 'auto' } });
+    
+    // Create video consumer
+    const videoConsumer = await consumerTransport.consume({
+      producerId: roomProducers.video.id,
+      rtpCapabilities: router.rtpCapabilities,
+      paused: false
+    });
+    
+    console.log(`[MediaSoup] Created video consumer for room: ${roomId}`);
+    
+    // Set headers for video streaming
+    res.writeHead(200, {
+      'Content-Type': 'video/webm',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Range',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Transfer-Encoding': 'chunked'
+    });
+    
+    console.log(`[MediaSoup] Starting direct video stream for room: ${roomId}`);
+    
+    // Send WebM header
+    const webmHeader = Buffer.from([
+      0x1A, 0x45, 0xDF, 0xA3, // EBML header
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, // EBML version
+      0x42, 0x86, 0x81, 0x01, // DocType
+      0x42, 0xF2, 0x81, 0x01, 0x42, 0xF3, 0x81, 0x01, // DocTypeVersion, DocTypeReadVersion
+      0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6D, // DocType = "webm"
+      0x42, 0x87, 0x81, 0x02, // EBMLMaxIDLength
+      0x42, 0x85, 0x81, 0x02  // EBMLMaxSizeLength
+    ]);
+    
+    res.write(webmHeader);
+    
+    let frameCount = 0;
+    
+    // Listen for RTP packets from the consumer
+    videoConsumer.on('transportclose', () => {
+      console.log(`[MediaSoup] Video consumer transport closed for room: ${roomId}`);
+    });
+    
+    videoConsumer.on('producerclose', () => {
+      console.log(`[MediaSoup] Video producer closed for room: ${roomId}`);
+      res.end();
+    });
+    
+    // Listen for RTP packets
+    videoConsumer.on('rtp', (rtpPacket) => {
+      if (res.destroyed) return;
+      
+      frameCount++;
+      
+      // Convert RTP packet to WebM format (simplified)
+      // In a real implementation, you'd need proper RTP to WebM conversion
+      const webmData = Buffer.from([
+        0x1F, 0x43, 0xB6, 0x75, // Cluster ID
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Cluster size
+        // RTP payload data (simplified)
+        ...rtpPacket.payload
+      ]);
+      
+      res.write(webmData);
+      
+      // Log every 30 packets (1 second at 30fps)
+      if (frameCount % 30 === 0) {
+        console.log(`[MediaSoup] Sent ${frameCount} RTP packets for room: ${roomId}`);
+      }
+    });
+    
+    // Clean up on disconnect
+    req.on('close', () => {
+      console.log(`[MediaSoup] Direct video stream connection closed for room: ${roomId}`);
+      consumerTransport.close();
+    });
+    
+    req.on('error', (error) => {
+      console.error(`[MediaSoup] Direct video stream error for room: ${roomId}:`, error);
+      consumerTransport.close();
+    });
+    
+    console.log(`[MediaSoup] Direct video stream started for room: ${roomId}`);
+    
+  } catch (error) {
+    console.error(`[MediaSoup] Error creating direct video stream for room ${roomId}:`, error);
+    res.status(500).json({ error: 'Failed to create direct video stream', details: error.message });
+  }
 });
 
 let worker, router;

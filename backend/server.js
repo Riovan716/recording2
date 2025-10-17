@@ -5,7 +5,7 @@ const { sequelize, User, LiveStream } = require('./models');
 const userRoutes = require('./routes/users');
 const recordingRoutes = require('./routes/recording');
 const activityLogRoutes = require('./routes/activityLog');
-const youtubeSimulcastRoutes = require('./routes/youtubeSimulcast');
+const simpleYouTubeRoutes = require('./routes/simpleYouTube');
 
 const cors = require('cors');
 const { spawn } = require('child_process');
@@ -49,7 +49,7 @@ app.use('/api/recording', recordingRoutes);
 app.use('/api/recordings', recordingRoutes);
 app.use('/api/livestream', livestreamRoutes);
 app.use('/api/activity', activityLogRoutes);
-app.use('/api/youtube', youtubeSimulcastRoutes);
+app.use('/api/youtube', simpleYouTubeRoutes);
 
 // Serve React app for root route
 app.get('/', (req, res) => {
