@@ -143,6 +143,10 @@ exports.stopLive = async (req, res) => {
         hasRecording 
       });
       
+      // Verify the update was successful
+      const updatedStream = await LiveStream.findByPk(id);
+      console.log('Verification - Updated stream status:', updatedStream ? updatedStream.status : 'NOT FOUND');
+      
       // Update history
       const historyEntry = streamingStats.streamHistory.find(h => h.id === id);
       if (historyEntry) {
@@ -384,11 +388,16 @@ exports.getLiveStreamHistory = async (req, res) => {
 exports.getLiveStreamDetail = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`[getLiveStreamDetail] Fetching stream detail for ID: ${id}`);
+    
     const stream = await LiveStream.findByPk(id);
     
     if (!stream) {
+      console.log(`[getLiveStreamDetail] Stream not found for ID: ${id}`);
       return res.status(404).json({ error: 'Live stream not found' });
     }
+    
+    console.log(`[getLiveStreamDetail] Stream found - Status: ${stream.status}, Title: ${stream.title}`);
     
     res.json({
       success: true,

@@ -7,6 +7,7 @@ import MultiCameraStreamer from "../components/MultiCameraStreamer";
 import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import SimpleYouTube from "../components/SimpleYouTube";
 import { API_URL } from "../config";
+import { io } from 'socket.io-client';
 
 // Color palette dengan tema hijau muda (#BBF7D0)
 const LIGHT_GREEN = "#BBF7D0";
@@ -79,12 +80,48 @@ const AdminLiveStreamPage: React.FC = () => {
   const [streamingCameras, setStreamingCameras] = useState<any[]>([]);
   const [streamingScreenSource, setStreamingScreenSource] = useState<any>(null);
   const [streamingLayouts, setStreamingLayouts] = useState<any[]>([]);
+  const [currentViewers, setCurrentViewers] = useState(0);
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Socket connection for real-time viewer count updates
+  useEffect(() => {
+    socketRef.current = io('http://192.168.1.14:4000');
+    
+    socketRef.current.on('connect', () => {
+      console.log('[AdminLiveStreamPage] Connected to MediaSoup server');
+      // Join the room for real-time updates
+      if (streamingState.roomId) {
+        socketRef.current.emit('joinRoom', { roomId: streamingState.roomId });
+        console.log(`[AdminLiveStreamPage] Joined room: ${streamingState.roomId}`);
+      }
+    });
+
+    socketRef.current.on('viewerCountUpdate', (data: { roomId: string; viewers: number }) => {
+      console.log(`[AdminLiveStreamPage] Received viewer count update:`, data);
+      if (streamingState.roomId && data.roomId === streamingState.roomId) {
+        setCurrentViewers(data.viewers);
+        console.log(`[AdminLiveStreamPage] Viewer count updated to: ${data.viewers}`);
+      } else {
+        console.log(`[AdminLiveStreamPage] Ignoring viewer count update for different room: ${data.roomId} (current: ${streamingState.roomId})`);
+      }
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('[AdminLiveStreamPage] Disconnected from MediaSoup server');
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [streamingState.roomId]);
 
   const isMobile = windowWidth < 768;
 
@@ -152,16 +189,39 @@ const AdminLiveStreamPage: React.FC = () => {
 
 
 
+  // Fetch viewer count for current stream
+  const fetchViewerCount = useCallback(async () => {
+    if (!streamingState.roomId) return;
+    
+    try {
+      console.log(`[AdminLiveStreamPage] Fetching viewer count for room: ${streamingState.roomId}`);
+      const response = await fetch(`http://192.168.1.14:4000/api/viewer-count/${streamingState.roomId}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[AdminLiveStreamPage] Viewer count response:`, data);
+        setCurrentViewers(data.viewers);
+        console.log(`[AdminLiveStreamPage] Fetched viewer count: ${data.viewers}`);
+      } else {
+        console.error(`[AdminLiveStreamPage] Failed to fetch viewer count: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error fetching viewer count:', error);
+    }
+  }, [streamingState.roomId]);
+
   // Real-time stats updates
   useEffect(() => {
     fetchStreamingStats();
 
     const interval = setInterval(() => {
       fetchStreamingStats();
-    }, 30000); // Update every 30 seconds
+      if (streamingState.isStreaming) {
+        fetchViewerCount();
+      }
+    }, 5000); // Update every 5 seconds for more frequent updates
 
     return () => clearInterval(interval);
-  }, [fetchStreamingStats]);
+  }, [fetchStreamingStats, fetchViewerCount, streamingState.isStreaming]);
 
   // Reset streaming information when streaming stops
   useEffect(() => {
@@ -247,6 +307,9 @@ const AdminLiveStreamPage: React.FC = () => {
       // Update stats immediately
       await fetchStreamingStats();
       
+      // Fetch initial viewer count
+      await fetchViewerCount();
+      
       showAlert("Live stream berhasil dimulai!", "success");
     } catch (error) {
       console.error("Error starting stream:", error);
@@ -266,8 +329,12 @@ const AdminLiveStreamPage: React.FC = () => {
       
       // Update stats
       await fetchStreamingStats();
+      
+      // Show success message
+      showAlert("Live stream berhasil dihentikan!", "success");
     } catch (error) {
       console.error("Error stopping stream:", error);
+      showAlert("Error menghentikan streaming", "error");
     }
   };
 
@@ -295,7 +362,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.22:3000/#/view/${roomId}`;
+    return `http://192.168.1.14:3000/#/view/${roomId}`;
   };
 
   if (loading) {
@@ -620,7 +687,22 @@ const AdminLiveStreamPage: React.FC = () => {
                       marginBottom: isMobile ? "4px" : "0"
                     }}>
                       <span>👥</span>
-                      <span>0 penonton</span>
+                      <span>{currentViewers} penonton</span>
+                      <button
+                        onClick={fetchViewerCount}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          color: COLORS.subtext,
+                          padding: '2px',
+                          borderRadius: '3px'
+                        }}
+                        title="Refresh viewer count"
+                      >
+                        🔄
+                      </button>
                     </div>
                     <div style={{
                       display: "flex",
@@ -830,8 +912,8 @@ const AdminLiveStreamPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Simple YouTube Streaming */}
-                {streamingState.isStreaming && streamingState.roomId && (
+                {/* Simple YouTube Streaming - TEMPORARILY COMMENTED OUT */}
+                {/* {streamingState.isStreaming && streamingState.roomId && (
                   <div style={{ marginBottom: "16px" }}>
                     <SimpleYouTube
                       roomId={streamingState.roomId}
@@ -844,7 +926,7 @@ const AdminLiveStreamPage: React.FC = () => {
                       }}
                     />
                   </div>
-                )}
+                )} */}
 
                 {/* Edit Layout Button - Only show for multi-camera streaming */}
                 {streamingState.isStreaming && (streamingCameras.length > 0 || streamingScreenSource) && (

@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const mediasoup = require('mediasoup');
 const fs = require('fs');
 const path = require('path');
+const { LiveStream } = require('./models');
 
 const app = express();
 const server = http.createServer(app);
@@ -61,7 +62,7 @@ app.get('/stream/:roomId', (req, res) => {
     try {
       // Create consumer transport for this stream
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.22', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -212,6 +213,86 @@ app.get('/debug/producers', (req, res) => {
   });
 });
 
+// Endpoint to get current viewer count for a room
+app.get('/api/viewer-count/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const viewerCount = roomViewers[roomId] ? roomViewers[roomId].size : 0;
+    
+    // Also get from database for consistency
+    const livestream = await LiveStream.findByPk(roomId);
+    const dbViewerCount = livestream ? livestream.viewers : 0;
+    
+    console.log(`[ViewerCount] API Request - Room: ${roomId}, Memory: ${viewerCount}, DB: ${dbViewerCount}`);
+    
+    res.json({
+      success: true,
+      roomId,
+      viewers: viewerCount,
+      dbViewers: dbViewerCount,
+      activeViewers: roomViewers[roomId] ? Array.from(roomViewers[roomId]) : []
+    });
+  } catch (error) {
+    console.error('Error getting viewer count:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get viewer count'
+    });
+  }
+});
+
+// Debug endpoint to check all room viewers
+app.get('/api/debug/viewers', (req, res) => {
+  console.log(`[ViewerCount] Debug request - All room viewers:`, roomViewers);
+  res.json({
+    success: true,
+    roomViewers: Object.keys(roomViewers).reduce((acc, roomId) => {
+      acc[roomId] = {
+        count: roomViewers[roomId].size,
+        viewers: Array.from(roomViewers[roomId])
+      };
+      return acc;
+    }, {})
+  });
+});
+
+// Endpoint for admin to notify viewers that stream has ended
+app.post('/api/stream-ended', (req, res) => {
+  try {
+    const { roomId } = req.body;
+    
+    if (!roomId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Room ID is required'
+      });
+    }
+    
+    console.log(`[StreamEnded] Admin API request to end stream for room: ${roomId}`);
+    
+    // Broadcast to all viewers in the room
+    io.to(roomId).emit('streamEnded', { 
+      roomId, 
+      message: 'Livestream telah berakhir',
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`[StreamEnded] Broadcasted stream ended notification to room: ${roomId}`);
+    
+    res.json({
+      success: true,
+      message: 'Stream ended notification sent to all viewers',
+      roomId: roomId
+    });
+  } catch (error) {
+    console.error('Error sending stream ended notification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send stream ended notification'
+    });
+  }
+});
+
 // New endpoint for FFmpeg-compatible stream - SIMPLE VERSION
 app.get('/ffmpeg-stream/:roomId', (req, res) => {
   const { roomId } = req.params;
@@ -323,7 +404,7 @@ app.get('/webrtc-stream/:roomId', (req, res) => {
       '3. Use the consumer to get video data',
       '4. Feed the video data to FFmpeg for YouTube RTMP'
     ],
-    webrtcUrl: `ws://192.168.1.22:4000`,
+    webrtcUrl: `ws://192.168.1.14:4000`,
     producerId: roomProducers.video.id
   });
 });
@@ -347,7 +428,7 @@ app.get('/direct-video/:roomId', async (req, res) => {
   try {
     // Create a consumer transport to get video data
     const consumerTransport = await router.createWebRtcTransport({
-      listenIps: [{ ip: '192.168.1.22', announcedIp: null }],
+      listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
       enableUdp: true,
       enableTcp: true,
       preferUdp: true
@@ -455,6 +536,72 @@ const producers = {}; // { [roomId]: { video: Producer, audio: Producer } }
 // Store transports per client
 const clientTransports = {}; // { [socketId]: { producer: Transport, consumers: [Transport] } }
 
+// Store active viewers for each room
+const roomViewers = {}; // { [roomId]: Set<socketId> }
+
+// Function to update viewer count in database
+const updateViewerCount = async (roomId) => {
+  try {
+    const viewerCount = roomViewers[roomId] ? roomViewers[roomId].size : 0;
+    console.log(`[ViewerCount] Updating viewer count for room ${roomId}: ${viewerCount}`);
+    console.log(`[ViewerCount] Active viewers in memory:`, roomViewers[roomId] ? Array.from(roomViewers[roomId]) : []);
+    
+    // Update database
+    const [affectedRows] = await LiveStream.update(
+      { viewers: viewerCount },
+      { where: { id: roomId } }
+    );
+    
+    console.log(`[ViewerCount] Database update result - affected rows: ${affectedRows}`);
+    
+    // Verify database update
+    const updatedRecord = await LiveStream.findByPk(roomId);
+    console.log(`[ViewerCount] Database verification - current viewers in DB: ${updatedRecord ? updatedRecord.viewers : 'not found'}`);
+    
+    // Broadcast viewer count update to all clients in the room
+    io.to(roomId).emit('viewerCountUpdate', { roomId, viewers: viewerCount });
+    console.log(`[ViewerCount] Broadcasted viewer count update to room ${roomId}: ${viewerCount}`);
+  } catch (error) {
+    console.error(`[ViewerCount] Error updating viewer count for room ${roomId}:`, error);
+    console.error(`[ViewerCount] Error details:`, error.message);
+    console.error(`[ViewerCount] Error stack:`, error.stack);
+  }
+};
+
+// Function to add viewer to room
+const addViewerToRoom = (roomId, socketId) => {
+  console.log(`[ViewerCount] Adding viewer ${socketId} to room ${roomId}`);
+  
+  if (!roomViewers[roomId]) {
+    roomViewers[roomId] = new Set();
+    console.log(`[ViewerCount] Created new room ${roomId}`);
+  }
+  
+  roomViewers[roomId].add(socketId);
+  console.log(`[ViewerCount] Room ${roomId} now has ${roomViewers[roomId].size} viewers:`, Array.from(roomViewers[roomId]));
+  
+  updateViewerCount(roomId);
+};
+
+// Function to remove viewer from room
+const removeViewerFromRoom = (roomId, socketId) => {
+  console.log(`[ViewerCount] Removing viewer ${socketId} from room ${roomId}`);
+  
+  if (roomViewers[roomId]) {
+    roomViewers[roomId].delete(socketId);
+    console.log(`[ViewerCount] Room ${roomId} now has ${roomViewers[roomId].size} viewers:`, Array.from(roomViewers[roomId]));
+    
+    if (roomViewers[roomId].size === 0) {
+      delete roomViewers[roomId];
+      console.log(`[ViewerCount] Deleted empty room ${roomId}`);
+    }
+    
+    updateViewerCount(roomId);
+  } else {
+    console.log(`[ViewerCount] Room ${roomId} not found when trying to remove viewer ${socketId}`);
+  }
+};
+
 // Recording functionality
 const recordings = {}; // { [roomId]: { isRecording: boolean, startTime: Date, filePath: string } }
 
@@ -502,6 +649,24 @@ io.on('connection', socket => {
     consumers: []
   };
 
+  // Handle room joining for real-time updates
+  socket.on('joinRoom', ({ roomId }) => {
+    console.log(`[ViewerCount] Socket ${socket.id} joining room ${roomId}`);
+    socket.join(roomId);
+  });
+
+  // Handle stream ended notification
+  socket.on('streamEnded', ({ roomId }) => {
+    console.log(`[StreamEnded] Admin ended stream for room: ${roomId}`);
+    // Broadcast to all viewers in the room
+    io.to(roomId).emit('streamEnded', { 
+      roomId, 
+      message: 'Livestream telah berakhir',
+      timestamp: new Date().toISOString()
+    });
+    console.log(`[StreamEnded] Broadcasted stream ended notification to room: ${roomId}`);
+  });
+
   socket.on('getRtpCapabilities', (_, cb) => {
     cb(router.rtpCapabilities);
   });
@@ -509,7 +674,7 @@ io.on('connection', socket => {
   socket.on('createProducerTransport', async (_, cb) => {
     try {
       const producerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.22', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -588,7 +753,7 @@ io.on('connection', socket => {
   socket.on('createConsumerTransport', async (_, cb) => {
     try {
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.22', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -636,6 +801,17 @@ io.on('connection', socket => {
 
   socket.on('consume', async ({ transportId, rtpCapabilities, roomId }, cb) => {
     try {
+      console.log(`[ViewerCount] Consume event received - Socket: ${socket.id}, RoomId: ${roomId}, TransportId: ${transportId}`);
+      
+      // Add viewer to room when they start consuming
+      if (roomId) {
+        addViewerToRoom(roomId, socket.id);
+        socket.join(roomId); // Join socket.io room for real-time updates
+        console.log(`[ViewerCount] Viewer ${socket.id} joined socket.io room ${roomId}`);
+      } else {
+        console.log(`[ViewerCount] WARNING: No roomId provided in consume event for socket ${socket.id}`);
+      }
+      
       // Find transport by ID or use the most recent one
       let transport = clientTransports[socket.id].consumers.find(t => t.id === transportId);
       if (!transport) {
@@ -738,6 +914,11 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     
+    // Remove viewer from all rooms
+    for (const roomId of Object.keys(roomViewers)) {
+      removeViewerFromRoom(roomId, socket.id);
+    }
+    
     // Clean up client transports
     if (clientTransports[socket.id]) {
       const clientData = clientTransports[socket.id];
@@ -830,6 +1011,6 @@ io.on('connection', socket => {
 });
 
 const PORT = 4000;
-server.listen(PORT, '192.168.1.22', () => {
-  console.log(`MediaSoup server running on http://192.168.1.22:${PORT}`);
+server.listen(PORT, '192.168.1.14', () => {
+  console.log(`MediaSoup server running on http://192.168.1.14:${PORT}`);
 }); 

@@ -37,7 +37,7 @@ const SimpleYouTube: React.FC<SimpleYouTubeProps> = ({
   const [showStreamKeyInput, setShowStreamKeyInput] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
 
-  const API_URL = 'http://192.168.1.22:3000';
+  const API_URL = 'http://192.168.1.14:3000';
 
   // Helper function to get stream key from localStorage
   const getStreamKey = () => {

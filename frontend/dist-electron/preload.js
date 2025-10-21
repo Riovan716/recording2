@@ -30,6 +30,8 @@ try {
         getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
         // Preview window
         openPreviewWindow: (url) => ipcRenderer.invoke('open-preview-window', url),
+        // Open external URL
+        openExternal: (url) => ipcRenderer.invoke('open-external', url),
     });
     console.log("[preload] Exposing electronAPI:", electronAPI);
     contextBridge.exposeInMainWorld("electronAPI", electronAPI);

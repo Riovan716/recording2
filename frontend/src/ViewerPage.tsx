@@ -46,6 +46,7 @@ const ViewerPage: React.FC = () => {
   const [networkQuality, setNetworkQuality] = useState<'good' | 'fair' | 'poor'>('good');
   const [currentBitrate, setCurrentBitrate] = useState(0);
   const [streamStartTime, setStreamStartTime] = useState<number | null>(null);
+  const [showStreamEndedModal, setShowStreamEndedModal] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
@@ -80,6 +81,41 @@ const ViewerPage: React.FC = () => {
       }
     };
   }, [streamId]);
+
+  // Listen for viewer count updates
+  useEffect(() => {
+    if (socketRef.current && streamId) {
+      const handleViewerCountUpdate = (data: { roomId: string; viewers: number }) => {
+        if (data.roomId === streamId) {
+          setViewers(data.viewers);
+          console.log(`[ViewerPage] Viewer count updated: ${data.viewers}`);
+        }
+      };
+
+      socketRef.current.on('viewerCountUpdate', handleViewerCountUpdate);
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.off('viewerCountUpdate', handleViewerCountUpdate);
+        }
+      };
+    }
+  }, [streamId, socketRef.current]);
+
+  // Check stream status periodically
+  useEffect(() => {
+    if (!streamId || !isConnected) return;
+    
+    // Check status every 5 seconds for faster response
+    const statusInterval = setInterval(async () => {
+      const streamEnded = await checkStreamStatus();
+      if (streamEnded) {
+        clearInterval(statusInterval);
+      }
+    }, 5000);
+    
+    return () => clearInterval(statusInterval);
+  }, [streamId, isConnected]);
 
   const fetchStreamData = async () => {
     try {
@@ -253,6 +289,36 @@ const ViewerPage: React.FC = () => {
     }, 30000); // Check every 30 seconds (less aggressive)
   };
 
+  // Check stream status from database
+  const checkStreamStatus = async () => {
+    if (!streamId) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/livestream/detail/${streamId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.data) {
+          // Check if stream status is 'ended' or 'recording' (stream has ended)
+          if (data.data.status === 'ended' || data.data.status === 'recording') {
+            setShowStreamEndedModal(true);
+            // Stop video playback
+            if (videoRef.current) {
+              videoRef.current.pause();
+            }
+            // Disconnect from stream
+            setIsConnected(false);
+            // Clear the interval to prevent further checks
+            return true;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking stream status:', error);
+    }
+  };
+
   const connectToStream = async () => {
     try {
       // Set timeout for WebRTC connection
@@ -262,13 +328,21 @@ const ViewerPage: React.FC = () => {
       }, 10000); // 10 second timeout
       
       // Connect to MediaSoup server
-      socketRef.current = io('http://192.168.1.22:4000');
+      socketRef.current = io('http://192.168.1.14:4000');
       
       socketRef.current.on('connect', async () => {
         console.log('Connected to MediaSoup server');
         setIsConnected(true);
         clearTimeout(connectionTimeout); // Clear timeout on successful connection
         console.log('Connection status updated to: true');
+        
+        // Listen for viewer count updates
+        socketRef.current.on('viewerCountUpdate', (data: { roomId: string; viewers: number }) => {
+          if (data.roomId === streamId) {
+            setViewers(data.viewers);
+            console.log(`[ViewerPage] Viewer count updated: ${data.viewers}`);
+          }
+        });
         
         // Check if producer exists for this room
         console.log('Checking producer for room:', streamId);
@@ -994,9 +1068,9 @@ const ViewerPage: React.FC = () => {
               borderRadius: '20px',
               fontSize: '14px',
               fontWeight: 500
-            }}>
-              👥 {viewers} penonton
-            </div>
+              }}>
+                👥 {viewers} penonton
+              </div>
           </div>
         ) : (streamData.status === 'ended' || streamData.status === 'recording') && streamData.recordingPath ? (
           <div style={{
@@ -1086,6 +1160,91 @@ const ViewerPage: React.FC = () => {
           50% { opacity: 0.5; }
         }
       `}</style>
+
+      {/* Stream Ended Modal */}
+      {showStreamEndedModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: COLORS.white,
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              fontSize: '48px',
+              marginBottom: '16px'
+            }}>
+              📺
+            </div>
+            
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              color: COLORS.text,
+              margin: '0 0 16px 0'
+            }}>
+              Livestream Berakhir
+            </h2>
+            
+            <p style={{
+              fontSize: '16px',
+              color: COLORS.subtext,
+              margin: '0 0 24px 0',
+              lineHeight: '1.5'
+            }}>
+              Admin telah mengakhiri livestream. Terima kasih telah menonton!
+            </p>
+            
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => {
+                  setShowStreamEndedModal(false);
+                  // Refresh the page to show recording if available
+                  window.location.reload();
+                }}
+                style={{
+                  background: COLORS.primary,
+                  color: COLORS.text,
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '12px 32px',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = COLORS.primaryDark;
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = COLORS.primary;
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -53,7 +53,7 @@ exports.listRecordings = async (req, res) => {
         filename: rec.filename,
         judul: rec.judul,
         uploadedAt: rec.uploadedAt,
-        url: `http://192.168.1.22:3000/api/recording/stream/${rec.filename}`,
+        url: `http://192.168.1.14:3000/api/recording/stream/${rec.filename}`,
         tanggal: uploadedDate.toLocaleDateString('id-ID', {
           year: 'numeric',
           month: 'long',

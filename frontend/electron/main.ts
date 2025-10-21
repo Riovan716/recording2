@@ -72,6 +72,9 @@ function createWindow() {
       // allowUniversalAccessFromFileURLs: true, // Deprecated property
       // Ensure proper script execution
       enableBlinkFeatures: 'CSSColorSchemeUARendering',
+      // Background execution settings for streaming
+      backgroundThrottling: false, // Prevent throttling when window is hidden
+      offscreen: false, // Keep rendering active
     },
   });
 
@@ -266,11 +269,20 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// Add command line arguments for better screen capture support
+// Add command line arguments for better screen capture support and background execution
 app.commandLine.appendSwitch('--enable-usermedia-screen-capture');
 app.commandLine.appendSwitch('--disable-features', 'VizDisplayCompositor');
 app.commandLine.appendSwitch('--enable-features', 'VaapiVideoDecoder');
 app.commandLine.appendSwitch('--autoplay-policy', 'no-user-gesture-required');
+// Background execution settings for streaming
+app.commandLine.appendSwitch('--disable-background-timer-throttling');
+app.commandLine.appendSwitch('--disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('--disable-renderer-backgrounding');
+app.commandLine.appendSwitch('--disable-field-trial-config');
+app.commandLine.appendSwitch('--disable-ipc-flooding-protection');
+// Keep media streams active in background
+app.commandLine.appendSwitch('--disable-background-media-suspend');
+app.commandLine.appendSwitch('--disable-background-media-throttling');
 
 // IPC handlers
 ipcMain.on('preload-crashed', (_event, error) => {

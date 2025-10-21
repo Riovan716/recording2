@@ -64,7 +64,12 @@ function createWindow() {
       // allowFileAccessFromFileURLs: true, // Deprecated property
       // allowUniversalAccessFromFileURLs: true, // Deprecated property
       // Ensure proper script execution
-      enableBlinkFeatures: "CSSColorSchemeUARendering"
+      enableBlinkFeatures: "CSSColorSchemeUARendering",
+      // Background execution settings for streaming
+      backgroundThrottling: false,
+      // Prevent throttling when window is hidden
+      offscreen: false
+      // Keep rendering active
     }
   });
   win.webContents.on("preload-error", (_e, p, err) => {
@@ -224,6 +229,13 @@ app.commandLine.appendSwitch("--enable-usermedia-screen-capture");
 app.commandLine.appendSwitch("--disable-features", "VizDisplayCompositor");
 app.commandLine.appendSwitch("--enable-features", "VaapiVideoDecoder");
 app.commandLine.appendSwitch("--autoplay-policy", "no-user-gesture-required");
+app.commandLine.appendSwitch("--disable-background-timer-throttling");
+app.commandLine.appendSwitch("--disable-backgrounding-occluded-windows");
+app.commandLine.appendSwitch("--disable-renderer-backgrounding");
+app.commandLine.appendSwitch("--disable-field-trial-config");
+app.commandLine.appendSwitch("--disable-ipc-flooding-protection");
+app.commandLine.appendSwitch("--disable-background-media-suspend");
+app.commandLine.appendSwitch("--disable-background-media-throttling");
 ipcMain.on("preload-crashed", (_event, error) => {
   console.error("[main] PRELOAD CRASHED:", error);
 });

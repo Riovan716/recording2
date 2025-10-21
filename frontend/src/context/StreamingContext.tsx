@@ -107,13 +107,73 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [streamingLayoutVersion]);
 
   useEffect(() => {
-    socket.current = io('http://192.168.1.22:4000');
+    socket.current = io('http://192.168.1.14:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();
       }
     };
   }, []);
+
+  // Keep MediaStream active when window is minimized or hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (streamingState.isStreaming && streamingState.localStream) {
+        const videoTracks = streamingState.localStream.getVideoTracks();
+        const audioTracks = streamingState.localStream.getAudioTracks();
+        
+        // Ensure tracks remain active even when window is hidden
+        videoTracks.forEach(track => {
+          if (track.readyState === 'live') {
+            track.enabled = true;
+          }
+        });
+        
+        audioTracks.forEach(track => {
+          if (track.readyState === 'live') {
+            track.enabled = true;
+          }
+        });
+        
+        console.log('MediaStream tracks kept active during visibility change');
+      }
+    };
+
+    const handlePageHide = () => {
+      if (streamingState.isStreaming && streamingState.localStream) {
+        console.log('Page hidden, keeping MediaStream active');
+        // Force MediaStream to stay active
+        streamingState.localStream.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.enabled = true;
+          }
+        });
+      }
+    };
+
+    const handlePageShow = () => {
+      if (streamingState.isStreaming && streamingState.localStream) {
+        console.log('Page shown, ensuring MediaStream is still active');
+        // Verify MediaStream is still active
+        streamingState.localStream.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.enabled = true;
+          }
+        });
+      }
+    };
+
+    // Add event listeners for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [streamingState.isStreaming, streamingState.localStream]);
 
   // Cleanup effect to prevent memory leaks on component unmount
   useEffect(() => {
@@ -377,10 +437,18 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         audioBitsPerSecond: 128000
       });
       
-      // Stream monitoring with delay prevention - store reference for cleanup
+      // Background-compatible stream monitoring with delay prevention
       streamMonitorRef.current = setInterval(async () => {
         const videoTrack = stream.getVideoTracks()[0];
         const audioTrack = stream.getAudioTracks()[0];
+        
+        // Keep tracks active even when window is hidden/minimized
+        if (videoTrack && videoTrack.readyState === 'live') {
+          videoTrack.enabled = true;
+        }
+        if (audioTrack && audioTrack.readyState === 'live') {
+          audioTrack.enabled = true;
+        }
         
         if (videoTrack && videoTrack.readyState === 'ended') {
           console.error('Video track ended unexpectedly');
@@ -449,7 +517,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             audioProducerRef.current.resume();
           }
         }
-      }, 10000); // Check every 10 seconds
+      }, 5000); // Check every 5 seconds for better responsiveness
 
       const chunks: Blob[] = [];
       mediaRecorder.ondataavailable = (event) => {
@@ -654,6 +722,20 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           },
           body: JSON.stringify({ id: streamingState.roomId }),
         });
+        
+        // Notify all viewers that stream has ended
+        try {
+          await fetch(`${API_URL}/api/stream-ended`, {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ roomId: streamingState.roomId }),
+          });
+          console.log('Stream ended notification sent to all viewers');
+        } catch (error) {
+          console.error('Failed to send stream ended notification:', error);
+        }
       }
 
       // Call cleanup function if available
@@ -939,7 +1021,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.22') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.14') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
@@ -1394,9 +1476,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
 
-      // Optimized animation function to draw cameras and screen to canvas
+      // Background-compatible animation function using setInterval for recording
       let isRecordingAnimating = true;
-      let lastRecordingFrameTime = 0;
+      let recordingAnimationInterval: NodeJS.Timeout | null = null;
       const recordingTargetFPS = 15; // Reduced to 15 FPS for screen sharing to save memory
       const recordingFrameInterval = 1000 / recordingTargetFPS;
       
@@ -1414,16 +1496,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         allVideoElements['screen'] = screenVideoElement;
       }
       
-      const drawCamerasToCanvas = (currentTime: number) => {
+      const drawCamerasToCanvas = () => {
         if (!isRecordingAnimating) return;
-        
-        // Frame rate limiting for recording
-        if (currentTime - lastRecordingFrameTime < recordingFrameInterval) {
-          const frameId = requestAnimationFrame(drawCamerasToCanvas);
-          animationFrameRef.current = frameId;
-          return;
-        }
-        lastRecordingFrameTime = currentTime;
         
         try {
           // Clear canvas completely to prevent memory leaks
@@ -1454,9 +1528,6 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch (error) {
           console.error('Error drawing to canvas:', error);
         }
-        
-        const frameId = requestAnimationFrame(drawCamerasToCanvas);
-        animationFrameRef.current = frameId;
       };
 
       // Layout drawing functions
@@ -1572,12 +1643,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       };
 
-      // Store animation frame reference for cleanup
-      let animationFrameId: number | null = null;
-      
-      // Start animation loop directly - no need for wrapper function
-      const initialFrameId = requestAnimationFrame(drawCamerasToCanvas);
-      animationFrameRef.current = initialFrameId;
+      // Start background-compatible animation loop using setInterval for recording
+      recordingAnimationInterval = setInterval(drawCamerasToCanvas, recordingFrameInterval);
 
       // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
@@ -1618,11 +1685,11 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Clear chunks array to free memory
         chunks.length = 0;
         
-        // Stop animation loop and clean up animation frames
+        // Stop animation loop and clean up animation intervals
         isRecordingAnimating = false;
-        if (animationFrameId !== null) {
-          cancelAnimationFrame(animationFrameId);
-          animationFrameId = null;
+        if (recordingAnimationInterval) {
+          clearInterval(recordingAnimationInterval);
+          recordingAnimationInterval = null;
         }
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -1873,9 +1940,9 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentStreamingLayout.current = customLayout;
       }
 
-      // Animation function for canvas composition with performance optimizations
+      // Background-compatible animation function using setInterval instead of requestAnimationFrame
       let isAnimating = true;
-      let lastFrameTime = 0;
+      let animationInterval: NodeJS.Timeout | null = null;
       const targetFPS = 15; // Reduced from 30 to 15 FPS for screen sharing to save memory
       const frameInterval = 1000 / targetFPS;
       
@@ -1893,16 +1960,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       };
       
-      const animate = (currentTime: number) => {
+      const animate = () => {
         if (!isAnimating || !ctx) return;
-        
-        // Frame rate limiting
-        if (currentTime - lastFrameTime < frameInterval) {
-          const frameId = requestAnimationFrame(animate);
-          streamingAnimationFrameRef.current = frameId;
-          return;
-        }
-        lastFrameTime = currentTime;
         
         // Update cached streams only when layout changes
         updateCachedStreams();
@@ -1934,9 +1993,6 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch (error) {
           console.error('Error drawing to canvas:', error);
         }
-        
-        const frameId = requestAnimationFrame(animate);
-        streamingAnimationFrameRef.current = frameId;
       };
       
       // Optimized drawing functions
@@ -2047,6 +2103,12 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const cleanupStreaming = () => {
         isAnimating = false;
         
+        // Clear animation interval to prevent memory leaks
+        if (animationInterval) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+        }
+        
         // Cancel animation frames to prevent memory leaks
         if (streamingAnimationFrameRef.current) {
           cancelAnimationFrame(streamingAnimationFrameRef.current);
@@ -2107,9 +2169,8 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Store cleanup function reference
       streamingAnimateRef.current = cleanupStreaming;
       
-      // Start animation loop
-      const initialFrameId = requestAnimationFrame(animate);
-      streamingAnimationFrameRef.current = initialFrameId;
+      // Start background-compatible animation loop using setInterval
+      animationInterval = setInterval(animate, frameInterval);
 
       updateStatus(`Streaming ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
 
