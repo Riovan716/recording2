@@ -17,15 +17,20 @@ exports.uploadRecording = async (req, res) => {
       uploadedAt: new Date() 
     });
     
-    // Log activity
-    await logActivity(
-      req.user.id, // Menggunakan req.user dari middleware authenticateToken
-      req.user.role,
-      req.user.name || 'admin',
-      'upload_recording',
-      `${req.user.name || 'Admin'} uploaded a recording: ${judul}`,
-      { filename, judul }
-    );
+    // Log activity - handle case where req.user might not exist
+    try {
+      await logActivity(
+        req.user?.id || 1, // Default admin ID if not available
+        req.user?.role || 'admin',
+        req.user?.name || 'admin',
+        'upload_recording',
+        `${req.user?.name || 'Admin'} uploaded a recording: ${judul}`,
+        { filename, judul }
+      );
+    } catch (logError) {
+      console.error('Error logging activity:', logError);
+      // Don't fail the upload if logging fails
+    }
     
     res.json({ success: true, filename });
   } catch (err) {
@@ -97,15 +102,20 @@ exports.deleteRecording = async (req, res) => {
     // Delete from database
     await recording.destroy();
 
-    // Log activity
-    await logActivity(
-      req.user.id, // Menggunakan req.user dari middleware authenticateToken
-      req.user.role,
-      req.user.name || 'admin',
-      'delete_recording',
-      `${req.user.name || 'Admin'} deleted recording: ${recording.judul}`,
-      { filename: recording.filename, judul: recording.judul }
-    );
+    // Log activity - handle case where req.user might not exist
+    try {
+      await logActivity(
+        req.user?.id || 1, // Default admin ID if not available
+        req.user?.role || 'admin',
+        req.user?.name || 'admin',
+        'delete_recording',
+        `${req.user?.name || 'Admin'} deleted recording: ${recording.judul}`,
+        { filename: recording.filename, judul: recording.judul }
+      );
+    } catch (logError) {
+      console.error('Error logging activity:', logError);
+      // Don't fail the delete if logging fails
+    }
 
     res.json({ success: true, message: 'Recording berhasil dihapus' });
   } catch (err) {

@@ -218,15 +218,16 @@ const AdminVideoListPage: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: COLORS.bg,
+          background: '#f3f4f6',
           fontFamily: FONT_FAMILY,
+          minHeight: '100vh',
         }}
       >
-        <div style={{ textAlign: "center", color: COLORS.subtext }}>
-          <div style={{ fontSize: "18px", marginBottom: "8px" }}>
+        <div style={{ textAlign: "center", color: '#6b7280' }}>
+          <div style={{ fontSize: "18px", marginBottom: "8px", fontWeight: 500 }}>
             Memuat...
           </div>
-          <div style={{ fontSize: "14px" }}>
+          <div style={{ fontSize: "14px", color: '#9ca3af' }}>
             Menyiapkan data daftar video
           </div>
         </div>
@@ -240,169 +241,232 @@ const AdminVideoListPage: React.FC = () => {
         padding: isMobile ? "16px" : "32px",
         maxWidth: "100%",
         overflowX: "hidden",
-        background: COLORS.bg,
+        background: '#f3f4f6',
         fontFamily: FONT_FAMILY,
+        minHeight: '100vh',
       }}
     >
-      {/* Header */}
+      {/* Hero Banner */}
       <div style={{
-        background: LIGHT_GREEN,
-        borderRadius: CARD_RADIUS,
-        color: '#1e293b',
+      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+        borderRadius: 12,
+        color: '#1f2937',
         padding: isMobile ? '18px 12px' : '32px 40px',
         marginBottom: 32,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: SHADOW,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         minHeight: 120,
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <div>
-          <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            fontSize: 15, 
+            color: '#64748b', 
+            marginBottom: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <i className="fas fa-calendar-days" style={{ fontSize: '14px' }}></i>
             {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+          <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>
             Daftar Video
           </div>
-          <div style={{ fontSize: 16, opacity: 0.9 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
             Selamat datang, {user?.name || 'Admin'}! Lihat daftar video yang telah tersimpan.
           </div>
         </div>
-        <span style={{ 
-          height: 100, 
-          fontSize: 100, 
-          objectFit: 'contain', 
-          marginLeft: isMobile ? 0 : 32, 
-          marginTop: isMobile ? 18 : 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          filter: 'drop-shadow(0 4px 24px #0002)' 
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '120px',
+          height: '120px',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+          borderRadius: '12px',
+          marginLeft: isMobile ? 0 : 32,
+          marginTop: isMobile ? 18 : 0,
         }}>
-          📹
-        </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '24px', color: '#10b981' }}>📹</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>Videos</div>
+          </div>
+        </div>
       </div>
 
-      {/* Video List */}
+      {/* Video List Container */}
       <div
         style={{
-          background: COLORS.white,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: CARD_RADIUS,
+          background: '#f3f4f6',
+          borderRadius: 12,
           padding: isMobile ? "16px" : "20px",
-          boxShadow: SHADOW,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: "18px",
-              fontWeight: 600,
-              color: COLORS.text,
-              margin: 0,
-            }}
-          >
-            Daftar Video ({filteredAndSortedRecordings.length})
-          </h3>
-          
-          <button
-            onClick={() => {
-              fetchRecordings();
-            }}
-            style={{
-              padding: "8px 16px",
-              background: COLORS.primary,
-              color: "black",
-              border: "none",
-              borderRadius: 6,
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            🔄 Refresh
-          </button>
-        </div>
         
-        {/* Search and Filter Controls */}
+        {/* Filters & Search Section */}
         <div style={{
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          marginBottom: '20px',
-          padding: '16px',
-          background: COLORS.white,
-          borderRadius: CARD_RADIUS,
-          boxShadow: SHADOW,
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: 12,
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         }}>
-          {/* Search Input */}
-          <div style={{ 
-            position: 'relative', 
-            flex: '1 1 250px',
-            minWidth: '200px',
-            maxWidth: '400px'
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
           }}>
-            <FaSearch style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: COLORS.subtext,
-              fontSize: '14px'
-            }} />
-            <input
-              type="text"
-              placeholder="Cari berdasarkan judul..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 36px',
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: '8px',
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'border-color 0.2s ease',
-                boxSizing: 'border-box',
-                background: COLORS.white,
-                color: COLORS.text
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <i className="fas fa-history" style={{ fontSize: '16px', color: '#6b7280' }}></i>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 500,
+                color: '#6b7280',
+                margin: 0,
+              }}>
+                Filter & Pencarian
+              </h3>
+            </div>
+            <button
+              onClick={() => {
+                fetchRecordings();
               }}
-              onFocus={e => e.target.style.borderColor = COLORS.primary}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
-            />
+              style={{
+                padding: "8px 12px",
+                background: '#f0f9ff',
+                color: '#6b7280',
+                border: "1px solid #e0f2fe",
+                borderRadius: 8,
+                fontSize: "12px",
+                fontWeight: 500,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#e0f2fe';
+                e.currentTarget.style.color = '#0369a1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f0f9ff';
+                e.currentTarget.style.color = '#6b7280';
+              }}
+            >
+              <i className="fas fa-sync-alt" style={{ fontSize: '12px' }}></i>
+              Refresh
+            </button>
           </div>
+          
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}>
+            {/* Search Input */}
+            <div style={{ 
+              position: 'relative', 
+              flex: '1 1 250px',
+              minWidth: '200px',
+              maxWidth: '400px'
+            }}>
+              <FaSearch style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#9ca3af',
+                fontSize: '14px'
+              }} />
+              <input
+                type="text"
+                placeholder="Cari berdasarkan judul..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px 10px 36px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  boxSizing: 'border-box',
+                  background: '#ffffff',
+                  color: '#6b7280',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                }}
+                onFocus={e => e.target.style.borderColor = '#10b981'}
+                onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
 
-          {/* Date Filter */}
-          <div style={{ flex: '0 0 auto' }}>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
+            {/* Date Filter */}
+            <div style={{ flex: '0 0 auto' }}>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                style={{
+                  padding: '10px 12px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  background: '#ffffff',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                }}
+                onFocus={e => e.target.style.borderColor = '#10b981'}
+                onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+
+            {/* Filter Button */}
+            <button
               style={{
-                padding: '10px 12px',
-                border: `1px solid ${COLORS.border}`,
+                padding: '10px 16px',
+                background: '#f9fafb',
+                color: '#6b7280',
+                border: '1px solid #e5e7eb',
                 borderRadius: '8px',
                 fontSize: '14px',
-                outline: 'none',
-                transition: 'border-color 0.2s ease',
-                background: COLORS.white,
-                color: COLORS.text,
-                cursor: 'pointer'
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
               }}
-              onFocus={e => e.target.style.borderColor = COLORS.primary}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
-            />
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f3f4f6';
+                e.currentTarget.style.color = '#374151';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f9fafb';
+                e.currentTarget.style.color = '#6b7280';
+              }}
+            >
+              <i className="fas fa-filter" style={{ fontSize: '12px' }}></i>
+              Filter
+            </button>
           </div>
         </div>
         
@@ -411,14 +475,18 @@ const AdminVideoListPage: React.FC = () => {
             style={{
               textAlign: "center",
               padding: "48px 24px",
-              color: COLORS.subtext,
+              color: '#6b7280',
+              background: '#ffffff',
+              borderRadius: 12,
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             }}
           >
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>📺</div>
-            <div style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>
+            <div style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px", color: '#374151' }}>
               Belum ada video tersimpan
             </div>
-            <div style={{ fontSize: "14px" }}>
+            <div style={{ fontSize: "14px", color: '#9ca3af' }}>
               Buat recording video baru untuk melihat daftar di sini
             </div>
           </div>
@@ -426,43 +494,46 @@ const AdminVideoListPage: React.FC = () => {
           <>
             {/* Table Header */}
             <div style={{
-              background: COLORS.white,
+              background: '#ffffff',
               borderRadius: "12px 12px 0 0",
-              border: `1px solid ${COLORS.border}`,
+              border: '1px solid #e5e7eb',
               borderBottom: "none",
               overflow: "hidden"
             }}>
               <div style={{
                 display: isMobile ? "none" : "grid",
-                gridTemplateColumns: "120px 1fr 140px 100px",
+                gridTemplateColumns: "120px 1fr 140px 100px 120px",
                 gap: "12px",
                 padding: "16px 20px",
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                fontWeight: 600,
-                color: COLORS.text,
+                background: '#f9fafb',
+                fontWeight: 500,
+                color: '#6b7280',
                 fontSize: "14px",
-                borderBottom: `1px solid ${COLORS.border}`
+                borderBottom: '1px solid #e5e7eb'
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   Thumbnail
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Title
+                  Judul
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Date & Time
+                  Tanggal & Waktu
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Actions
+                  Status
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Aksi
                 </div>
               </div>
             </div>
 
             {/* Table Body */}
             <div style={{
-              background: COLORS.white,
+              background: '#ffffff',
               borderRadius: "0 0 12px 12px",
-              border: `1px solid ${COLORS.border}`,
+              border: '1px solid #e5e7eb',
               borderTop: "none",
               overflow: "hidden"
             }}>
@@ -471,29 +542,29 @@ const AdminVideoListPage: React.FC = () => {
                   key={recording.id}
                   style={{
                     display: isMobile ? "block" : "grid",
-                    gridTemplateColumns: "120px 1fr 140px 100px",
+                    gridTemplateColumns: "120px 1fr 140px 100px 120px",
                     gap: "12px",
                     padding: "16px 20px",
-                    borderBottom: index < paginatedRecordings.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                    borderBottom: index < paginatedRecordings.length - 1 ? '1px solid #e5e7eb' : "none",
                     transition: "all 0.3s ease",
                     cursor: "pointer",
                     background: "transparent",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                    e.currentTarget.style.background = '#f9fafb';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  {/* Thumbnail for Desktop */}
+                  {/* Thumbnail */}
                   <div style={{
                     display: isMobile ? "none" : "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     height: "70px",
                     borderRadius: "8px",
-                    background: `linear-gradient(135deg, rgba(187, 247, 208, 0.1) 0%, rgba(134, 239, 172, 0.05) 100%)`,
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
                     position: "relative",
                     overflow: "hidden",
                   }}>
@@ -510,7 +581,7 @@ const AdminVideoListPage: React.FC = () => {
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                         e.currentTarget.parentElement!.innerHTML = `
-                          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: ${COLORS.subtext};">
+                          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;">
                             <div style="font-size: 24px;">📹</div>
                           </div>
                         `;
@@ -518,7 +589,7 @@ const AdminVideoListPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Title & Info */}
+                  {/* Title */}
                   <div style={{
                     display: "flex",
                     flexDirection: "column",
@@ -529,9 +600,9 @@ const AdminVideoListPage: React.FC = () => {
                     padding: isMobile ? "0 0 12px 0" : "0"
                   }}>
                     <div style={{
-                      fontSize: "16px",
-                      fontWeight: 700,
-                      color: COLORS.text,
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: '#6b7280',
                       marginBottom: isMobile ? "4px" : "6px",
                       lineHeight: 1.3,
                       overflow: "hidden",
@@ -545,7 +616,7 @@ const AdminVideoListPage: React.FC = () => {
                       <>
                         <div style={{ 
                           fontSize: "12px", 
-                          color: COLORS.subtext,
+                          color: '#9ca3af',
                           marginBottom: "8px",
                           display: "flex",
                           alignItems: "center",
@@ -572,20 +643,38 @@ const AdminVideoListPage: React.FC = () => {
                     alignItems: "center",
                     textAlign: "center",
                     fontSize: "13px",
-                    color: COLORS.text,
+                    color: '#6b7280',
                   }}>
-                    <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                    <div style={{ fontWeight: 500, marginBottom: "2px" }}>
                       {new Date(recording.uploadedAt).toLocaleDateString("id-ID", {
                         day: "2-digit",
                         month: "2-digit", 
                         year: "numeric"
                       })}
                     </div>
-                    <div style={{ color: COLORS.subtext, fontSize: "11px" }}>
+                    <div style={{ color: '#9ca3af', fontSize: "11px" }}>
                       {new Date(recording.uploadedAt).toLocaleTimeString("id-ID", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}>
+                    <div style={{
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      background: '#d1fae5',
+                      color: '#059669',
+                    }}>
+                      SAVED
                     </div>
                   </div>
 
@@ -600,66 +689,69 @@ const AdminVideoListPage: React.FC = () => {
                     <button
                       onClick={() => handlePlayVideo(recording)}
                       style={{
-                        padding: isMobile ? "8px 12px" : "6px 10px",
-                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: isMobile ? 12 : 6,
+                        padding: "8px",
+                        background: '#ffffff',
+                        color: '#10b981',
+                        border: "1px solid #10b981",
+                        borderRadius: 8,
                         fontSize: "12px",
-                        fontWeight: 600,
+                        fontWeight: 500,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "4px",
-                        transition: "all 0.3s ease",
-                        boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)',
+                        transition: "all 0.2s ease",
                         flex: isMobile ? "1 1 auto" : "0 0 auto",
-                        minWidth: isMobile ? "50px" : "50px",
-                        maxWidth: "100px",
+                        minWidth: isMobile ? "50px" : "40px",
+                        height: "36px",
                       }}
                       onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#10b981';
+                        e.currentTarget.style.color = '#ffffff';
                         e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(34, 197, 94, 0.4)';
                       }}
                       onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.color = '#10b981';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(34, 197, 94, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "12px" }}>▶</span>
+                      <i className="fas fa-play" style={{ fontSize: "12px" }}></i>
                       {isMobile && "Play"}
                     </button>
 
                     <button
                       onClick={() => handleDeleteVideo(recording)}
                       style={{
-                        padding: isMobile ? "8px 12px" : "6px 10px",
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: isMobile ? 12 : 6,
+                        padding: "8px",
+                        background: '#ffffff',
+                        color: '#ef4444',
+                        border: "1px solid #ef4444",
+                        borderRadius: 8,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.3s ease",
-                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
+                        transition: "all 0.2s ease",
                         fontSize: "12px",
-                        fontWeight: 600,
+                        fontWeight: 500,
                         flex: isMobile ? "1 1 auto" : "0 0 auto",
-                        minWidth: isMobile ? "120px" : "50px",
+                        minWidth: isMobile ? "120px" : "40px",
+                        height: "36px",
                       }}
                       onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.color = '#ffffff';
                         e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
                       }}
                       onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.color = '#ef4444';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(239, 68, 68, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "12px" }}>🗑</span>
+                      <i className="fas fa-trash" style={{ fontSize: "12px" }}></i>
                       {isMobile && "Delete"}
                     </button>
                   </div>
@@ -673,80 +765,230 @@ const AdminVideoListPage: React.FC = () => {
         {totalPages > 1 && (
           <div style={{
             display: 'flex',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '8px',
             marginTop: '24px',
-            padding: '16px 0'
+            padding: '16px 0',
+            flexWrap: 'wrap',
+            gap: '16px'
           }}>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                background: currentPage === 1 ? '#f3f4f6' : COLORS.white,
-                color: currentPage === 1 ? COLORS.subtext : '#1e293b',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                boxShadow: currentPage === 1 ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                border: `1px solid ${COLORS.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ←
-            </button>
-            
+            {/* Pagination Info */}
             <div style={{
-              display: 'flex',
-              gap: '4px',
-              alignItems: 'center'
+              fontSize: '14px',
+              color: '#6b7280',
+              fontWeight: 500,
             }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    background: currentPage === page ? COLORS.primary : COLORS.white,
-                    color: currentPage === page ? '#1e293b' : COLORS.subtext,
-                    fontSize: '14px',
-                    fontWeight: currentPage === page ? 600 : 500,
-                    cursor: 'pointer',
-                    boxShadow: currentPage === page ? '0 2px 8px rgba(187, 247, 208, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    border: `1px solid ${currentPage === page ? COLORS.primary : COLORS.border}`,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
+              Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredAndSortedRecordings.length)} dari {filteredAndSortedRecordings.length} hasil
             </div>
 
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-            background: currentPage === totalPages ? '#f3f4f6' : COLORS.white,
-                color: currentPage === totalPages ? COLORS.subtext : '#1e293b',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                boxShadow: currentPage === totalPages ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                border: `1px solid ${COLORS.border}`,
+            {/* Pagination Controls */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: currentPage === 1 ? '#f3f4f6' : '#ffffff',
+                  color: currentPage === 1 ? '#9ca3af' : '#6b7280',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  boxShadow: currentPage === 1 ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: `1px solid ${currentPage === 1 ? '#e5e7eb' : '#e5e7eb'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.color = '#374151';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.color = '#6b7280';
+                  }
+                }}
+              >
+                <i className="fas fa-chevron-left" style={{ fontSize: '12px' }}></i>
+              </button>
+              
+              <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              →
-            </button>
+                gap: '4px',
+                alignItems: 'center'
+              }}>
+                {(() => {
+                  const maxVisiblePages = 5;
+                  const halfVisible = Math.floor(maxVisiblePages / 2);
+                  let startPage = Math.max(1, currentPage - halfVisible);
+                  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                  
+                  if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                  }
+
+                  const pages = [];
+                  
+                  if (startPage > 1) {
+                    pages.push(
+                      <button
+                        key={1}
+                        onClick={() => setCurrentPage(1)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          color: '#6b7280',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                          border: '1px solid #e5e7eb',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#f9fafb';
+                          e.currentTarget.style.color = '#374151';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.color = '#6b7280';
+                        }}
+                      >
+                        1
+                      </button>
+                    );
+                    
+                    if (startPage > 2) {
+                      pages.push(
+                        <span key="ellipsis1" style={{ color: '#9ca3af', fontSize: '14px' }}>
+                          ...
+                        </span>
+                      );
+                    }
+                  }
+
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          background: currentPage === i ? '#d1fae5' : '#ffffff',
+                          color: currentPage === i ? '#059669' : '#6b7280',
+                          fontSize: '14px',
+                          fontWeight: currentPage === i ? 600 : 500,
+                          cursor: 'pointer',
+                          boxShadow: currentPage === i ? '0 2px 4px rgba(16, 185, 129, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                          border: `1px solid ${currentPage === i ? '#10b981' : '#e5e7eb'}`,
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage !== i) {
+                            e.currentTarget.style.background = '#f9fafb';
+                            e.currentTarget.style.color = '#374151';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentPage !== i) {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.color = '#6b7280';
+                          }
+                        }}
+                      >
+                        {i}
+                      </button>
+                    );
+                  }
+
+                  if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                      pages.push(
+                        <span key="ellipsis2" style={{ color: '#9ca3af', fontSize: '14px' }}>
+                          ...
+                        </span>
+                      );
+                    }
+                    
+                    pages.push(
+                      <button
+                        key={totalPages}
+                        onClick={() => setCurrentPage(totalPages)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          color: '#6b7280',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                          border: '1px solid #e5e7eb',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#f9fafb';
+                          e.currentTarget.style.color = '#374151';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.color = '#6b7280';
+                        }}
+                      >
+                        {totalPages}
+                      </button>
+                    );
+                  }
+
+                  return pages;
+                })()}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  background: currentPage === totalPages ? '#f3f4f6' : '#ffffff',
+                  color: currentPage === totalPages ? '#9ca3af' : '#6b7280',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  boxShadow: currentPage === totalPages ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  border: `1px solid ${currentPage === totalPages ? '#e5e7eb' : '#e5e7eb'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.color = '#374151';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.color = '#6b7280';
+                  }
+                }}
+              >
+                <i className="fas fa-chevron-right" style={{ fontSize: '12px' }}></i>
+              </button>
+            </div>
           </div>
         )}
       </div>

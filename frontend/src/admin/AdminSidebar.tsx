@@ -3,49 +3,28 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const COLORS = {
-  sidebarBg: '#BBF7D0', // Light Green
-  sidebarText: '#1E293B', // Dark Gray for better contrast
-  sidebarActiveBg: '#86EFAC', // Darker Green
-  sidebarActiveText: '#1E293B', // Dark Gray
-  sidebarHoverBg: '#86EFAC', // Darker Green
-  divider: '#86EFAC', // Darker Green
-  logout: '#BBF7D0', // Light Green
-  logoutText: '#1E293B', // Dark Gray
-  icon: '#1E293B', // Dark Gray
-  iconActive: '#BBF7D0', // Light Green
-  logoText: '#1E293B', // Dark Gray
+  sidebarBg: '#FFFFFF', // White background
+  sidebarText: '#64748B', // Gray text for inactive items
+  sidebarActiveBg: '#F0FDF4', // Very light green background for active item
+  sidebarActiveText: '#16A34A', // Softer green text for active item
+  sidebarBorderActive: '#065F46', // Darker green for the active border line
+  sidebarHoverBg: '#F8FAFC', // Light gray hover background
+  divider: '#E2E8F0', // Light gray divider
+  logout: '#FFFFFF', // White background
+  logoutText: '#64748B', // Gray text
+  icon: '#64748B', // Gray icons for inactive items
+  iconActive: '#16A34A', // Softer green icons for active item
+  logoText: '#1E293B', // Dark text for logo
 };
 
 const menu = [
-  { label: 'Dashboard', path: '/admin/dashboard', icon: (
-    // Analytics/Home icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg>
-  ) },
-  { label: 'Live Stream', path: '/admin/dashboard/livestream', icon: (
-    // Live streaming icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg>
-  ) },
-  { label: 'History Live Stream', path: '/admin/dashboard/livestream-history', icon: (
-    // History icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/><path d="M12 2l0 20"/></svg>
-  ) },
-  { label: 'Recording', path: '/admin/dashboard/recording', icon: (
-    // Video recording icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-  ) },
- 
-  { label: 'Daftar Video', path: '/admin/dashboard/videos', icon: (
-    // Video list icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="8" cy="8" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="8" r="1"/></svg>
-  ) },
-  { label: 'camera', path: '/admin/dashboard/camera-preview', icon: (
-    // Camera preview icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="3"/></svg>
-  ) },
-  { label: 'Profile', path: '/admin/dashboard/profile', icon: (
-    // User profile icon
-    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-  ) },
+  { label: 'Dashboard', path: '/admin/dashboard', icon: 'fas fa-home' },
+  { label: 'Live Stream', path: '/admin/dashboard/livestream', icon: 'fas fa-wifi' },
+  { label: 'History', path: '/admin/dashboard/livestream-history', icon: 'fas fa-clock' },
+  { label: 'Recording', path: '/admin/dashboard/recording', icon: 'fas fa-video' },
+  { label: 'Daftar Video', path: '/admin/dashboard/videos', icon: 'fas fa-play-circle' },
+  { label: 'Camera', path: '/admin/dashboard/camera-preview', icon: 'fas fa-camera' },
+  { label: 'Profile', path: '/admin/dashboard/profile', icon: 'fas fa-user' },
 ];
 
 const fontFamily = 'Inter, Segoe UI, Poppins, Arial, sans-serif';
@@ -225,10 +204,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                     e.currentTarget.style.color = COLORS.icon;
                   }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                  <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
                 </button>
                 <div>
                   <div style={{ 
@@ -268,8 +244,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                         padding: '14px 16px',
                         borderRadius: 12,
                         background: isActive ? COLORS.sidebarActiveBg : 'transparent',
-                        color: COLORS.sidebarText,
-                        fontWeight: isActive ? 700 : 500,
+                        color: isActive ? COLORS.sidebarActiveText : COLORS.sidebarText,
+                        fontWeight: isActive ? 600 : 500,
+                        borderLeft: isActive ? `4px solid ${COLORS.sidebarBorderActive}` : 'none',
+                        paddingLeft: isActive ? '12px' : '16px',
                         fontSize: 15,
                         border: 'none',
                         cursor: 'pointer',
@@ -283,6 +261,16 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                       }}
                       aria-label={item.label}
                       onClick={() => handleMenuClick(item.path)}
+                      onMouseOver={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = COLORS.sidebarHoverBg;
+                        }
+                      }}
+                      onMouseOut={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
                     >
                       <span style={{ 
                         display: 'flex', 
@@ -292,11 +280,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                         width: 24,
                         height: 24,
                         flexShrink: 0,
+                        color: isActive ? COLORS.iconActive : COLORS.icon,
+                        transition: 'color 0.2s',
                       }}>
-                        {React.cloneElement(item.icon, { 
-                          stroke: COLORS.sidebarText, 
-                          style: { transition: 'stroke 0.2s' } 
-                        })}
+                        <i className={item.icon} style={{ fontSize: '16px' }}></i>
                       </span>
                       {item.label}
                     </button>
@@ -352,11 +339,9 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                   marginRight: 12,
                   width: 24,
                   height: 24,
+                  color: COLORS.logoutText,
                 }}>
-                  <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 16l4-4m0 0l-4-4m4 4H7"/>
-                    <rect x="3" y="5" width="8" height="14" rx="2"/>
-                  </svg>
+                  <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
                 </span>
                 Logout
               </button>
@@ -440,11 +425,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
               }}
             >
               {/* Hamburger icon */}
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="7" x2="19" y2="7" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <line x1="5" y1="17" x2="19" y2="17" />
-              </svg>
+              <i className="fas fa-bars" style={{ fontSize: '20px' }}></i>
             </button>
           ) : (
             <>
@@ -476,11 +457,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                 }}
               >
                 {/* Hamburger icon */}
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="7" x2="19" y2="7" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <line x1="5" y1="17" x2="19" y2="17" />
-                </svg>
+                <i className="fas fa-bars" style={{ fontSize: '20px' }}></i>
               </button>
               {/* Judul dan subtitle */}
               <div>
@@ -520,11 +497,12 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
           gap: 0,
-          padding: collapsed ? '14px 0' : '14px 16px',
+          padding: collapsed ? '14px 0' : (isActive ? '14px 12px 14px 12px' : '14px 16px'),
           borderRadius: 12,
-          background: isActive ? COLORS.sidebarActiveBg : (isHovered ? COLORS.sidebarActiveBg : 'transparent'),
-          color: COLORS.sidebarText,
-          fontWeight: isActive ? 700 : (isHovered ? 600 : 500),
+          background: isActive ? COLORS.sidebarActiveBg : (isHovered ? COLORS.sidebarHoverBg : 'transparent'),
+          color: isActive ? COLORS.sidebarActiveText : COLORS.sidebarText,
+          fontWeight: isActive ? 600 : 500,
+          borderLeft: isActive ? `4px solid ${COLORS.sidebarBorderActive}` : 'none',
           fontSize: 15,
           border: 'none',
           cursor: 'pointer',
@@ -550,11 +528,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
           width: 24,
           height: 24,
           flexShrink: 0,
+          color: isActive ? COLORS.iconActive : COLORS.icon,
+          transition: 'color 0.2s',
         }}>
-          {React.cloneElement(item.icon, { 
-            stroke: COLORS.sidebarText, 
-            style: { transition: 'stroke 0.2s' } 
-          })}
+          <i className={item.icon} style={{ fontSize: '16px' }}></i>
         </span>
         {!collapsed && (
           <span style={{
@@ -622,11 +599,9 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
               marginRight: collapsed ? 0 : 12,
               width: 24,
               height: 24,
+              color: COLORS.logoutText,
             }}>
-              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 16l4-4m0 0l-4-4m4 4H7"/>
-                <rect x="3" y="5" width="8" height="14" rx="2"/>
-              </svg>
+              <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
             </span>
             {!collapsed && 'Logout'}
           </button>

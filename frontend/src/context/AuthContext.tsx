@@ -15,6 +15,7 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check localStorage on app start - check both regular auth and admin auth
@@ -52,13 +54,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('adminData');
       }
     }
+    
+    // Set loading to false after checking localStorage
+    setIsLoading(false);
   }, []);
 
   const login = (userData: User, authToken: string) => {
     setUser(userData);
     setToken(authToken);
+    // Store in both regular and admin storage for compatibility
     localStorage.setItem('authToken', authToken);
     localStorage.setItem('authUser', JSON.stringify(userData));
+    localStorage.setItem('adminToken', authToken);
+    localStorage.setItem('adminData', JSON.stringify(userData));
   };
 
   const logout = () => {
@@ -87,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     updateUser,
     isAuthenticated: !!token && !!user,
+    isLoading,
   };
 
   return (

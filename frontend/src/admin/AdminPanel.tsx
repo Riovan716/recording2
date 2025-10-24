@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminDashboard from './AdminDashboard';
 import AdminLiveStreamPage from './AdminLiveStreamPage';
@@ -17,10 +17,11 @@ const GRAY_TEXT = '#64748b';
 const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
 
 const AdminPanel: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     const handleResize = () => {
       const newIsMobile = window.innerWidth <= 768;
@@ -30,6 +31,46 @@ const AdminPanel: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileOpen]);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: '#f6f8fa'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #e2e8f0',
+            borderTop: '4px solid #10b981',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <div style={{ color: '#64748b', fontSize: '16px' }}>Loading...</div>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user || user.role !== 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   // Fungsi inisial nama
   const getInitials = (name: string) => {

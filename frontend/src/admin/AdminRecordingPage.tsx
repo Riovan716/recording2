@@ -135,6 +135,9 @@ const AdminRecordingPage: React.FC = () => {
   const [recordingCameras, setRecordingCameras] = useState<any[]>([]);
   const [recordingScreenSource, setRecordingScreenSource] = useState<any>(null);
   const [currentRecordingLayoutType, setCurrentRecordingLayoutType] = useState<string>('');
+  const [showFinishedPage, setShowFinishedPage] = useState(false);
+  const [finishedRecordingData, setFinishedRecordingData] = useState<any>(null);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error', duration: number} | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -204,14 +207,114 @@ const AdminRecordingPage: React.FC = () => {
 
   const handleStopRecording = () => {
     stopRecording();
+    handleStopAndPrepareFinishedPage(); // Call the new function here
   };
 
-  const handleUpload = async () => {
+  const handleStopAndPrepareFinishedPage = async () => {
     try {
-      await uploadRecording();
-      fetchRecordings();
+      // Wait a bit for the videoBlob to be updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Debug logging
+      console.log('Debug - streamingState.videoBlob:', streamingState.videoBlob);
+      console.log('Debug - streamingState.videoUrl:', streamingState.videoUrl);
+      
+      const finishedData = {
+        judul: recordingJudul || 'Recording Baru',
+        duration: streamingState.recordingDuration || 1,
+        resolution: '1080p (Full HD)',
+        frameRate: 60,
+        size: 0, // Initial size is 0, will be updated after upload
+        cameras: recordingCameras.length || 1,
+        layers: recordingLayouts.length || 1,
+        quality: 'Excellent',
+        bitrate: 5.0,
+        uploadedAt: new Date().toISOString(),
+        isUploaded: false, // New flag to track upload status
+        videoBlob: streamingState.videoBlob, // Store the blob for preview/download
+        videoUrl: streamingState.videoUrl, // Also store videoUrl as fallback
+      };
+      
+      console.log('Debug - finishedData:', finishedData);
+      setFinishedRecordingData(finishedData);
+      setShowFinishedPage(true);
     } catch (err) {
-      // Handle error silently
+      console.error("Error preparing finished page data:", err);
+    }
+  };
+
+  const handleUploadVideo = async () => {
+    if (!streamingState.videoBlob) {
+      console.error("No video blob available for upload.");
+      setNotification({
+        message: 'Tidak ada video untuk diunggah.',
+        type: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+    try {
+      // Perform the actual upload
+      await uploadRecording();
+      fetchRecordings(); // Refresh the list of recordings
+
+      // Update finishedRecordingData to reflect upload status and actual size
+      setFinishedRecordingData((prevData: any) => ({
+        ...prevData,
+        size: streamingState.videoBlob ? streamingState.videoBlob.size : prevData.size,
+        isUploaded: true,
+      }));
+      setNotification({
+        message: 'Video berhasil diunggah!',
+        type: 'success',
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error("Error uploading video:", err);
+      setNotification({
+        message: 'Gagal mengunggah video.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handlePreviewVideo = (blob: Blob | null, videoUrl?: string) => {
+    if (blob) {
+      const videoUrl = URL.createObjectURL(blob);
+      window.open(videoUrl, '_blank');
+    } else if (videoUrl) {
+      window.open(videoUrl, '_blank');
+    } else {
+      setNotification({
+        message: 'Video tidak tersedia untuk pratinjau.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleDownloadVideo = (blob: Blob | null, filename: string) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setNotification({
+        message: 'Video berhasil diunduh!',
+        type: 'success',
+        duration: 3000,
+      });
+    } else {
+      setNotification({
+        message: 'Video blob tidak tersedia untuk diunduh.',
+        type: 'error',
+        duration: 3000,
+      });
     }
   };
 
@@ -272,7 +375,316 @@ const AdminRecordingPage: React.FC = () => {
     updateRecordingLayout(layouts);
   }, [updateRecordingLayout]);
 
+  const handleBackToRecording = () => {
+    setShowFinishedPage(false);
+    setFinishedRecordingData(null);
+    // Reset recording state
+    setRecordingCameras([]);
+    setRecordingScreenSource(null);
+    setRecordingLayouts([]);
+    setCurrentRecordingLayoutType('');
+  };
 
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  };
+
+  // Show finished page if upload was successful
+  if (showFinishedPage && finishedRecordingData) {
+    return (
+      <div style={{ 
+        padding: isMobile ? "16px" : "32px",
+        maxWidth: "100%",
+        overflowX: "hidden",
+        background: '#f3f4f6',
+        fontFamily: FONT_FAMILY,
+        minHeight: '100vh',
+      }}>
+        {/* Recording Selesai Banner */}
+        <div style={{
+          background: '#d1fae5',
+          borderRadius: 12,
+          padding: isMobile ? '20px' : '32px',
+          marginBottom: 32,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: '#10b981',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <i className="fas fa-check" style={{ fontSize: '32px', color: 'white' }}></i>
+          </div>
+          <div>
+            <h1 style={{
+              fontSize: '24px',
+              fontWeight: 700,
+              color: '#1f2937',
+              margin: '0 0 8px 0',
+            }}>
+              Recording Selesai!
+            </h1>
+            <p style={{
+              fontSize: '16px',
+              color: '#6b7280',
+              margin: 0,
+              fontWeight: 400,
+            }}>
+              Video recording Anda telah berhasil disimpan dan siap untuk digunakan
+            </p>
+          </div>
+        </div>
+
+        {/* Ringkasan Recording */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: 12,
+          padding: isMobile ? '20px' : '32px',
+          marginBottom: 32,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e5e7eb',
+        }}>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: 600,
+            color: '#1f2937',
+            margin: '0 0 24px 0',
+          }}>
+            Ringkasan Recording
+          </h2>
+
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            flexDirection: isMobile ? 'column' : 'row',
+          }}>
+            {/* Video Thumbnail */}
+            <div style={{
+              width: isMobile ? '100%' : '200px',
+              height: '120px',
+              borderRadius: 8,
+              background: '#000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: '1px solid #e5e7eb',
+              overflow: 'hidden',
+              position: 'relative',
+            }}>
+              {(() => {
+                const videoBlob = finishedRecordingData.videoBlob || streamingState.videoBlob;
+                const videoUrl = finishedRecordingData.videoUrl || streamingState.videoUrl;
+                
+                console.log('Debug - Thumbnail videoBlob:', videoBlob);
+                console.log('Debug - Thumbnail videoUrl:', videoUrl);
+                
+                if (videoBlob) {
+                  return (
+                    <video
+                      src={URL.createObjectURL(videoBlob)}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                      muted
+                      preload="metadata"
+                    />
+                  );
+                } else if (videoUrl) {
+                  return (
+                    <video
+                      src={videoUrl}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                      muted
+                      preload="metadata"
+                    />
+                  );
+                } else {
+                  return (
+                    <i className="fas fa-video" style={{ fontSize: '32px', color: '#10b981' }}></i>
+                  );
+                }
+              })()}
+            </div>
+
+            {/* Recording Details */}
+            <div style={{
+              flex: 1,
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'auto 1fr',
+              gap: '12px',
+              alignItems: 'start',
+            }}>
+              <div style={{ fontWeight: 600, color: '#374151' }}>JUDUL RECORDING:</div>
+              <div style={{ color: '#6b7280' }}>{finishedRecordingData.judul}</div>
+
+              <div style={{ fontWeight: 600, color: '#374151' }}>DURASI:</div>
+              <div style={{ color: '#6b7280' }}>{formatDuration(finishedRecordingData.duration)}</div>
+
+              <div style={{ fontWeight: 600, color: '#374151' }}>RESOLUTION:</div>
+              <div style={{ color: '#6b7280' }}>{finishedRecordingData.resolution}</div>
+
+              <div style={{ fontWeight: 600, color: '#374151' }}>FRAME RATE:</div>
+              <div style={{ color: '#6b7280' }}>{finishedRecordingData.frameRate} FPS</div>
+
+              <div style={{ fontWeight: 600, color: '#374151' }}>UKURAN FILE:</div>
+              <div style={{ color: '#6b7280' }}>
+                {finishedRecordingData.isUploaded && finishedRecordingData.size > 0
+                  ? formatFileSize(finishedRecordingData.size)
+                  : 'Belum diunggah'}
+              </div>
+
+              <div style={{ fontWeight: 600, color: '#374151' }}>WAKTU SIMPAN:</div>
+              <div style={{ color: '#6b7280' }}>{formatDate(finishedRecordingData.uploadedAt)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'center',
+        }}>
+          <button
+            onClick={() => handlePreviewVideo(
+              finishedRecordingData.videoBlob || streamingState.videoBlob, 
+              finishedRecordingData.videoUrl || streamingState.videoUrl
+            )}
+            style={{
+              padding: '12px 24px',
+              background: '#ffffff',
+              color: '#10b981',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f0fdf4';
+              e.currentTarget.style.borderColor = '#10b981';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.borderColor = '#e5e7eb';
+            }}
+          >
+            <i className="fas fa-play" style={{ fontSize: '14px' }}></i>
+            Preview Video
+          </button>
+
+          {/* NEW: Upload Video Button */}
+          <button
+            onClick={handleUploadVideo}
+            disabled={finishedRecordingData.isUploaded}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 8,
+              background: finishedRecordingData.isUploaded ? '#e5e7eb' : '#10b981', // Green if not uploaded, gray if uploaded
+              color: finishedRecordingData.isUploaded ? '#6b7280' : '#ffffff', // White text
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: finishedRecordingData.isUploaded ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: finishedRecordingData.isUploaded ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+            }}
+            onMouseEnter={(e) => {
+              if (!finishedRecordingData.isUploaded) {
+                e.currentTarget.style.background = '#059669'; // Darker green on hover
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!finishedRecordingData.isUploaded) {
+                e.currentTarget.style.background = '#10b981';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }
+            }}
+          >
+            <i className="fas fa-upload" style={{ fontSize: '14px' }}></i>
+            {finishedRecordingData.isUploaded ? 'Uploaded' : 'Upload Video'}
+          </button>
+
+          <button
+            onClick={handleBackToRecording}
+            style={{
+              padding: '12px 24px',
+              background: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#059669';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#10b981';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <i className="fas fa-video" style={{ fontSize: '14px' }}></i>
+            Buat Recording Baru
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -310,7 +722,7 @@ const AdminRecordingPage: React.FC = () => {
         >
           {/* Welcome Card */}
           <div style={{
-            background: LIGHT_GREEN,
+     background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
             borderRadius: CARD_RADIUS,
             color: '#1e293b',
             padding: isMobile ? '18px 12px' : '32px 40px',
@@ -323,9 +735,20 @@ const AdminRecordingPage: React.FC = () => {
             width: '100%',
           }}>
             <div>
-              <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Video Recording</div>
-              <div style={{ fontSize: 16, opacity: 0.9 }}>
+              <div style={{ 
+                fontSize: 14, 
+                color: '#6b7280', 
+                marginBottom: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500
+              }}>
+                <i className="fas fa-calendar-days" style={{ fontSize: '14px' }}></i>
+                {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>Video Recording</div>
+              <div style={{ fontSize: 14, color: '#9ca3af', lineHeight: '1.5', maxWidth: '500px', fontWeight: 400 }}>
                 Selamat datang, {user?.name || 'Admin'}! Buat dan kelola video pembelajaran Anda dengan mudah.
               </div>
             </div>
@@ -404,7 +827,7 @@ const AdminRecordingPage: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '10px',
-                        background: 'linear-gradient(135deg, #4ADE80 0%, #22C55E 100%)',
+                        background: 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
                         color: "white",
                         border: 'none',
                         borderRadius: 16,
@@ -508,53 +931,6 @@ const AdminRecordingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Upload Buttons */}
-            {streamingState.videoBlob && (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={handleUpload}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    background: COLORS.primary,
-                    color: COLORS.white,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '12px 24px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    minWidth: '140px',
-                    maxWidth: '200px',
-                  }}
-                >
-                  <FaUpload size={14} />
-                  Upload Video
-                </button>
-                <button
-                  onClick={handleCancelUpload}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    background: COLORS.accent,
-                    color: COLORS.white,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    minWidth: '120px',
-                  }}
-                >
-                  ❌ Batal
-                </button>
-              </div>
-            )}
 
 
             {/* Status */}
@@ -571,23 +947,6 @@ const AdminRecordingPage: React.FC = () => {
                 {streamingState.status}
               </div>
             )}
-
-            {/* Video Preview */}
-            {streamingState.videoUrl && (
-              <div style={{ marginTop: '16px' }}>
-                <video
-                  ref={videoRef}
-                  src={streamingState.videoUrl}
-                  controls
-                  style={{
-                    width: '100%',
-                    borderRadius: 6,
-                    border: `1px solid ${COLORS.border}`,
-                  }}
-                />
-              </div>
-            )}
-
 
             {/* Live Camera Preview */}
             {(streamingState.isRecording || streamingState.isScreenRecording) && streamingState.recordingStream && (
@@ -677,6 +1036,9 @@ const AdminRecordingPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+
+
         </div>
 
         {/* Popup Modal */}

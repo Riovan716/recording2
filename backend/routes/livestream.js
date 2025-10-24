@@ -20,6 +20,7 @@ router.post('/reset-stats', ctrl.resetStats);
 router.post('/sync-stats', ctrl.syncStats);
 router.post('/update-recording', ctrl.updateRecordingPath);
 router.post('/upload-recording', upload.single('recording'), ctrl.uploadLiveStreamRecording);
+router.post('/stream-ended', ctrl.notifyStreamEnded);
 
 // Routes with :id parameter (order matters - more specific routes first)
 router.delete('/:id', ctrl.deleteLiveStream);

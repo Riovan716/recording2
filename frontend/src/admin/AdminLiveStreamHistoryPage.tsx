@@ -352,53 +352,68 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
         fontFamily: FONT_FAMILY,
       }}
     >
-      {/* Header */}
+      {/* Hero Banner */}
       <div style={{
-        background: LIGHT_GREEN,
-        borderRadius: CARD_RADIUS,
-        color: '#1e293b',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+        borderRadius: 12,
+        color: '#1f2937',
         padding: isMobile ? '18px 12px' : '32px 40px',
         marginBottom: 32,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: SHADOW,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         minHeight: 120,
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <div>
-          <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            fontSize: 15, 
+            color: '#64748b', 
+            marginBottom: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <i className="fas fa-calendar-days" style={{ fontSize: '14px' }}></i>
             {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+          <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>
             History Live Streaming
           </div>
-          <div style={{ fontSize: 16, opacity: 0.9 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
             Selamat datang, {user?.name || 'Admin'}! Lihat riwayat live streaming yang telah dilakukan.
           </div>
         </div>
-        <span style={{ 
-          height: 100, 
-          fontSize: 100, 
-          objectFit: 'contain', 
-          marginLeft: isMobile ? 0 : 32, 
-          marginTop: isMobile ? 18 : 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          filter: 'drop-shadow(0 4px 24px #0002)' 
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '120px',
+          height: '120px',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+          borderRadius: '12px',
+          marginLeft: isMobile ? 0 : 32,
+          marginTop: isMobile ? 18 : 0,
         }}>
-          📊
-        </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '24px', color: '#10b981' }}>📊</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>Analytics</div>
+          </div>
+        </div>
       </div>
 
-      {/* History List */}
+      {/* Filters & Search Section */}
       <div
         style={{
-          background: COLORS.white,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: CARD_RADIUS,
-          padding: isMobile ? "16px" : "20px",
-          boxShadow: SHADOW,
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: 12,
+          padding: isMobile ? "16px" : "24px",
+          marginBottom: 24,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         }}
       >
         <div
@@ -406,19 +421,23 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "20px",
+            marginBottom: "24px",
           }}
         >
-          <h3
+          <h2
             style={{
               fontSize: "18px",
-              fontWeight: 600,
-              color: COLORS.text,
+              fontWeight: 500,
+              color: '#6b7280',
               margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
-            History Live Streaming ({filteredAndSortedHistory.length})
-          </h3>
+            <i className="fas fa-history" style={{ fontSize: '16px' }}></i>
+            History Live Streaming <span style={{ color: '#1f2937', fontWeight: 600 }}>({filteredAndSortedHistory.length})</span>
+          </h2>
           
           <button
             onClick={() => {
@@ -427,49 +446,58 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             }}
             style={{
               padding: "8px 16px",
-              background: COLORS.primary,
-              color: "black",
-              border: "none",
-              borderRadius: 6,
+              background: '#d1fae5',
+              color: '#059669',
+              border: '1px solid #a7f3d0',
+              borderRadius: 8,
               fontSize: "14px",
               fontWeight: 500,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               gap: "8px",
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#a7f3d0';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#d1fae5';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            🔄 Refresh
+            <i className="fas fa-rotate-right" style={{ fontSize: '12px' }}></i>
+            Refresh
           </button>
         </div>
         
         {/* Search and Filter Controls */}
         <div style={{
           display: 'flex',
-          gap: '12px',
+          gap: '16px',
           flexWrap: 'wrap',
           alignItems: 'center',
-          marginBottom: '20px',
-          padding: '16px',
-          background: COLORS.white,
-          borderRadius: CARD_RADIUS,
-          boxShadow: SHADOW,
+          padding: '20px',
+          background: '#f9fafb',
+          borderRadius: 8,
+          border: '1px solid #e5e7eb',
         }}>
           {/* Search Input */}
           <div style={{ 
             position: 'relative', 
-            flex: '1 1 250px',
-            minWidth: '200px',
+            flex: '1 1 300px',
+            minWidth: '250px',
             maxWidth: '400px'
           }}>
-            <FaSearch style={{
+            <i className="fas fa-search" style={{
               position: 'absolute',
               left: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              color: COLORS.subtext,
+              color: '#9ca3af',
               fontSize: '14px'
-            }} />
+            }}></i>
             <input
               type="text"
               placeholder="Cari berdasarkan judul atau ID..."
@@ -477,41 +505,77 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               onChange={e => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px 12px 10px 36px',
-                border: `1px solid ${COLORS.border}`,
+                padding: '12px 12px 12px 40px',
+                border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '14px',
                 outline: 'none',
                 transition: 'border-color 0.2s ease',
                 boxSizing: 'border-box',
-                background: COLORS.white,
-                color: COLORS.text
+                background: '#ffffff',
+                color: '#1f2937'
               }}
-              onFocus={e => e.target.style.borderColor = COLORS.primary}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
+              onFocus={e => e.target.style.borderColor = '#10b981'}
+              onBlur={e => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
 
           {/* Date Filter */}
           <div style={{ flex: '0 0 auto' }}>
+          
             <input
               type="date"
               value={filterDate}
               onChange={e => setFilterDate(e.target.value)}
               style={{
-                padding: '10px 12px',
-                border: `1px solid ${COLORS.border}`,
+                padding: '12px',
+                border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '14px',
                 outline: 'none',
                 transition: 'border-color 0.2s ease',
-                background: COLORS.white,
-                color: COLORS.text,
+                background: '#ffffff',
+                color: '#1f2937',
                 cursor: 'pointer'
               }}
-              onFocus={e => e.target.style.borderColor = COLORS.primary}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
+              onFocus={e => e.target.style.borderColor = '#10b981'}
+              onBlur={e => e.target.style.borderColor = '#d1d5db'}
             />
+          </div>
+
+          {/* Filter Button */}
+          <div style={{ flex: '0 0 auto', alignSelf: 'flex-end' }}>
+            <button
+              onClick={() => {
+                // Apply filters logic here
+                console.log('Applying filters...');
+              }}
+              style={{
+                padding: '12px 16px',
+                background: '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#059669';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#10b981';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <i className="fas fa-filter" style={{ fontSize: '12px' }}></i>
+              Filter
+            </button>
           </div>
         </div>
         
@@ -535,43 +599,52 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
           <>
             {/* Table Header */}
             <div style={{
-              background: COLORS.white,
+              background: '#ffffff',
               borderRadius: "12px 12px 0 0",
-              border: `1px solid ${COLORS.border}`,
+              border: '1px solid #e5e7eb',
               borderBottom: "none",
               overflow: "hidden"
             }}>
               <div style={{
                 display: isMobile ? "none" : "grid",
-                gridTemplateColumns: "120px 1fr 140px 100px",
+                gridTemplateColumns: "120px 1fr 100px 100px 140px 100px 120px",
                 gap: "12px",
                 padding: "16px 20px",
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                fontWeight: 600,
-                color: COLORS.text,
+                background: '#f8fafc',
+                fontWeight: 500,
+                color: '#6b7280',
                 fontSize: "14px",
-                borderBottom: `1px solid ${COLORS.border}`
+                borderBottom: '1px solid #e5e7eb'
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   Thumbnail
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Title
+                  Judul
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Date & Time
+                  Durasi
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  Actions
+                  Viewers
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Tanggal & Waktu
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Status
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                  Aksi
                 </div>
               </div>
             </div>
 
             {/* Table Body */}
             <div style={{
-              background: COLORS.white,
+              background: '#ffffff',
               borderRadius: "0 0 12px 12px",
-              border: `1px solid ${COLORS.border}`,
+              border: '1px solid #e5e7eb',
               borderTop: "none",
               overflow: "hidden"
             }}>
@@ -580,16 +653,16 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                   key={stream.id}
                   style={{
                     display: isMobile ? "block" : "grid",
-                    gridTemplateColumns: "120px 1fr 140px 100px",
+                    gridTemplateColumns: "120px 1fr 100px 100px 140px 100px 120px",
                     gap: "12px",
                     padding: "16px 20px",
-                    borderBottom: index < paginatedHistory.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                    borderBottom: index < paginatedHistory.length - 1 ? '1px solid #e5e7eb' : "none",
                     transition: "all 0.3s ease",
                     cursor: "pointer",
                     background: "transparent",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                    e.currentTarget.style.background = '#f8fafc';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
@@ -662,7 +735,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Title & Info */}
+                  {/* Title */}
                   <div style={{
                     display: "flex",
                     flexDirection: "column",
@@ -673,9 +746,9 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     padding: isMobile ? "0 0 12px 0" : "0"
                   }}>
                     <div style={{
-                      fontSize: "16px",
-                      fontWeight: 700,
-                      color: COLORS.text,
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: '#1f2937',
                       marginBottom: isMobile ? "4px" : "6px",
                       lineHeight: 1.3,
                       overflow: "hidden",
@@ -689,7 +762,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                       <>
                         <div style={{ 
                           fontSize: "12px", 
-                          color: COLORS.subtext,
+                          color: '#9ca3af',
                           marginBottom: "8px",
                           display: "flex",
                           alignItems: "center",
@@ -709,6 +782,36 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Duration */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    fontSize: "13px",
+                    color: '#6b7280',
+                  }}>
+                    <div style={{ fontWeight: 500 }}>
+                      {stream.duration ? formatDuration(stream.duration) : '-'}
+                    </div>
+                  </div>
+
+                  {/* Viewers */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
+                    fontSize: "13px",
+                    color: '#6b7280',
+                  }}>
+                    <div style={{ fontWeight: 500 }}>
+                      {stream.viewers || 0}
+                    </div>
+                  </div>
+
                   {/* Date & Time */}
                   <div style={{
                     display: isMobile ? "none" : "flex",
@@ -717,20 +820,49 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     alignItems: "center",
                     textAlign: "center",
                     fontSize: "13px",
-                    color: COLORS.text,
+                    color: '#6b7280',
                   }}>
-                    <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                    <div style={{ fontWeight: 500, marginBottom: "2px" }}>
                       {stream.startTime && new Date(stream.startTime).toLocaleDateString("id-ID", {
                         day: "2-digit",
                         month: "2-digit", 
                         year: "numeric"
                       })}
                     </div>
-                    <div style={{ color: COLORS.subtext, fontSize: "11px" }}>
+                    <div style={{ color: '#9ca3af', fontSize: "11px" }}>
                       {stream.startTime && new Date(stream.startTime).toLocaleTimeString("id-ID", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    display: isMobile ? "none" : "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}>
+                    <div
+                      style={{
+                        background: stream.status === 'active' 
+                          ? '#fef2f2' 
+                          : '#f0fdf4',
+                        color: stream.status === 'active' 
+                          ? '#dc2626' 
+                          : '#16a34a',
+                        fontSize: "11px",
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        fontWeight: 500,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.3px",
+                        border: stream.status === 'active' 
+                          ? '1px solid #fecaca' 
+                          : '1px solid #bbf7d0',
+                      }}
+                    >
+                      {stream.status === 'active' ? 'LIVE' : 'SAVED'}
                     </div>
                   </div>
 
@@ -746,65 +878,69 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     <button
                       onClick={() => handlePlayVideo(stream)}
                       style={{
-                        padding: isMobile ? "8px 12px" : "6px 10px",
-                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: isMobile ? 12 : 6,
+                        padding: "8px",
+                        background: '#ffffff',
+                        color: '#10b981',
+                        border: "1px solid #10b981",
+                        borderRadius: 8,
                         fontSize: "12px",
-                        fontWeight: 600,
+                        fontWeight: 500,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "4px",
-                        transition: "all 0.3s ease",
-                        boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)',
+                        transition: "all 0.2s ease",
                         flex: isMobile ? "1 1 auto" : "0 0 auto",
-                        minWidth: isMobile ? "50px" : "50px",
+                        minWidth: isMobile ? "50px" : "40px",
+                        height: "36px",
                       }}
                       onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#10b981';
+                        e.currentTarget.style.color = '#ffffff';
                         e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(34, 197, 94, 0.4)';
                       }}
                       onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.color = '#10b981';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(34, 197, 94, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "12px" }}>▶</span>
+                      <i className="fas fa-play" style={{ fontSize: "12px" }}></i>
                       {isMobile && "Play"}
                     </button>
 
                     <button
                       onClick={() => handleDeleteStream(stream)}
                       style={{
-                        padding: isMobile ? "8px 12px" : "6px 10px",
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: isMobile ? 12 : 6,
+                        padding: "8px",
+                        background: '#ffffff',
+                        color: '#ef4444',
+                        border: "1px solid #ef4444",
+                        borderRadius: 8,
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.3s ease",
-                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
+                        transition: "all 0.2s ease",
                         fontSize: "12px",
-                        fontWeight: 600,
+                        fontWeight: 500,
                         flex: isMobile ? "1 1 auto" : "0 0 auto",
-                        minWidth: isMobile ? "120px" : "50px",
+                        minWidth: isMobile ? "120px" : "40px",
+                        height: "36px",
                       }}
                       onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.color = '#ffffff';
                         e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
                       }}
                       onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.color = '#ef4444';
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(239, 68, 68, 0.3)';
                       }}
                     >
-                      <span style={{ fontSize: "12px" }}>🗑</span>
+                      <i className="fas fa-trash" style={{ fontSize: "12px" }}></i>
                       {isMobile && "Delete"}
                     </button>
                   </div>
@@ -818,80 +954,149 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
         {totalPages > 1 && (
           <div style={{
             display: 'flex',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '8px',
             marginTop: '24px',
-            padding: '16px 0'
+            padding: '20px',
+            background: '#f9fafb',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb'
           }}>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                background: currentPage === 1 ? '#f3f4f6' : COLORS.white,
-                color: currentPage === 1 ? COLORS.subtext : '#1e293b',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                boxShadow: currentPage === 1 ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                border: `1px solid ${COLORS.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ←
-            </button>
+            <div style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              fontWeight: 500
+            }}>
+              Menampilkan <strong style={{ color: '#1f2937' }}>{startIndex + 1}-{Math.min(endIndex, filteredAndSortedHistory.length)}</strong> dari <strong style={{ color: '#1f2937' }}>{filteredAndSortedHistory.length}</strong> hasil
+            </div>
             
             <div style={{
               display: 'flex',
-              gap: '4px',
-              alignItems: 'center'
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    background: currentPage === page ? COLORS.primary : COLORS.white,
-                    color: currentPage === page ? '#1e293b' : COLORS.subtext,
-                    fontSize: '14px',
-                    fontWeight: currentPage === page ? 600 : 500,
-                    cursor: 'pointer',
-                    boxShadow: currentPage === page ? '0 2px 8px rgba(187, 247, 208, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    border: `1px solid ${currentPage === page ? COLORS.primary : COLORS.border}`,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                background: currentPage === totalPages ? '#f3f4f6' : COLORS.white,
-                color: currentPage === totalPages ? COLORS.subtext : '#1e293b',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                boxShadow: currentPage === totalPages ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)',
-                border: `1px solid ${COLORS.border}`,
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? '#f3f4f6' : '#ffffff',
+                  color: currentPage === 1 ? '#9ca3af' : '#6b7280',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 1) {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }
+                }}
+              >
+                <i className="fas fa-chevron-left" style={{ fontSize: '12px' }}></i>
+              </button>
+              
+              <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              →
-            </button>
+                gap: '4px',
+                alignItems: 'center'
+              }}>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let page;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        background: currentPage === page ? '#10b981' : '#ffffff',
+                        color: currentPage === page ? '#ffffff' : '#6b7280',
+                        fontSize: '14px',
+                        fontWeight: currentPage === page ? 600 : 500,
+                        cursor: 'pointer',
+                        border: `1px solid ${currentPage === page ? '#10b981' : '#e5e7eb'}`,
+                        transition: 'all 0.2s ease',
+                        minWidth: '40px'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (currentPage !== page) {
+                          e.currentTarget.style.background = '#f3f4f6';
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (currentPage !== page) {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <span style={{ color: '#9ca3af', fontSize: '14px', padding: '0 4px' }}>...</span>
+                )}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? '#f3f4f6' : '#ffffff',
+                  color: currentPage === totalPages ? '#9ca3af' : '#6b7280',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== totalPages) {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }
+                }}
+              >
+                <i className="fas fa-chevron-right" style={{ fontSize: '12px' }}></i>
+              </button>
+            </div>
           </div>
         )}
       </div>

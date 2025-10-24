@@ -9,6 +9,18 @@ interface Stats {
   activeStreams: number;
 }
 
+interface LiveStream {
+  id: string;
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  viewers?: number;
+  isRecording?: boolean;
+  recordingPath?: string;
+  status?: 'active' | 'ended' | 'recording';
+}
+
 
 const COLORS = {
   primary: '#BBF7D0',
@@ -33,7 +45,9 @@ const AdminDashboard: React.FC = () => {
     totalStreams: 0,
     activeStreams: 0,
   });
+  const [liveStreamHistory, setLiveStreamHistory] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -72,11 +86,40 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchLiveStreamHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/livestream/history?limit=5`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLiveStreamHistory(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching live stream history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
 
 
   useEffect(() => {
     fetchStats();
+    fetchLiveStreamHistory();
   }, []);
+
+  // Format tanggal untuk live stream history
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
 
   // Tanggal hari ini (format: Month D, YYYY)
   const today = new Date();
@@ -86,238 +129,323 @@ const AdminDashboard: React.FC = () => {
   ];
   const todayFormatted = `${monthNames[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
 
+  // Responsive breakpoints
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div style={{ 
-      padding: '32px 32px 32px 32px', 
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
+      padding: isMobile ? '16px' : '32px', 
+      background: '#f8fafc', 
       minHeight: '100vh',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       maxWidth: '100%',
       overflowX: 'hidden'
     }}>
-      {/* Header */}
-      <div style={{ 
-        marginBottom: '40px',
-        background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
-        borderRadius: '20px',
+      {/* Welcome Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+        border: '1px solid rgba(16, 185, 129, 0.2)',
+        borderRadius: '12px',
         padding: '32px',
-        color: 'white',
+        marginBottom: '32px',
+        color: '#1f2937',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}>
-        <div style={{
-          position: 'absolute',
-          top: '-50%',
-          right: '-20%',
-          width: '200px',
-          height: '200px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '50%',
-          filter: 'blur(40px)'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-30%',
-          left: '-10%',
-          width: '150px',
-          height: '150px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '50%',
-          filter: 'blur(30px)'
-        }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <h1 style={{ 
-            fontSize: '36px', 
-            fontWeight: 800, 
-            margin: '0 0 12px 0',
-            color: '#1e293b'
-          }}>
-            Dashboard Admin
-          </h1>
-          <p style={{ 
-            fontSize: '18px', 
-            color: '#1e293b', 
-            margin: 0,
-            fontWeight: 500,
-            opacity: 0.8
-          }}>
-            Selamat datang kembali, {user?.name || 'Admin'}! • {todayFormatted}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px 0', color: '#1f2937' }}>
+              Selamat Datang Kembali, {user?.name || 'Admin'}! 👋
+            </h1>
+            <p style={{ fontSize: '14px', margin: 0, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
+              Dashboard Anda menampilkan ringkasan lengkap aktivitas streaming dan konten terbaru.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Quick Stats */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '24px',
-        marginBottom: '40px'
+        marginBottom: '32px',
       }}>
         <div style={{
           background: '#ffffff',
-          borderRadius: '20px',
-          padding: '28px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          borderRadius: '12px',
+          padding: '24px',
           border: '1px solid #e2e8f0',
-          position: 'relative',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          cursor: 'pointer'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'translateY(-8px)';
-          e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 12px -4px rgba(0, 0, 0, 0.1)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
         }}>
           <div style={{
-            position: 'absolute',
-            top: '-20px',
-            right: '-20px',
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
-            borderRadius: '50%',
-            opacity: 0.1
-          }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(187, 247, 208, 0.3)'
-            }}>
-              <FaVideo size={24} color="white" />
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b', textAlign: 'right' }}>
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '24px',
+          }}>
+            <i className="fas fa-video"></i>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>Total Recording</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.totalRecordings}
             </div>
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
-            Total Recording
-          </div>
-          <div style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
-            Video pembelajaran yang telah dibuat
+            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-arrow-up"></i>
+              <span>13% dari bulan lalu</span>
+            </div>
           </div>
         </div>
 
         <div style={{
           background: '#ffffff',
-          borderRadius: '20px',
-          padding: '28px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          borderRadius: '12px',
+          padding: '24px',
           border: '1px solid #e2e8f0',
-          position: 'relative',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          cursor: 'pointer'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'translateY(-8px)';
-          e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 12px -4px rgba(0, 0, 0, 0.1)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
         }}>
           <div style={{
-            position: 'absolute',
-            top: '-20px',
-            right: '-20px',
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            borderRadius: '50%',
-            opacity: 0.1
-          }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(34, 197, 94, 0.3)'
-            }}>
-              <FaBroadcastTower size={24} color="white" />
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b', textAlign: 'right' }}>
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '24px',
+          }}>
+            <i className="fas fa-wifi"></i>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>Total Stream</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.totalStreams}
             </div>
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
-            Total Live Stream
-          </div>
-          <div style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
-            Sesi streaming yang telah dilakukan
+            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-arrow-up"></i>
+              <span>13% dari bulan lalu</span>
+            </div>
           </div>
         </div>
 
-
         <div style={{
           background: '#ffffff',
-          borderRadius: '20px',
-          padding: '28px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          borderRadius: '12px',
+          padding: '24px',
           border: '1px solid #e2e8f0',
-          position: 'relative',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          cursor: 'pointer'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'translateY(-8px)';
-          e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 8px 12px -4px rgba(0, 0, 0, 0.1)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
         }}>
           <div style={{
-            position: 'absolute',
-            top: '-20px',
-            right: '-20px',
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
-            borderRadius: '50%',
-            opacity: 0.1
-          }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #BBF7D0, #86EFAC)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(187, 247, 208, 0.3)'
-            }}>
-              <FaEye size={24} color="white" />
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b', textAlign: 'right' }}>
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '24px',
+          }}>
+            <i className="fas fa-eye"></i>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>Active Now</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.activeStreams}
             </div>
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
-            Stream Aktif
-          </div>
-          <div style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
-            Streaming yang sedang berlangsung
+            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fas fa-arrow-up"></i>
+              <span>13% dari minggu lalu</span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Main Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '2fr 1fr',
+        gap: isMobile ? '16px' : '32px',
+      }}>
+        {/* Left Column */}
+        <div>
+          {/* Live Stream History */}
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            marginBottom: '24px',
+          }}>
+            <div style={{
+              padding: '24px 24px 0 24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                margin: 0,
+                color: '#1e293b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <i className="fas fa-history"></i>
+                Live Stream History
+              </h2>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                display: isMobile ? 'none' : 'grid',
+                gridTemplateColumns: '1fr auto auto',
+                gap: '16px',
+                fontSize: '12px',
+                color: '#64748b',
+                fontWeight: 600,
+                marginBottom: '16px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid #e2e8f0',
+              }}>
+                <div>Judul</div>
+                <div>Tanggal</div>
+            
+              </div>
+              {historyLoading ? (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '20px',
+                  color: '#64748b',
+                  fontSize: '14px'
+                }}>
+                  Memuat history...
+                </div>
+              ) : liveStreamHistory.length === 0 ? (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '20px',
+                  color: '#64748b',
+                  fontSize: '14px'
+                }}>
+                  Belum ada live stream history
+                </div>
+              ) : (
+                liveStreamHistory.map((stream, index) => (
+                  <div key={stream.id} style={{
+                    display: isMobile ? 'block' : 'grid',
+                    gridTemplateColumns: '1fr auto auto',
+                    gap: '16px',
+                    padding: isMobile ? '16px 0' : '12px 0',
+                    borderBottom: index < liveStreamHistory.length - 1 ? '1px solid #f1f5f9' : 'none',
+                    alignItems: 'center',
+                  }}>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: '#1e293b', 
+                      fontWeight: 500,
+                      marginBottom: isMobile ? '8px' : '0'
+                    }}>
+                      {stream.title || `Live Stream #${stream.id}`}
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#64748b',
+                      marginBottom: isMobile ? '8px' : '0'
+                    }}>
+                      {stream.startTime ? formatDate(stream.startTime) : '-'}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
 
+        {/* Right Column */}
+        <div>
+
+
+          {/* Quick Actions */}
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+          }}>
+            <div style={{ padding: '24px 24px 0 24px' }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                margin: 0,
+                color: '#1e293b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <i className="fas fa-zap"></i>
+                Quick Actions
+              </h2>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px',
+              }}>
+                {[
+                  { icon: 'fas fa-play', text: 'Start Stream' },
+                  { icon: 'fas fa-disc', text: 'New Recording' },
+                  { icon: 'fas fa-gear', text: 'Settings' },
+                  { icon: 'fas fa-file-download', text: 'Download' },
+                ].map((action, index) => (
+                  <button key={index} style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}>
+                    <i className={action.icon} style={{ fontSize: '16px' }}></i>
+                    <span>{action.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

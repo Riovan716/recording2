@@ -6,9 +6,17 @@ import { API_URL } from '../config';
 // Import images using ES6 imports
 import umaloLogo from '../assets/umalo.png';
 
-// Color palette - Light green theme
-const LIGHT_GREEN = '#BBF7D0';
-const SOFT_GREEN = '#DCFCE7';
+// Color palette - Snap Stream theme
+const PRIMARY = '#10b981';
+const PRIMARY_LIGHT = '#34d399';
+const PRIMARY_DARK = '#047857';
+const TEXT_DARK = '#0f172a';
+const TEXT_GRAY = '#475569';
+const TEXT_LIGHT = '#94a3b8';
+const BG_WHITE = '#ffffff';
+const BG_LIGHT = '#f8fafc';
+const BORDER_LIGHT = '#e2e8f0';
+const ERROR = '#ef4444';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +25,14 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
+
+  // Redirect to dashboard if already authenticated
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/admin/dashboard');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Handle window resize
   React.useEffect(() => {
@@ -28,6 +43,41 @@ const AdminLogin = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: BG_LIGHT
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #e2e8f0',
+            borderTop: '4px solid #10b981',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <div style={{ color: TEXT_GRAY, fontSize: '16px' }}>Loading...</div>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,251 +120,638 @@ const AdminLogin = () => {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      width: '100%',
+      height: '100vh',
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'Poppins, Inter, Segoe UI, Arial, sans-serif',
-      background: '#BBF7D0',
-      position: 'relative',
+      fontFamily: '"Sora", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
+      color: TEXT_DARK,
       overflow: 'hidden',
     }}>
-      {/* Gradient overlay */}
+      {/* Background Animation */}
       <div style={{
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-        opacity: '0.3',
-      }}></div>
-
-      {/* Background wave shapes */}
-      <div style={{
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        opacity: '0.13',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
       }}>
-        <svg width="120%" height="120%" viewBox="0 0 960 500" fill="none">
-          <path d="M0,300 Q400,200 400,300 T800,200 L800,600 L0,600 Z" fill="#10B981"/>
-          <path d="M0,400 Q200,300 400,400 T800,400 L800,600 L0,600 Z" fill="#059669" opacity="1"/>
+        <div style={{
+          position: 'absolute',
+          width: '400px',
+          height: '400px',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.1))',
+          borderRadius: '50%',
+          top: '-100px',
+          right: '50px',
+          filter: 'blur(80px)',
+          animation: 'float-bg 20s ease-in-out infinite',
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(96, 165, 250, 0.08))',
+          borderRadius: '50%',
+          bottom: '100px',
+          left: '-50px',
+          filter: 'blur(80px)',
+          animation: 'float-bg 25s ease-in-out infinite reverse',
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          width: '250px',
+          height: '250px',
+          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(196, 181, 253, 0.05))',
+          borderRadius: '50%',
+          top: '50%',
+          right: '-100px',
+          filter: 'blur(80px)',
+          animation: 'float-bg 22s ease-in-out infinite',
+        }}></div>
+        
+        {/* SVG Blobs */}
+        <svg style={{
+          position: 'absolute',
+          width: '400px',
+          height: '400px',
+          top: '10%',
+          left: '5%',
+          animation: 'float-blob 20s ease-in-out infinite',
+        }} viewBox="0 0 200 200">
+          <defs>
+            <linearGradient id="grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{stopColor: '#10b981', stopOpacity: 0.15}} />
+              <stop offset="100%" style={{stopColor: '#34d399', stopOpacity: 0.1}} />
+            </linearGradient>
+          </defs>
+          <path d="M50,50 Q100,0 150,50 T150,150 Q100,200 50,150 T50,50" fill="url(#grad-1)" />
+        </svg>
+        <svg style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          bottom: '10%',
+          right: '5%',
+          animation: 'float-blob 25s ease-in-out infinite reverse',
+        }} viewBox="0 0 200 200">
+          <defs>
+            <linearGradient id="grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{stopColor: '#3b82f6', stopOpacity: 0.1}} />
+              <stop offset="100%" style={{stopColor: '#60a5fa', stopOpacity: 0.08}} />
+            </linearGradient>
+          </defs>
+          <path d="M50,50 Q100,0 150,50 T150,150 Q100,200 50,150 T50,50" fill="url(#grad-2)" />
         </svg>
       </div>
 
-
-
-      {/* Brand text and logo - Centered above form */}
+      {/* Main Layout */}
       <div style={{
-        position: 'absolute',
-        top: isMobile ? '4%' : '5%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10,
-        textAlign: 'center',
         width: '100%',
+        maxWidth: '1400px',
+        height: '100%',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1fr',
+        gap: isMobile ? '30px' : '60px',
+        padding: isMobile ? '30px 20px' : '60px',
+        position: 'relative',
+        zIndex: 10,
       }}>
-        <h2 style={{
-          fontSize: isMobile ? '2.5rem' : '3.5rem',
-          fontWeight: 'bold',
-          color: '#000000',
-          marginBottom: '0.5rem',
-          letterSpacing: '-1px',
-          textShadow: '0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1)',
-          filter: 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15))',
-        }}>
-          Snap Room
-        </h2>
+        {/* Left Column - Hero */}
+        {!isMobile && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '48px',
+            }}>
+              {/* Logo */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '32px',
+                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.2)',
+                }}>
+                  <img 
+                    src="/assets/menu.png" 
+                    alt="Menu Icon"
+                    style={{
+                      height: '32px',
+                      width: '32px',
+                      objectFit: 'contain',
+                      filter: 'brightness(0) invert(1)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <h1 style={{
+                    fontSize: '36px',
+                    fontWeight: 800,
+                    marginBottom: '4px',
+                    color: TEXT_DARK,
+                  }}>
+                    Snap <span style={{
+                      background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}>Stream</span>
+                  </h1>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px',
+                    color: TEXT_LIGHT,
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                  }}>
+                    <span>Professional Platform powered by</span>
+                    <img 
+                      src={umaloLogo} 
+                      alt="Umalo Logo"
+                      style={{
+                        height: '25px',
+                        width: 'auto',
+                        objectFit: 'contain',
+
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Hero Text */}
+              <div>
+                <h2 style={{
+                  fontSize: '48px',
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                  marginBottom: '16px',
+                  color: TEXT_DARK,
+                }}>
+                  Admin Dashboard
+                </h2>
+                <p style={{
+                  fontSize: '16px',
+                  color: TEXT_GRAY,
+                  lineHeight: 1.6,
+                  maxWidth: '500px',
+                }}>
+                  Professional admin panel for managing live streaming platform. 
+                  Access advanced controls and analytics for your streaming infrastructure.
+                </p>
+              </div>
+
+              {/* Feature Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '16px',
+              }}>
+                <div style={{
+                  padding: '16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  gap: '12px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    background: `linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.08))`,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: PRIMARY,
+                    fontSize: '20px',
+                    flexShrink: 0,
+                  }}>
+                    <i className="fas fa-video"></i>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: TEXT_DARK,
+                      marginBottom: '2px',
+                    }}>Live Streaming</h3>
+                    <p style={{
+                      fontSize: '11px',
+                      color: TEXT_LIGHT,
+                    }}>Manage live streams</p>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  gap: '12px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    background: `linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.08))`,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: PRIMARY,
+                    fontSize: '20px',
+                    flexShrink: 0,
+                  }}>
+                    <i className="fas fa-chart-line"></i>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: TEXT_DARK,
+                      marginBottom: '2px',
+                    }}>Analytics</h3>
+                    <p style={{
+                      fontSize: '11px',
+                      color: TEXT_LIGHT,
+                    }}>Real-time data</p>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  gap: '12px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    background: `linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.08))`,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: PRIMARY,
+                    fontSize: '20px',
+                    flexShrink: 0,
+                  }}>
+                    <i className="fas fa-users"></i>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: TEXT_DARK,
+                      marginBottom: '2px',
+                    }}>User Management</h3>
+                    <p style={{
+                      fontSize: '11px',
+                      color: TEXT_LIGHT,
+                    }}>Control access</p>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  gap: '12px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    background: `linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.08))`,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: PRIMARY,
+                    fontSize: '20px',
+                    flexShrink: 0,
+                  }}>
+                    <i className="fas fa-shield-alt"></i>
+                  </div>
+                  <div>
+                    <h3 style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: TEXT_DARK,
+                      marginBottom: '2px',
+                    }}>Security</h3>
+                    <p style={{
+                      fontSize: '11px',
+                      color: TEXT_LIGHT,
+                    }}>Enterprise grade</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Column - Form */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.5rem',
-          marginBottom: '10rem',
         }}>
-          <span style={{
-            color: '#000000',
-            opacity: 1,
-            fontSize: isMobile ? '1.2rem' : '1.5rem',
-            textShadow: '0 3px 6px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15)',
-            filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))',
+          <div style={{
+            width: '100%',
+            maxWidth: '380px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '28px',
           }}>
-            powered by
-          </span>
-          <img 
-            src={umaloLogo} 
-            alt="Umalo Logo"
-            style={{
-              height: isMobile ? '1rem' : '1.4rem',
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
-            }}
-          />
-        </div>
-      </div>
+            {/* Language Selector */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+            }}>
+            </div>
 
-      {/* Login Form - Centered */}
-      <div 
-        style={{
-          position: 'relative',
-          zIndex: 3,
-          width: '100%',
-          maxWidth: '400px',
-          background: '#fff',
-          borderRadius: 16,
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)',
-          border: `1.5px solid ${LIGHT_GREEN}22`,
-          padding: isMobile ? '2rem 1.5rem' : '3rem 2.5rem',
-          margin: isMobile ? '0 1rem' : '0 2rem',
-          transform: 'translateY(-5px)',
-          transition: 'all 0.3s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-8px)';
-          e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.2), 0 12px 40px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(-5px)';
-          e.currentTarget.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05)';
-        }}
-      >
-        <h1 style={{
-          fontSize: isMobile ? '2rem' : '2.5rem',
-          fontWeight: 'bold',
-          color: '#1e293b',
-          marginBottom: '0.5rem',
-          textAlign: 'center',
-          letterSpacing: '-1px',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          filter: 'drop-shadow(0 3px 6px rgba(0, 0, 0, 0.08))',
-        }}>
-          Login
-        </h1>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.5rem', width: '90%', maxWidth: 320, margin: '0 auto 1.5rem auto' }}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '1rem',
-                border: 'none',
-                borderBottom: `2px solid ${LIGHT_GREEN}55`,
-                outline: 'none',
-                fontSize: '1rem',
-                backgroundColor: 'transparent',
-                color: '#1e293b',
-                transition: 'border 0.18s',
-              }}
-              onFocus={e => e.currentTarget.style.borderBottom = `2px solid ${LIGHT_GREEN}`}
-              onBlur={e => e.currentTarget.style.borderBottom = `2px solid ${LIGHT_GREEN}55`}
-            />
-          </div>
-          <div style={{ marginBottom: '1.5rem', position: 'relative', width: '90%', maxWidth: 320, margin: '0 auto 1.5rem auto' }}>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '1rem',
-                border: 'none',
-                borderBottom: `2px solid ${LIGHT_GREEN}55`,
-                outline: 'none',
-                fontSize: '1rem',
-                backgroundColor: 'transparent',
-                color: '#1e293b',
-                paddingRight: '2.5rem',
-                transition: 'border 0.18s',
-              }}
-              onFocus={e => e.currentTarget.style.borderBottom = `2px solid ${LIGHT_GREEN}`}
-              onBlur={e => e.currentTarget.style.borderBottom = `2px solid ${LIGHT_GREEN}55`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: LIGHT_GREEN,
-                fontWeight: 600,
-                fontSize: '1.3rem',
-                cursor: 'pointer',
-                opacity: 0.8,
+            {/* Form Header */}
+            <div>
+              <h1 style={{
+                fontSize: isMobile ? '26px' : '32px',
+                fontWeight: 800,
+                marginBottom: '8px',
+                color: TEXT_DARK,
+              }}>
+                Admin Login
+              </h1>
+              <p style={{
+                fontSize: '14px',
+                color: TEXT_GRAY,
+              }}>
+                Access your admin dashboard
+              </p>
+            </div>
+
+            {/* Form Fields */}
+            <form onSubmit={handleSubmit} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+            }}>
+              {/* Email Input */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}>
+                <label style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: TEXT_GRAY,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}>Email</label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '10px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}>
+                  <i className="fas fa-envelope" style={{
+                    fontSize: '16px',
+                    color: TEXT_LIGHT,
+                    transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}></i>
+                  <input
+                    type="email"
+                    placeholder="admin@snapstream.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      color: TEXT_DARK,
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}>
+                <label style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: TEXT_GRAY,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}>Password</label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  background: BG_WHITE,
+                  border: `1.5px solid ${BORDER_LIGHT}`,
+                  borderRadius: '10px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}>
+                  <i className="fas fa-lock" style={{
+                    fontSize: '16px',
+                    color: TEXT_LIGHT,
+                    transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}></i>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      color: TEXT_DARK,
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: TEXT_LIGHT,
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      padding: '4px 8px',
+                      transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <i className={`fas fa-eye${showPassword ? '' : '-slash'}`}></i>
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div style={{
+                  color: ERROR,
+                  background: '#fef2f2',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                }}>
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                style={{
+                  padding: '12px 24px',
+                  background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px rgba(16, 185, 129, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.3)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.2)';
+                }}
+              >
+                <span>Sign In Now</span>
+                <i className="fas fa-arrow-right"></i>
+              </button>
+            </form>
+
+            {/* Footer */}
+            <div style={{
+              textAlign: 'center',
+              fontSize: '13px',
+              color: TEXT_GRAY,
+            }}>
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: 0,
-              }}
-              tabIndex={-1}
-              aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-            >
-              {showPassword ? (
-                // Mata terbuka
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={LIGHT_GREEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              ) : (
-                // Mata tertutup
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={LIGHT_GREEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              )}
-            </button>
+                gap: '6px',
+              }}>
+                <span>Snap Stream powered by</span>
+                <img 
+                  src={umaloLogo} 
+                  alt="Umalo Logo"
+                  style={{
+                    height: '25px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Footer Links */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${BORDER_LIGHT}`,
+              fontSize: '11px',
+            }}>
+              <a href="#" style={{
+                color: TEXT_LIGHT,
+                textDecoration: 'none',
+                transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>Privacy</a>
+              <a href="#" style={{
+                color: TEXT_LIGHT,
+                textDecoration: 'none',
+                transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>Terms</a>
+              <a href="#" style={{
+                color: TEXT_LIGHT,
+                textDecoration: 'none',
+                transition: 'color 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>Support</a>
+            </div>
           </div>
-          {error && (
-            <div style={{ color: '#b91c1c', background: '#fef2f2', borderRadius: 8, padding: '10px 16px', marginBottom: 18, fontWeight: 600, fontSize: 15, textAlign: 'center' }}>{error}</div>
-          )}
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              background: '#059669',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 10,
-              fontWeight: 700,
-              fontSize: 17,
-              padding: '15px 0',
-              marginTop: 8,
-              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.4), 0 2px 8px rgba(5, 150, 105, 0.2)',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              letterSpacing: '0.1px',
-              transform: 'translateY(0)',
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.background = '#047857';
-              e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(4, 120, 87, 0.5), 0 3px 12px rgba(4, 120, 87, 0.3)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = '#059669';
-              e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(5, 150, 105, 0.4), 0 2px 8px rgba(5, 150, 105, 0.2)';
-            }}
-          >
-            Masuk
-          </button>
-        </form>
-        
-        <div style={{
-          textAlign: 'center',
-          marginTop: '1.5rem',
-        }}>
         </div>
       </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes float-bg {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(50px, 50px); }
+        }
+        
+        @keyframes float-blob {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, 30px); }
+        }
+      `}</style>
     </div>
   );
 };

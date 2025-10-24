@@ -440,22 +440,22 @@ const AdminLiveStreamPage: React.FC = () => {
       >
          {/* Welcome Card */}
          <div style={{
-           background: LIGHT_GREEN,
-          borderRadius: CARD_RADIUS,
-          color: '#1e293b',
+       background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
+          borderRadius: 12,
+          color: '#1f2937',
           padding: isMobile ? '18px 12px' : '32px 40px',
           marginBottom: 32,
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          boxShadow: SHADOW,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           minHeight: 120,
         }}>
           <div>
-            <div style={{ fontSize: 15, opacity: 0.8, marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Live Streaming</div>
-            <div style={{ fontSize: 16, opacity: 0.9 }}>
+            <div style={{ fontSize: 15, color: '#64748b', marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>Live Streaming</div>
+            <div style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
               Selamat datang, {user?.name || 'Admin'}! Mulai live streaming pembelajaran dengan mudah.
             </div>
           </div>
@@ -487,14 +487,13 @@ const AdminLiveStreamPage: React.FC = () => {
           {/* Main Content */}
           <div
             style={{
-              background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-              border: 'none',
-              borderRadius: 24,
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
               padding: isMobile ? "20px" : "32px",
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04)',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               position: 'relative',
               overflow: 'hidden',
-              backdropFilter: 'blur(10px)',
             }}
           >
             {/* Modern Background Pattern */}
@@ -521,23 +520,19 @@ const AdminLiveStreamPage: React.FC = () => {
             <div style={{ position: 'relative', zIndex: 1 }}>
               <h2
                 style={{
-                  fontSize: "24px",
-                  fontWeight: 700,
-                  color: COLORS.text,
+                  fontSize: "20px",
+                  fontWeight: 500,
+                  color: '#6b7280',
                   margin: "0 0 8px 0",
-                  background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
                 }}
               >
                 Kontrol Live Streaming
               </h2>
               <p style={{
                 fontSize: "14px",
-                color: COLORS.subtext,
+                color: '#9ca3af',
                 margin: "0 0 24px 0",
-                fontWeight: 500,
+                fontWeight: 400,
               }}>
                 Kelola dan kontrol streaming live dengan mudah
               </p>
@@ -555,7 +550,7 @@ const AdminLiveStreamPage: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '10px',
-                      background: 'linear-gradient(135deg, #4ADE80 0%, #22C55E 100%)',
+                      background: 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
                       color: "white",
                       border: 'none',
                       borderRadius: 16,
@@ -605,8 +600,8 @@ const AdminLiveStreamPage: React.FC = () => {
                 {/* Enhanced Status Info */}
                 <div
                   style={{
-                    background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
-                    border: `1px solid ${COLORS.primary}`,
+                    background: "#f0f9ff",
+                    border: `1px solid #e0f2fe`,
                     borderRadius: 12,
                     padding: "16px",
                     marginBottom: "16px",
@@ -646,19 +641,19 @@ const AdminLiveStreamPage: React.FC = () => {
                       }} />
                       <span style={{
                         fontSize: "14px",
-                        fontWeight: 600,
-                        color: COLORS.text
+                        fontWeight: 500,
+                        color: '#6b7280'
                       }}>
                         Live Streaming Aktif
                       </span>
                     </div>
                     <div style={{
-                      background: COLORS.green,
-                      color: COLORS.white,
+                      background: '#d1fae5',
+                      color: '#059669',
                       padding: "4px 8px",
                       borderRadius: 6,
                       fontSize: "11px",
-                      fontWeight: 600
+                      fontWeight: 500
                     }}>
                       ONLINE
                     </div>
@@ -666,8 +661,9 @@ const AdminLiveStreamPage: React.FC = () => {
                   
                   <div style={{
                     fontSize: "13px",
-                    color: COLORS.subtext,
-                    marginBottom: "4px"
+                    color: '#9ca3af',
+                    marginBottom: "4px",
+                    fontWeight: 500
                   }}>
                     📺 Admin Live Stream
                   </div>
@@ -677,7 +673,7 @@ const AdminLiveStreamPage: React.FC = () => {
                     alignItems: "center",
                     gap: isMobile ? "8px" : "16px",
                     fontSize: "12px",
-                    color: COLORS.subtext,
+                    color: '#9ca3af',
                     flexWrap: isMobile ? "wrap" : "nowrap"
                   }}>
                     <div style={{
@@ -695,7 +691,7 @@ const AdminLiveStreamPage: React.FC = () => {
                           border: 'none',
                           cursor: 'pointer',
                           fontSize: '12px',
-                          color: COLORS.subtext,
+                          color: '#9ca3af',
                           padding: '2px',
                           borderRadius: '3px'
                         }}
@@ -731,9 +727,9 @@ const AdminLiveStreamPage: React.FC = () => {
                 {streamingState.isStreaming && streamingState.roomId && (
                   <div
                     style={{
-                      background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
-                      border: `2px solid ${COLORS.primary}`,
-                      borderRadius: 16,
+                      background: "#f0f9ff",
+                      border: `1px solid #e0f2fe`,
+                      borderRadius: 12,
                       padding: "20px",
                       marginBottom: "16px",
                       position: "relative",
@@ -755,8 +751,8 @@ const AdminLiveStreamPage: React.FC = () => {
                     <div
                       style={{
                         fontSize: "16px",
-                        fontWeight: 700,
-                        color: COLORS.primary,
+                        fontWeight: 500,
+                        color: '#6b7280',
                         marginBottom: "12px",
                         display: "flex",
                         alignItems: "center",
@@ -770,18 +766,18 @@ const AdminLiveStreamPage: React.FC = () => {
                     
                     <div
                       style={{
-                        background: COLORS.white,
-                        border: `2px solid ${COLORS.border}`,
-                        borderRadius: 12,
+                        background: '#ffffff',
+                        border: `1px solid #e5e7eb`,
+                        borderRadius: 8,
                         padding: "12px 16px",
                         fontSize: "13px",
-                        color: COLORS.text,
+                        color: '#6b7280',
                         marginBottom: "16px",
                         wordBreak: "break-all",
                         fontFamily: "monospace",
                         position: "relative",
                         zIndex: 1,
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
                       }}
                     >
                       {generateStreamUrl(streamingState.roomId)}
@@ -817,7 +813,7 @@ const AdminLiveStreamPage: React.FC = () => {
                           borderRadius: 10,
                           padding: "12px 16px",
                           fontSize: "13px",
-                          fontWeight: 600,
+                          fontWeight: 500,
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
@@ -888,7 +884,7 @@ const AdminLiveStreamPage: React.FC = () => {
                           borderRadius: 10,
                           padding: "12px 16px",
                           fontSize: "13px",
-                          fontWeight: 600,
+                          fontWeight: 500,
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
@@ -968,7 +964,7 @@ const AdminLiveStreamPage: React.FC = () => {
                       borderRadius: 10,
                       padding: "12px 16px",
                       fontSize: "14px",
-                      fontWeight: 600,
+                      fontWeight: 500,
                       cursor: "pointer",
                       transition: "all 0.2s ease",
                       boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)",
@@ -1003,7 +999,7 @@ const AdminLiveStreamPage: React.FC = () => {
                     borderRadius: 12,
                     padding: "16px 20px",
                     fontSize: "15px",
-                    fontWeight: 700,
+                    fontWeight: 500,
                     cursor: "pointer",
                     transition: "all 0.3s ease",
                     boxShadow: "0 6px 20px rgba(239, 68, 68, 0.3)",

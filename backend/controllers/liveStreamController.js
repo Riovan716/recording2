@@ -621,6 +621,27 @@ exports.deleteLiveStream = async (req, res) => {
   }
 };
 
+// Fungsi untuk notifikasi stream ended
+exports.notifyStreamEnded = async (req, res) => {
+  try {
+    const { roomId } = req.body;
+    
+    if (!roomId) {
+      return res.status(400).json({ error: 'Room ID is required' });
+    }
+    
+    console.log('Stream ended notification received for room:', roomId);
+    
+    // Here you can add logic to notify all viewers that the stream has ended
+    // For now, we'll just log it and return success
+    
+    res.json({ success: true, message: 'Stream ended notification processed' });
+  } catch (error) {
+    console.error('Error processing stream ended notification:', error);
+    res.status(500).json({ error: 'Failed to process stream ended notification' });
+  }
+};
+
 // Fungsi untuk membersihkan live stream yang sudah berakhir dari memory
 exports.cleanupEndedStreams = () => {
   // Hapus live stream yang sudah berakhir dari memory (lebih dari 1 jam yang lalu)
