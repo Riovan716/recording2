@@ -199,30 +199,23 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
           }
         `}
       </style>
-      <div style={{ 
-        width: '100%', 
-        maxWidth: '1200px', 
-        margin: '20px auto 0', 
-        backgroundColor: 'white',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}>
 
 
       {/* Notification Bar */}
-      <div style={{ backgroundColor: '#facc15', padding: '8px 16px', marginTop: '16px' }}>
-        <p style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
+      <div style={{ backgroundColor: '#facc15', padding: '6px 12px', marginBottom: '12px' }}>
+        <p style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>
           Ditemukan {availableCameras.length} kamera{availableScreens.length > 0 ? ` dan ${availableScreens.length} layar` : ''}
         </p>
       </div>
 
       {/* Content */}
-      <div style={{ padding: '16px' }}>
+      <div>
         {/* Judul Stream Section */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <FaStar style={{ fontSize: '14px', color: 'black' }} />
-            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Judul Stream</h3>
-            <FaCamera style={{ fontSize: '14px', color: 'black', marginLeft: 'auto' }} />
+            <FaStar style={{ fontSize: '12px', color: 'black' }} />
+            <h3 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>Judul Stream</h3>
+            <FaCamera style={{ fontSize: '12px', color: 'black', marginLeft: 'auto' }} />
           </div>
           <input
             type="text"
@@ -231,10 +224,10 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
             placeholder="Masukkan judul yang sesuai"
             style={{ 
               width: '100%', 
-              padding: '12px', 
+              padding: '10px', 
               border: '1px solid #d1d5db', 
               borderRadius: '6px', 
-              fontSize: '14px',
+              fontSize: '12px',
               backgroundColor: 'white',
               outline: 'none'
             }}
@@ -250,11 +243,11 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
         </div>
 
         {/* Camera Selection */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaCamera style={{ fontSize: '14px', color: 'black' }} />
-              <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Pilih Kamera</h3>
+              <FaCamera style={{ fontSize: '12px', color: 'black' }} />
+              <h3 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>Pilih Kamera</h3>
             </div>
             <button
               onClick={getAvailableCameras}
@@ -263,7 +256,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '4px', 
-                fontSize: '14px', 
+                fontSize: '12px', 
                 color: 'black', 
                 backgroundColor: 'transparent',
                 border: 'none',
@@ -292,7 +285,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '12px', 
-                    padding: '12px', 
+                    padding: '10px', 
                     border: `1px solid ${isSelected ? 'black' : '#d1d5db'}`,
                     backgroundColor: isSelected ? '#f9fafb' : 'white',
                     cursor: 'pointer',
@@ -326,7 +319,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                       accentColor: 'black'
                     }}
                   />
-                  <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
+                  <span style={{ fontSize: '12px', color: 'black', flex: 1 }}>
                     {camera.label}
                   </span>
                 </label>
@@ -337,11 +330,11 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
 
         {/* Screen Recording Section */}
         {availableScreens.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaDesktop style={{ fontSize: '14px', color: 'black' }} />
-                <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Screen Recording</h3>
+                <FaDesktop style={{ fontSize: '12px', color: 'black' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>Screen Recorder</h3>
               </div>
               <button
                 onClick={getAvailableScreens}
@@ -350,7 +343,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '4px', 
-                  fontSize: '14px', 
+                  fontSize: '12px', 
                   color: 'black', 
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -374,7 +367,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '12px', 
-                padding: '12px', 
+                padding: '10px', 
                 border: `1px solid ${includeScreenRecording ? 'black' : '#d1d5db'}`,
                 backgroundColor: includeScreenRecording ? '#f9fafb' : 'white',
                 cursor: 'pointer',
@@ -401,8 +394,8 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     accentColor: 'black'
                   }}
                 />
-                <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
-                  Aktifkan Screen Recording
+                <span style={{ fontSize: '12px', color: 'black', flex: 1 }}>
+                  Aktifkan Screen Recorder
                 </span>
               </label>
             </div>
@@ -420,7 +413,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '12px', 
-                        padding: '12px', 
+                        padding: '10px', 
                         border: `1px solid ${isSelected ? 'black' : '#d1d5db'}`,
                         backgroundColor: isSelected ? '#f9fafb' : 'white',
                         cursor: 'pointer',
@@ -450,7 +443,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                           accentColor: 'black'
                         }}
                       />
-                      <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
+                      <span style={{ fontSize: '12px', color: 'black', flex: 1 }}>
                         {screen.name} ({screen.type === 'screen' ? 'Layar' : 'Jendela'})
                       </span>
                     </label>
@@ -462,10 +455,10 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
         )}
 
         {/* Layout Section */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <FaTh style={{ fontSize: '14px', color: 'black' }} />
-            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
+            <FaTh style={{ fontSize: '12px', color: 'black' }} />
+            <h3 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>
               Layout {includeScreenRecording ? 'Kamera & Layar' : 'Kamera'}
             </h3>
           </div>
@@ -476,7 +469,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
               display: 'flex', 
               alignItems: 'center', 
               gap: '12px', 
-              padding: '12px', 
+              padding: '10px', 
               border: `1px solid ${layoutType === 'pip' ? 'black' : '#d1d5db'}`,
               backgroundColor: layoutType === 'pip' ? '#f9fafb' : 'white',
               cursor: 'pointer',
@@ -521,9 +514,11 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     </svg>
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Picture-in-Picture</h4>
+                    <h4 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Picture-in-Picture</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      {includeScreenRecording ? 'Satu utama (kamera/layar), lainnya kecil' : 'Satu utama, lainnya kecil'}
+                      {includeScreenRecording 
+                        ? 'Satu sumber utama (kamera atau layar) menempati layar penuh, sumber lainnya muncul sebagai jendela kecil di pojok. Layar akan otomatis menjadi konten utama.' 
+                        : 'Satu kamera utama menempati sebagian besar layar, kamera lainnya muncul sebagai thumbnail kecil di sisi layar.'}
                     </p>
                   </div>
                 </div>
@@ -535,7 +530,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
               display: 'flex', 
               alignItems: 'center', 
               gap: '12px', 
-              padding: '12px', 
+              padding: '10px', 
               border: `1px solid ${layoutType === 'custom' ? 'black' : '#d1d5db'}`,
               backgroundColor: layoutType === 'custom' ? '#f9fafb' : 'white',
               cursor: 'pointer',
@@ -578,9 +573,9 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     <FaArrowsAlt style={{ fontSize: '16px', color: 'black' }} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
+                    <h4 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      {includeScreenRecording ? 'Atur layout kamera & layar sesuai keinginan' : 'Atur layout sesuai keinginan'}
+                      {includeScreenRecording ? 'Atur ukuran dan posisi kamera & layar secara bebas sesuai kebutuhan Anda. Seret dan ubah ukuran setiap elemen secara manual.' : 'Atur ukuran dan posisi kamera secara bebas sesuai kebutuhan Anda. Seret dan ubah ukuran setiap elemen secara manual.'}
                     </p>
                   </div>
                 </div>
@@ -614,7 +609,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     gap: '8px', 
                     padding: '12px 24px', 
                     borderRadius: '6px', 
-                    fontSize: '14px', 
+                    fontSize: '12px', 
                     fontWeight: '500',
                     backgroundColor: selectedCameras.length === 0 ? '#d1d5db' : '#3b82f6',
                     color: selectedCameras.length === 0 ? '#6b7280' : 'white',
@@ -635,7 +630,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                     }
                   }}
                 >
-                  <FaArrowsAlt style={{ fontSize: '14px' }} />
+                  <FaArrowsAlt style={{ fontSize: '12px' }} />
                   Atur Layout
                 </button>
                 
@@ -652,7 +647,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
                       gap: '8px', 
                       padding: '12px 16px', 
                       borderRadius: '6px', 
-                      fontSize: '14px', 
+                      fontSize: '12px', 
                       fontWeight: '500',
                       backgroundColor: '#10b981',
                       color: 'white',
@@ -701,7 +696,7 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
               gap: '8px', 
               padding: '12px 32px', 
               borderRadius: '6px', 
-              fontSize: '14px', 
+              fontSize: '12px', 
               fontWeight: '500',
               backgroundColor: (
                 (selectedCameras.length === 0 && !includeScreenRecording) || 
@@ -752,11 +747,10 @@ const MultiCameraStreamer: React.FC<MultiCameraStreamerProps> = ({
               }
             }}
           >
-            <FaPlay style={{ fontSize: '14px' }} />
+            <FaPlay style={{ fontSize: '12px' }} />
             Mulai Streaming
           </button>
         </div>
-      </div>
       </div>
 
       {/* Layout Editor Modal */}

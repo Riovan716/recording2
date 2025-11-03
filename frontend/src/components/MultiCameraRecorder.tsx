@@ -235,8 +235,8 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         `}
       </style>
       <div style={{ 
-        width: '100%', 
-        maxWidth: '600px', 
+        width: '90%', 
+        maxWidth: '480px', 
         margin: '0 auto', 
         backgroundColor: 'white',
         fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -246,12 +246,12 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        padding: '16px', 
+        padding: '12px', 
         borderBottom: '1px solid #e5e7eb' 
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FaCamera style={{ fontSize: '18px', color: 'black' }} />
-          <h1 style={{ fontSize: '18px', fontWeight: '600', color: 'black', margin: 0 }}>Multi-Camera Recording</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <FaCamera style={{ fontSize: '16px', color: 'black' }} />
+          <h1 style={{ fontSize: '16px', fontWeight: '600', color: 'black', margin: 0 }}>Multi-Camera Recorder</h1>
         </div>
         {onClose && (
           <button
@@ -260,8 +260,8 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
               display: 'flex', 
               alignItems: 'center', 
               gap: '4px', 
-              padding: '8px 12px', 
-              fontSize: '14px', 
+              padding: '6px 10px', 
+              fontSize: '12px', 
               color: 'black', 
               backgroundColor: 'transparent',
               border: 'none',
@@ -271,26 +271,26 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <FaClose style={{ fontSize: '14px' }} />
+            <FaClose style={{ fontSize: '12px' }} />
             Tutup
           </button>
         )}
       </div>
 
       {/* Notification Bar */}
-      <div style={{ backgroundColor: '#facc15', padding: '8px 16px' }}>
-        <p style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
+      <div style={{ backgroundColor: '#facc15', padding: '6px 12px' }}>
+        <p style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>
           Ditemukan {availableCameras.length} kamera{availableScreens.length > 0 ? ` dan ${availableScreens.length} layar` : ''}
         </p>
       </div>
 
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '12px' }}>
         {/* Judul Recording Section */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <FaStar style={{ fontSize: '14px', color: 'black' }} />
-            <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Judul Recording</h3>
-            <FaCamera style={{ fontSize: '14px', color: 'black', marginLeft: 'auto' }} />
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <FaStar style={{ fontSize: '12px', color: 'black' }} />
+            <h3 style={{ fontSize: '12px', fontWeight: '500', color: 'black', margin: 0 }}>Judul Recording</h3>
+            <FaCamera style={{ fontSize: '12px', color: 'black', marginLeft: 'auto' }} />
           </div>
           
           <input
@@ -300,10 +300,10 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
             placeholder="Masukkan judul yang sesuai"
             style={{ 
               width: '100%', 
-              padding: '12px', 
+              padding: '10px', 
               border: '1px solid #d1d5db', 
               borderRadius: '6px', 
-              fontSize: '14px',
+              fontSize: '13px',
               backgroundColor: 'white',
               outline: 'none'
             }}
@@ -319,7 +319,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         </div>
 
         {/* Pilih Kamera Section */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaCamera style={{ fontSize: '14px', color: 'black' }} />
@@ -401,11 +401,11 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
 
         {/* Screen Recording Section */}
         {availableScreens.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FaDesktop style={{ fontSize: '14px', color: 'black' }} />
-                <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Screen Recording</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>Screen Recorder</h3>
               </div>
               <button
                 onClick={getAvailableScreens}
@@ -467,7 +467,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   }}
                 />
                 <span style={{ fontSize: '14px', color: 'black', flex: 1 }}>
-                  Aktifkan Screen Recording
+                  Aktifkan Screen Recorder
                 </span>
               </label>
             </div>
@@ -526,7 +526,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         )}
 
         {/* Layout Section */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <FaTh style={{ fontSize: '14px', color: 'black' }} />
             <h3 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0 }}>
@@ -587,7 +587,9 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Picture-in-Picture</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      {includeScreenRecording ? 'Satu utama (kamera/layar), lainnya kecil' : 'Satu utama, lainnya kecil'}
+                      {includeScreenRecording 
+                        ? 'Satu sumber utama (kamera atau layar) menempati layar penuh, sumber lainnya muncul sebagai jendela kecil di pojok. Layar akan otomatis menjadi konten utama.' 
+                        : 'Satu kamera utama menempati sebagian besar layar, kamera lainnya muncul sebagai thumbnail kecil di sisi layar.'}
                     </p>
                   </div>
                 </div>
@@ -643,7 +645,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'black', margin: 0, marginBottom: '2px' }}>Custom Layout</h4>
                     <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                      {includeScreenRecording ? 'Atur layout kamera & layar sesuai keinginan' : 'Atur layout sesuai keinginan'}
+                      {includeScreenRecording ? 'Atur ukuran dan posisi kamera & layar secara bebas sesuai kebutuhan Anda. Seret dan ubah ukuran setiap elemen secara manual.' : 'Atur ukuran dan posisi kamera secara bebas sesuai kebutuhan Anda. Seret dan ubah ukuran setiap elemen secara manual.'}
                     </p>
                   </div>
                 </div>

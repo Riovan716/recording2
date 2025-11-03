@@ -205,10 +205,16 @@ const updateProfile = async (req, res) => {
 // Update password for specific user
 const updatePassword = async (req, res) => {
   try {
+    // Use authenticated user's ID from token
+    const userId = req.user?.id;
     const { id } = req.params;
+    
+    // Use authenticated user ID, fallback to params if not available
+    const targetUserId = userId || id;
+    
     const { currentPassword, newPassword } = req.body;
     
-    const user = await User.findByPk(id);
+    const user = await User.findByPk(targetUserId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -220,6 +226,16 @@ const updatePassword = async (req, res) => {
     
     // Update password
     await user.update({ password: newPassword });
+    
+    // Log activity
+    await logActivity(
+      user.id,
+      user.role,
+      user.name,
+      'change_password',
+      `${user.name} changed their password`,
+      {}
+    );
     
     res.json({ message: 'Password berhasil diperbarui' });
   } catch (error) {

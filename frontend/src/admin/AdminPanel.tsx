@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminDashboard from './AdminDashboard';
 import AdminLiveStreamPage from './AdminLiveStreamPage';
 import AdminLiveStreamHistoryPage from './AdminLiveStreamHistoryPage';
 import AdminRecordingPage from './AdminRecordingPage';
 import AdminCameraPreviewPage from './AdminCameraPreviewPage';
-import AdminVideoListPage from './AdminVideoListPage';
 import AdminProfilePage from './AdminProfilePage';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,9 +16,12 @@ const GRAY_TEXT = '#64748b';
 const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
 
 const AdminPanel: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // All hooks must be called before any conditional returns
   useEffect(() => {
@@ -31,6 +33,15 @@ const AdminPanel: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileOpen]);
+
+  // Cleanup timeout on unmount (must be before any conditional return)
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -87,6 +98,28 @@ const AdminPanel: React.FC = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleMouseEnter = () => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    // Set dropdown to show after 300ms delay
+    hoverTimeoutRef.current = setTimeout(() => {
+      setShowProfileDropdown(true);
+    }, 300);
+  };
+
+  const handleMouseLeave = () => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    // Set dropdown to hide after 200ms delay (gives time to move to dropdown)
+    hoverTimeoutRef.current = setTimeout(() => {
+      setShowProfileDropdown(false);
+    }, 200);
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <AdminSidebar mobileOpen={mobileOpen} onMobileToggle={handleMobileToggle} />
@@ -134,11 +167,18 @@ const AdminPanel: React.FC = () => {
             </svg>
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: isMobile ? 0 : 'auto' }}>
-            <div style={{ textAlign: 'right', marginRight: 8 }}>
-              <div style={{ fontWeight: 700, color: GRAY_TEXT }}>{displayName}</div>
-              <div style={{ fontSize: 14, color: GRAY_TEXT, opacity: 0.7 }}>{displayRole}</div>
-            </div>
+          {/* Profile with Dropdown */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 16, 
+              marginLeft: isMobile ? 0 : 'auto',
+              position: 'relative'
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
             <span style={{
               width: 48,
               height: 48,
@@ -154,9 +194,131 @@ const AdminPanel: React.FC = () => {
               marginLeft: 8,
               userSelect: 'none',
               boxShadow: SHADOW,
-            }}>
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease',
+            }}
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            >
               {initials}
             </span>
+
+            {/* Dropdown Menu */}
+            {showProfileDropdown && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '60px',
+                  right: 0,
+                  background: WHITE,
+                  borderRadius: 12,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  padding: '16px',
+                  minWidth: '240px',
+                  zIndex: 1000,
+                  border: '1px solid #e2e8f0'
+                }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                {/* Profile Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '16px' }}>
+                  <span style={{
+                    width: 48,
+                    height: 48,
+                    background: LIGHT_GREEN,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 20,
+                    border: `3px solid ${LIGHT_GREEN}`,
+                    userSelect: 'none',
+                    boxShadow: SHADOW,
+                  }}>
+                    {initials}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, color: GRAY_TEXT, fontSize: 16 }}>{displayName}</div>
+                    <div style={{ fontSize: 13, color: GRAY_TEXT, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <i className="fas fa-user-circle" style={{ fontSize: 14 }}></i>
+                      {displayRole.charAt(0).toUpperCase() + displayRole.slice(1)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Button */}
+                <button
+                  onClick={() => {
+                    navigate('/admin/dashboard/profile');
+                    setShowProfileDropdown(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    background: '#f1f5f9',
+                    color: GRAY_TEXT,
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '12px 16px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                    marginBottom: '8px',
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#e2e8f0';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = '#f1f5f9';
+                  }}
+                >
+                  <i className="fas fa-user" style={{ fontSize: 14 }}></i>
+                  Profile
+                </button>
+
+                {/* Logout Button */}
+                <button
+                  onClick={() => {
+                    logout();
+                    window.location.href = '/';
+                  }}
+                  style={{
+                    width: '100%',
+                    background: '#ef4444',
+                    color: WHITE,
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '12px 16px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)',
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = '#dc2626';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = '#ef4444';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.2)';
+                  }}
+                >
+                  <i className="fas fa-sign-out-alt" style={{ fontSize: 14 }}></i>
+                  Log Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -167,7 +329,6 @@ const AdminPanel: React.FC = () => {
           <Route path="livestream-history" element={<AdminLiveStreamHistoryPage />} />
           <Route path="recording" element={<AdminRecordingPage />} />
           <Route path="camera-preview" element={<AdminCameraPreviewPage />} />
-          <Route path="videos" element={<AdminVideoListPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
         </Routes>
       </div>

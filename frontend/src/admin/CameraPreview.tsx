@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import AudioLevelIndicator from '../components/AudioLevelIndicator';
 
 interface CameraPreviewProps {
   stream: MediaStream;
@@ -162,23 +163,23 @@ const CameraPreview: React.FC<CameraPreviewProps> = ({
       {isStreaming && !isLoading && !hasError && (
         <div style={{
           position: 'absolute',
-          top: '12px',
-          left: '12px',
-          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+          top: '8px',
+          left: '8px',
+          background: 'rgba(239, 68, 68, 0.9)',
           color: 'white',
-          padding: '6px 12px',
-          borderRadius: '20px',
-          fontSize: '12px',
-          fontWeight: '600',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '9px',
+          fontWeight: '700',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
-          animation: 'pulse 2s infinite'
+          gap: '4px',
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+          letterSpacing: '0.5px'
         }}>
           <div style={{
-            width: '8px',
-            height: '8px',
+            width: '5px',
+            height: '5px',
             borderRadius: '50%',
             background: 'white',
             animation: 'blink 1s infinite'
@@ -231,12 +232,24 @@ const CameraPreview: React.FC<CameraPreviewProps> = ({
         </div>
       )}
       
-      {/* Quality Indicator */}
+      {/* Audio Level Indicator */}
       {isStreaming && !isLoading && !hasError && (
         <div style={{
           position: 'absolute',
           bottom: '12px',
           left: '12px',
+          zIndex: 10
+        }}>
+          <AudioLevelIndicator stream={stream} isActive={isStreaming} />
+        </div>
+      )}
+      
+      {/* Quality Indicator */}
+      {isStreaming && !isLoading && !hasError && (
+        <div style={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
           background: 'rgba(0, 0, 0, 0.7)',
           color: 'white',
           padding: '6px 12px',

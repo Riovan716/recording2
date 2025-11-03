@@ -730,15 +730,10 @@ const BasicLayoutEditor: React.FC<BasicLayoutEditorProps> = ({
                 }
                 // Explicitly call onLayoutChange to ensure parent gets updated
                 onLayoutChange(layouts);
-                // Show success message with better UX
-                const button = document.activeElement as HTMLButtonElement;
-                const originalText = button.innerHTML;
-                button.innerHTML = '✅ Tersimpan!';
-                button.style.backgroundColor = '#059669';
-                setTimeout(() => {
-                  button.innerHTML = originalText;
-                  button.style.backgroundColor = '#10b981';
-                }, 2000);
+                // Close modal immediately after saving
+                if (onClose) {
+                  onClose();
+                }
               }}
               style={{
                 padding: '8px 16px',

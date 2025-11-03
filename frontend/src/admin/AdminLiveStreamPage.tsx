@@ -80,6 +80,7 @@ const AdminLiveStreamPage: React.FC = () => {
   const [streamingCameras, setStreamingCameras] = useState<any[]>([]);
   const [streamingScreenSource, setStreamingScreenSource] = useState<any>(null);
   const [streamingLayouts, setStreamingLayouts] = useState<any[]>([]);
+  const [currentStreamingLayoutType, setCurrentStreamingLayoutType] = useState<string>('');
   const [currentViewers, setCurrentViewers] = useState(0);
   const socketRef = useRef<any>(null);
 
@@ -229,6 +230,7 @@ const AdminLiveStreamPage: React.FC = () => {
       setStreamingCameras([]);
       setStreamingScreenSource(null);
       setStreamingLayouts([]);
+      setCurrentStreamingLayoutType('');
     }
   }, [streamingState.isStreaming]);
 
@@ -282,6 +284,7 @@ const AdminLiveStreamPage: React.FC = () => {
       setStreamingCameras(selectedCameraDevices || []);
       setStreamingScreenSource(screenSource || null);
       setStreamingLayouts(customLayout || []);
+      setCurrentStreamingLayoutType(layoutType);
       
       setShowMultiCameraStreamer(false);
       await fetchStreamingStats();
@@ -451,6 +454,7 @@ const AdminLiveStreamPage: React.FC = () => {
           justifyContent: 'space-between',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           minHeight: 120,
+          
         }}>
           <div>
             <div style={{ fontSize: 15, color: '#64748b', marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -459,7 +463,6 @@ const AdminLiveStreamPage: React.FC = () => {
               Selamat datang, {user?.name || 'Admin'}! Mulai live streaming pembelajaran dengan mudah.
             </div>
           </div>
-          <span style={{ height: 100, fontSize: 100, objectFit: 'contain', marginLeft: isMobile ? 0 : 32, marginTop: isMobile ? 18 : 0, display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 4px 24px #0002)' }}>📺</span>
         </div>
 
         {/* Stats Cards */}
@@ -782,129 +785,6 @@ const AdminLiveStreamPage: React.FC = () => {
                     >
                       {generateStreamUrl(streamingState.roomId)}
                     </div>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      gap: "12px",
-                      position: "relative",
-                      zIndex: 1,
-                      flexDirection: isMobile ? "column" : "row"
-                    }}>
-                      <button
-                        onClick={() => {
-                          try {
-                            if (!streamingState.roomId) {
-                              showAlert("Room ID tidak tersedia. Silakan coba lagi.", "error");
-                              return;
-                            }
-                            const link = generateStreamUrl(streamingState.roomId);
-                            window.open(link, '_blank');
-                            showAlert("Preview dibuka di tab baru!", "success");
-                          } catch (error) {
-                            console.error('Error opening preview:', error);
-                            showAlert("Gagal membuka preview. Silakan coba lagi.", "error");
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                           background: "linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)",
-                          color: COLORS.white,
-                          border: "none",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          transition: "all 0.2s ease",
-                           boxShadow: "0 4px 12px rgba(187, 247, 208, 0.3)"
-                        }}
-                        onMouseOver={e => {
-                          e.currentTarget.style.transform = "translateY(-2px)";
-                           e.currentTarget.style.boxShadow = "0 6px 16px rgba(187, 247, 208, 0.4)";
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                           e.currentTarget.style.boxShadow = "0 4px 12px rgba(187, 247, 208, 0.3)";
-                        }}
-                      >
-                        👁️ Buka Preview
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            if (!streamingState.roomId) {
-                              showAlert("Room ID tidak tersedia. Silakan coba lagi.", "error");
-                              return;
-                            }
-                            const link = generateStreamUrl(streamingState.roomId);
-                            
-                            // Try modern clipboard API first
-                            if (navigator.clipboard && window.isSecureContext) {
-                              await navigator.clipboard.writeText(link);
-                              showAlert("Link berhasil disalin ke clipboard!", "success");
-                            } else {
-                              // Fallback for older browsers or non-secure contexts
-                              const textArea = document.createElement('textarea');
-                              textArea.value = link;
-                              textArea.style.position = 'fixed';
-                              textArea.style.left = '-999999px';
-                              textArea.style.top = '-999999px';
-                              document.body.appendChild(textArea);
-                              textArea.focus();
-                              textArea.select();
-                              
-                              try {
-                                const successful = document.execCommand('copy');
-                                if (successful) {
-                                  showAlert("Link berhasil disalin ke clipboard!", "success");
-                                } else {
-                                  throw new Error('Copy command failed');
-                                }
-                              } catch (err) {
-                                // Show the link in a modal if clipboard fails
-                                showAlert(`Gagal menyalin ke clipboard. Silakan salin manual: ${link}`, "warning");
-                              } finally {
-                                document.body.removeChild(textArea);
-                              }
-                            }
-                          } catch (error) {
-                            console.error('Error copying to clipboard:', error);
-                            showAlert("Gagal menyalin link ke clipboard. Silakan coba lagi.", "error");
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-                          color: COLORS.white,
-                          border: "none",
-                          borderRadius: 10,
-                          padding: "12px 16px",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          transition: "all 0.2s ease",
-                          boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
-                        }}
-                        onMouseOver={e => {
-                          e.currentTarget.style.transform = "translateY(-2px)";
-                          e.currentTarget.style.boxShadow = "0 6px 16px rgba(34, 197, 94, 0.4)";
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
-                        }}
-                      >
-                        📋 Salin Link
-                      </button>
-                    </div>
                   </div>
                 )}
 
@@ -924,51 +804,73 @@ const AdminLiveStreamPage: React.FC = () => {
                   </div>
                 )} */}
 
-                {/* Edit Layout Button - Only show for multi-camera streaming */}
-                {streamingState.isStreaming && (streamingCameras.length > 0 || streamingScreenSource) && (
+                {/* Action Buttons Row */}
+                <div style={{
+                  display: "flex",
+                  gap: "8px",
+                  marginBottom: "12px"
+                }}>
+
+                  {/* Salin Link Button */}
                   <button
-                    onClick={() => {
-                      // Load current layout from localStorage
-                      const savedLayout = localStorage.getItem('streamingLayout');
-                      if (savedLayout) {
-                        try {
-                          const parsedLayout = JSON.parse(savedLayout);
-                          setStreamingLayouts(parsedLayout);
-                        } catch (error) {
-                          console.error('Error parsing saved streaming layout:', error);
+                    onClick={async () => {
+                      try {
+                        if (!streamingState.roomId) {
+                          showAlert("Room ID tidak tersedia. Silakan coba lagi.", "error");
+                          return;
                         }
-                      }
-                      
-                      // Load screen source from localStorage
-                      const savedScreenSource = localStorage.getItem('screenSource');
-                      if (savedScreenSource) {
-                        try {
-                          const parsedScreenSource = JSON.parse(savedScreenSource);
-                          setStreamingScreenSource(parsedScreenSource);
-                        } catch (error) {
-                          console.error('Error parsing saved screen source:', error);
+                        const link = generateStreamUrl(streamingState.roomId);
+                        
+                        // Try modern clipboard API first
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(link);
+                          showAlert("Link berhasil disalin ke clipboard!", "success");
+                        } else {
+                          // Fallback for older browsers or non-secure contexts
+                          const textArea = document.createElement('textarea');
+                          textArea.value = link;
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          
+                          try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                              showAlert("Link berhasil disalin ke clipboard!", "success");
+                            } else {
+                              throw new Error('Copy command failed');
+                            }
+                          } catch (err) {
+                            // Show the link in a modal if clipboard fails
+                            showAlert(`Gagal menyalin ke clipboard. Silakan salin manual: ${link}`, "warning");
+                          } finally {
+                            document.body.removeChild(textArea);
+                          }
                         }
+                      } catch (error) {
+                        console.error('Error copying to clipboard:', error);
+                        showAlert("Gagal menyalin link ke clipboard. Silakan coba lagi.", "error");
                       }
-                      
-                      setShowStreamingLayoutEditor(true);
                     }}
                     style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
+                      flex: 1,
                       background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
                       color: COLORS.white,
                       border: "none",
                       borderRadius: 10,
-                      padding: "12px 16px",
-                      fontSize: "14px",
+                      padding: "8px 12px",
+                      fontSize: "12px",
                       fontWeight: 500,
                       cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
                       transition: "all 0.2s ease",
-                      boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)",
-                      marginBottom: "12px"
+                      boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
                     }}
                     onMouseOver={e => {
                       e.currentTarget.style.transform = "translateY(-2px)";
@@ -979,56 +881,102 @@ const AdminLiveStreamPage: React.FC = () => {
                       e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
                     }}
                   >
-                    <span style={{ fontSize: "16px" }}>🎛️</span>
-                    <span>Edit Layout</span>
+                    <span style={{ fontSize: "14px" }}>📋</span>
+                    <span>Salin Link</span>
                   </button>
-                )}
 
-                {/* Enhanced Stop Button */}
-                <button
-                  onClick={handleStopStream}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "10px",
-                    background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-                    color: COLORS.white,
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "16px 20px",
-                    fontSize: "15px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    boxShadow: "0 6px 20px rgba(239, 68, 68, 0.3)",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = "translateY(-3px)";
-                    e.currentTarget.style.boxShadow = "0 8px 25px rgba(239, 68, 68, 0.4)";
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(239, 68, 68, 0.3)";
-                  }}
-                >
-                  {/* Background Pattern */}
-                  <div style={{
-                    position: "absolute",
-                    top: "-20px",
-                    right: "-20px",
-                    width: "60px",
-                    height: "60px",
-                    background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)",
-                    borderRadius: "50%"
-                  }} />
-                  
-                  <span style={{ fontSize: "18px" }}>⏹️</span>
-                  <span style={{ position: "relative", zIndex: 1 }}>Hentikan Live Stream</span>
-                </button>
+                  {/* Edit Layout Button - Only show for multi-camera streaming with custom layout */}
+                  {streamingState.isStreaming && currentStreamingLayoutType === 'custom' && (
+                    <button
+                      onClick={() => {
+                        // Load current layout from localStorage
+                        const savedLayout = localStorage.getItem('streamingLayout');
+                        if (savedLayout) {
+                          try {
+                            const parsedLayout = JSON.parse(savedLayout);
+                            setStreamingLayouts(parsedLayout);
+                          } catch (error) {
+                            console.error('Error parsing saved streaming layout:', error);
+                          }
+                        }
+                        
+                        // Load screen source from localStorage
+                        const savedScreenSource = localStorage.getItem('screenSource');
+                        if (savedScreenSource) {
+                          try {
+                            const parsedScreenSource = JSON.parse(savedScreenSource);
+                            setStreamingScreenSource(parsedScreenSource);
+                          } catch (error) {
+                            console.error('Error parsing saved screen source:', error);
+                          }
+                        }
+                        
+                        setShowStreamingLayoutEditor(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+                        color: COLORS.white,
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "8px 12px",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
+                      }}
+                      onMouseOver={e => {
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(34, 197, 94, 0.4)";
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
+                      }}
+                    >
+                      <span style={{ fontSize: "14px" }}>🎛️</span>
+                      <span>Edit</span>
+                    </button>
+                  )}
+
+                  {/* Stop Button */}
+                  <button
+                    onClick={handleStopStream}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                      color: COLORS.white,
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)"
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(239, 68, 68, 0.4)";
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(239, 68, 68, 0.3)";
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>⏹️</span>
+                    <span>Hentikan</span>
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -1176,14 +1124,14 @@ const AdminLiveStreamPage: React.FC = () => {
           <div style={{
             backgroundColor: 'white',
             borderRadius: CARD_RADIUS,
-            padding: isMobile ? '20px' : '32px',
-            maxWidth: '1200px',
-            width: '100%',
-            maxHeight: '90vh',
+            padding: isMobile ? '12px' : '16px',
+            maxWidth: '480px',
+            width: '90%',
+            maxHeight: '85vh',
             overflow: 'auto',
             boxShadow: SHADOW,
             border: `1px solid ${COLORS.border}`,
-            margin: isMobile ? '10px' : '20px'
+            margin: isMobile ? '10px' : '0'
           }}>
             <div style={{
               display: 'flex',

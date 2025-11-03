@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useStreaming } from '../context/StreamingContext';
 import { FaVideo, FaUpload, FaStop, FaDownload, FaUser, FaBook, FaCamera, FaTimes } from 'react-icons/fa';
@@ -41,7 +42,9 @@ const COLORS = {
 const AnimatedDot = () => (
   <span style={{
     display: 'inline-block',
-    width: 8, height: 8, borderRadius: '50%',
+    width: 8, 
+    height: 8, 
+    borderRadius: '50%',
     background: COLORS.accent,
     marginRight: 6,
     animation: 'blink 1s infinite',
@@ -117,6 +120,7 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 );
 
 const AdminRecordingPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, token } = useAuth();
   const { streamingState, startCameraRecording, startScreenRecording, stopRecording, uploadRecording, cancelUpload, setSelectedKelas, setSelectedMapel, startMultiCameraRecording, updateRecordingLayout } = useStreaming();
   const [recordings, setRecordings] = useState<any[]>([]);
@@ -138,6 +142,11 @@ const AdminRecordingPage: React.FC = () => {
   const [showFinishedPage, setShowFinishedPage] = useState(false);
   const [finishedRecordingData, setFinishedRecordingData] = useState<any>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error', duration: number} | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [showDeleteVideoModal, setShowDeleteVideoModal] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -269,6 +278,11 @@ const AdminRecordingPage: React.FC = () => {
         type: 'success',
         duration: 3000,
       });
+      
+      // Redirect to recording page after upload
+      setTimeout(() => {
+        handleBackToRecording();
+      }, 1000);
     } catch (err) {
       console.error("Error uploading video:", err);
       setNotification({
@@ -315,6 +329,65 @@ const AdminRecordingPage: React.FC = () => {
         type: 'error',
         duration: 3000,
       });
+    }
+  };
+
+  const handlePlayVideo = (recording: any) => {
+    setSelectedVideo(recording);
+    setShowVideoModal(true);
+  };
+
+  const handleCloseVideoModal = () => {
+    setShowVideoModal(false);
+    setSelectedVideo(null);
+  };
+
+  const handleDeleteVideo = (recording: any) => {
+    setVideoToDelete(recording);
+    setShowDeleteVideoModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteVideoModal(false);
+    setVideoToDelete(null);
+  };
+
+  const confirmDeleteVideo = async () => {
+    if (!videoToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`${API_URL}/api/recording/${videoToDelete.id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+      
+      if (response.ok) {
+        setNotification({
+          message: 'Video berhasil dihapus!',
+          type: 'success',
+          duration: 3000,
+        });
+        fetchRecordings();
+      } else {
+        setNotification({
+          message: 'Gagal menghapus video.',
+          type: 'error',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      setNotification({
+        message: 'Gagal menghapus video.',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsDeleting(false);
+      handleCloseDeleteModal();
     }
   };
 
@@ -656,7 +729,7 @@ const AdminRecordingPage: React.FC = () => {
             onClick={handleBackToRecording}
             style={{
               padding: '12px 24px',
-              background: '#10b981',
+              background: '#ef4444',
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,
@@ -667,19 +740,19 @@ const AdminRecordingPage: React.FC = () => {
               alignItems: 'center',
               gap: '8px',
               transition: 'all 0.2s ease',
-              boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+              boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#059669';
+              e.currentTarget.style.background = '#dc2626';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#10b981';
+              e.currentTarget.style.background = '#ef4444';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            <i className="fas fa-video" style={{ fontSize: '14px' }}></i>
-            Buat Recording Baru
+            <i className="fas fa-times" style={{ fontSize: '14px' }}></i>
+            Batal
           </button>
         </div>
       </div>
@@ -754,6 +827,8 @@ const AdminRecordingPage: React.FC = () => {
             </div>
             <span style={{ height: 100, fontSize: 100, objectFit: 'contain', marginLeft: isMobile ? 0 : 32, marginTop: isMobile ? 18 : 0, display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 4px 24px #0002)' }}>🎥</span>
           </div>
+
+
           {/* Recording Controls */}
         <div style={{
           background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
@@ -821,38 +896,47 @@ const AdminRecordingPage: React.FC = () => {
                  
                     <button
                       onClick={handleStartMultiCameraRecording}
-                      disabled={streamingState.isRecording || streamingState.isScreenRecording}
+                      disabled={streamingState.isRecording || streamingState.isScreenRecording || streamingState.isStreaming}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '10px',
-                        background: 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
+                        background: streamingState.isStreaming 
+                          ? 'linear-gradient(135deg, #64748b 0%, #64748b 100%)' 
+                          : 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
                         color: "white",
                         border: 'none',
                         borderRadius: 16,
                         padding: '14px 24px',
                         fontSize: '15px',
                         fontWeight: 600,
-                        cursor: 'pointer',
-                        opacity: 1,
+                        cursor: streamingState.isStreaming ? 'not-allowed' : 'pointer',
+                        opacity: streamingState.isStreaming ? 0.6 : 1,
                         width: 'auto',
-                        boxShadow: '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
+                        boxShadow: streamingState.isStreaming
+                          ? 'none'
+                          : '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
                         transition: 'all 0.3s ease',
                         position: 'relative',
                         overflow: 'hidden',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
+                        if (!streamingState.isStreaming) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
+                        }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
+                        if (!streamingState.isStreaming) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
+                        }
                       }}
+                      title={streamingState.isStreaming ? 'Live streaming sedang aktif. Stop live streaming terlebih dahulu untuk memulai recording.' : ''}
                     >
                       <span style={{ fontSize: '18px' }}>🎥</span>
-                      Multi-Camera Recording
+                      Multi-Camera Recording {streamingState.isStreaming ? '(Live Streaming Aktif)' : ''}
                     </button>
                   </>
                 ) : (
@@ -878,6 +962,8 @@ const AdminRecordingPage: React.FC = () => {
                     <AnimatedDot />
                     {streamingState.isRecording ? 'Stop Recording' : 'Stop Screen Recording'}
                   </button>
+
+                  
                   
                   {/* Edit Layout Button - Only show for multi-camera recording with custom layout */}
                   {streamingState.isRecording && currentRecordingLayoutType === 'custom' && (
@@ -931,20 +1017,88 @@ const AdminRecordingPage: React.FC = () => {
               </div>
             </div>
 
-
-
-            {/* Status */}
-            {streamingState.status && (
+                      {/* Video List Section */}
+          {!streamingState.isRecording && !streamingState.isScreenRecording && recordings && recordings.length > 0 && (
+            <div style={{
+              background: '#ffffff',
+              borderRadius: 12,
+              padding: isMobile ? "16px" : "20px",
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e5e7eb',
+              marginBottom: '24px',
+            }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', marginBottom: '20px' }}>
+                Daftar Video Tersimpan
+              </h2>
+              
+              {/* Table Header */}
               <div style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                borderRadius: 6,
-                fontSize: '12px',
+                display: isMobile ? "none" : "grid",
+                gridTemplateColumns: "120px 1fr 100px 140px 120px",
+                gap: "12px",
+                padding: "16px 20px",
                 fontWeight: 500,
-                background: streamingState.status.includes('berhasil') ? '#d1fae5' : streamingState.status.includes('Error') ? '#fee2e2' : '#fef3c7',
-                color: streamingState.status.includes('berhasil') ? '#065f46' : streamingState.status.includes('Error') ? '#dc2626' : '#d97706',
+                color: '#6b7280',
+                fontSize: "14px",
+                background: '#f9fafb',
+                borderRadius: "12px 12px 0 0",
+                border: '1px solid #e5e7eb',
+                borderBottom: '1px solid #e5e7eb'
               }}>
-                {streamingState.status}
+                <div>Video</div>
+                <div style={{ textAlign: "center" }}>Judul</div>
+                <div style={{ textAlign: "center" }}>Durasi</div>
+                <div style={{ textAlign: "center" }}>Tanggal & Waktu</div>
+                <div style={{ textAlign: "center" }}>Aksi</div>
+              </div>
+
+              {/* Table Body */}
+              <div style={{
+                background: '#ffffff',
+                borderRadius: isMobile ? "12px" : "0 0 12px 12px",
+                border: '1px solid #e5e7eb',
+                borderTop: isMobile ? '1px solid #e5e7eb' : "none"
+              }}>
+                {recordings.slice(0, 10).map((recording: any, index: number) => (
+                  <div key={recording.id} style={{
+                    display: isMobile ? "block" : "grid",
+                    gridTemplateColumns: "120px 1fr 100px 140px 120px",
+                    gap: "12px",
+                    padding: "16px 20px",
+                    borderBottom: index < recordings.slice(0, 10).length - 1 ? '1px solid #e5e7eb' : "none",
+                    transition: "all 0.3s ease",
+                    background: "transparent"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                    <div style={{ display: isMobile ? "none" : "flex", alignItems: "center", justifyContent: "center", height: "70px", borderRadius: "8px", background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))', position: "relative", overflow: "hidden" }}>
+                      <video style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} muted preload="metadata" src={`${API_URL}/api/recording/download/${recording.filename}`} onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement!.innerHTML = '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;"><div style="font-size: 24px;">📹</div></div>'; }} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", minHeight: "70px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 500, color: '#6b7280', lineHeight: 1.3 }}>{recording.judul || recording.filename}</div>
+                    </div>
+                    <div style={{ display: isMobile ? "none" : "flex", justifyContent: "center", alignItems: "center", fontSize: "13px", color: '#6b7280' }}>
+                      {recording.duration ? `${Math.floor(recording.duration / 60)}m` : '0m'}
+                    </div>
+                    <div style={{ display: isMobile ? "none" : "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", fontSize: "13px", color: '#6b7280' }}>
+                      <div style={{ fontWeight: 500, marginBottom: "2px" }}>{new Date(recording.uploadedAt || recording.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
+                      <div style={{ color: '#9ca3af', fontSize: "11px" }}>{new Date(recording.uploadedAt || recording.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px" }}>
+                      <button onClick={() => handlePlayVideo(recording)} style={{ padding: "8px", background: '#ffffff', color: '#10b981', border: "1px solid #10b981", borderRadius: 8, fontSize: "12px", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = '#ffffff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#10b981'; }}>
+                        <i className="fas fa-play" style={{ fontSize: "12px" }}></i>
+                </button>
+                      <button onClick={() => handleDeleteVideo(recording)} style={{ padding: "8px", background: '#ffffff', color: '#ef4444', border: "1px solid #ef4444", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease", fontSize: "12px", fontWeight: 500 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#ffffff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#ef4444'; }}>
+                        <i className="fas fa-trash" style={{ fontSize: "12px" }}></i>
+                </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
               </div>
             )}
 
@@ -1194,10 +1348,10 @@ const AdminRecordingPage: React.FC = () => {
             <div style={{
               background: COLORS.white,
               borderRadius: CARD_RADIUS,
-              padding: isMobile ? '20px' : '32px',
-              maxWidth: '1200px',
-              width: '100%',
-              maxHeight: '90vh',
+              padding: isMobile ? '20px' : '24px',
+              maxWidth: '480px',
+              width: '90%',
+              maxHeight: '80vh',
               overflow: 'auto',
               boxShadow: SHADOW,
               border: `1px solid ${COLORS.border}`,
@@ -1207,18 +1361,18 @@ const AdminRecordingPage: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: isMobile ? 'flex-start' : 'center',
-                marginBottom: '24px',
+                marginBottom: '16px',
                 flexDirection: isMobile ? 'column' : 'row',
                 gap: isMobile ? '12px' : '0'
               }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px'
+                  gap: '8px'
                 }}>
                   <div style={{
-                    width: isMobile ? 32 : 40,
-                    height: isMobile ? 32 : 40,
+                    width: isMobile ? 28 : 32,
+                    height: isMobile ? 28 : 32,
                     borderRadius: 8,
                     background: COLORS.primary,
                     display: 'flex',
@@ -1226,12 +1380,12 @@ const AdminRecordingPage: React.FC = () => {
                     justifyContent: 'center',
                     color: COLORS.white,
                   }}>
-                    <FaCamera size={isMobile ? 14 : 16} />
+                    <FaCamera size={isMobile ? 12 : 14} />
                   </div>
                   <h3 style={{
                     margin: 0,
-                    fontSize: isMobile ? '18px' : '24px',
-                    fontWeight: 700,
+                    fontSize: isMobile ? '16px' : '18px',
+                    fontWeight: 600,
                     color: COLORS.text,
                     fontFamily: FONT_FAMILY
                   }}>
@@ -1348,6 +1502,170 @@ const AdminRecordingPage: React.FC = () => {
             </div>
           </div>
         )}
+
+      {/* Video Player Modal */}
+      {showVideoModal && selectedVideo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: '16px',
+            maxWidth: '800px',
+            maxHeight: '80vh',
+            width: '90%',
+            position: 'relative'
+          }}>
+            <button onClick={handleCloseVideoModal} style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              zIndex: 10001
+            }}>
+              ✕
+            </button>
+            <h3 style={{
+              margin: '0 0 12px 0',
+              fontSize: '16px',
+              fontWeight: 600,
+              color: '#1e293b'
+            }}>
+              {selectedVideo.judul || selectedVideo.filename}
+            </h3>
+            <div style={{
+              width: '100%',
+              margin: '0 auto'
+            }}>
+              <video
+                controls
+                autoPlay
+                style={{
+                  width: '100%',
+                  maxHeight: '400px',
+                  borderRadius: 8,
+                  border: '1px solid #e5e7eb'
+                }}
+                src={`${API_URL}/api/recording/download/${selectedVideo.filename}`}
+              >
+                Browser Anda tidak mendukung video player.
+              </video>
+            </div>
+            <div style={{
+              marginTop: '12px',
+              fontSize: '13px',
+              color: '#64748b'
+            }}>
+              <strong>Tanggal:</strong> {new Date(selectedVideo.uploadedAt || selectedVideo.createdAt).toLocaleString('id-ID')}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Video Confirmation Modal */}
+      {showDeleteVideoModal && videoToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: '32px',
+            maxWidth: '400px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+          }}>
+            <button onClick={handleCloseDeleteModal} style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              background: 'transparent',
+              color: '#64748b',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              zIndex: 10001
+            }}>
+              ✕
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: 600, color: '#1e293b' }}>
+                Hapus Video?
+              </h3>
+              <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
+                Apakah Anda yakin ingin menghapus video <strong>"{videoToDelete.judul || videoToDelete.filename}"</strong>?
+                <br /><br />
+                <strong style={{ color: '#ef4444' }}>Tindakan ini tidak dapat dibatalkan!</strong>
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button onClick={handleCloseDeleteModal} disabled={isDeleting} style={{
+                  padding: '12px 24px',
+                  background: '#e5e7eb',
+                  color: '#1e293b',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer'
+                }}>
+                  Batal
+                </button>
+                <button onClick={confirmDeleteVideo} disabled={isDeleting} style={{
+                  padding: '12px 24px',
+                  background: isDeleting ? '#64748b' : '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer'
+                }}>
+                  {isDeleting ? '⏳ Menghapus...' : '🗑️ Ya, Hapus'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
         </div>
       </div>
     </>

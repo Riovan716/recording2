@@ -206,10 +206,6 @@ const AdminDashboard: React.FC = () => {
             <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.totalRecordings}
             </div>
-            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <i className="fas fa-arrow-up"></i>
-              <span>13% dari bulan lalu</span>
-            </div>
           </div>
         </div>
 
@@ -239,10 +235,6 @@ const AdminDashboard: React.FC = () => {
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>Total Stream</div>
             <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.totalStreams}
-            </div>
-            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <i className="fas fa-arrow-up"></i>
-              <span>13% dari bulan lalu</span>
             </div>
           </div>
         </div>
@@ -274,10 +266,6 @@ const AdminDashboard: React.FC = () => {
             <div style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
               {loading ? '...' : stats.activeStreams}
             </div>
-            <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <i className="fas fa-arrow-up"></i>
-              <span>13% dari minggu lalu</span>
-            </div>
           </div>
         </div>
       </div>
@@ -285,7 +273,7 @@ const AdminDashboard: React.FC = () => {
       {/* Main Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '2fr 1fr',
+        gridTemplateColumns: '1fr',
         gap: isMobile ? '16px' : '32px',
       }}>
         {/* Left Column */}
@@ -386,65 +374,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column */}
-        <div>
-
-
-          {/* Quick Actions */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-          }}>
-            <div style={{ padding: '24px 24px 0 24px' }}>
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: 700,
-                margin: 0,
-                color: '#1e293b',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}>
-                <i className="fas fa-zap"></i>
-                Quick Actions
-              </h2>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '12px',
-              }}>
-                {[
-                  { icon: 'fas fa-play', text: 'Start Stream' },
-                  { icon: 'fas fa-disc', text: 'New Recording' },
-                  { icon: 'fas fa-gear', text: 'Settings' },
-                  { icon: 'fas fa-file-download', text: 'Download' },
-                ].map((action, index) => (
-                  <button key={index} style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#1e293b',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                  }}>
-                    <i className={action.icon} style={{ fontSize: '16px' }}></i>
-                    <span>{action.text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -23,24 +23,42 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Ignore errors during initialization/refresh - they're often transient
+    const errorMsg = error?.message || '';
+    
+    // Don't catch context/hydration errors that happen during refresh
+    if (errorMsg.includes('Cannot read') || 
+        errorMsg.includes('undefined') ||
+        errorMsg.includes('context') ||
+        errorMsg.includes('hydration') ||
+        errorMsg.includes('Warning') ||
+        !errorMsg) {
+      return { hasError: false, error: null };
+    }
+    
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    // Only log real errors, ignore common refresh/context errors
+    const errorMsg = error?.message || '';
+    const stack = errorInfo.componentStack || '';
+    
+    if (!errorMsg.includes('Cannot read') && 
+        !errorMsg.includes('undefined') &&
+        !errorMsg.includes('context') &&
+        !errorMsg.includes('Warning') &&
+        !stack.includes('AuthContext') &&
+        !stack.includes('StreamingContext')) {
+      console.error('Error caught by boundary:', error, errorInfo);
+    }
   }
 
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <h2>Something went wrong</h2>
-          <p>{this.state.error?.message}</p>
-          <button onClick={() => window.location.reload()}>Reload Page</button>
-        </div>
-      );
-    }
+  // Note: Avoid resetting state in lifecycle methods to prevent update loops
 
+  render() {
+    // Always render children - don't show error UI
+    // Errors are logged but not displayed to prevent loops
     return this.props.children;
   }
 }

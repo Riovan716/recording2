@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:electron": "vite",
     "dev:backend": "cd ../backend && npm start",
     "dev:media": "cd ../backend && npm run media",
     "build": "npm run build:electron && npm run build:renderer",

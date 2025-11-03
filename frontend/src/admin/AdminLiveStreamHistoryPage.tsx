@@ -335,7 +335,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             Memuat...
           </div>
           <div style={{ fontSize: "14px" }}>
-            Menyiapkan data history live streaming
+            Menyiapkan data History Streaming
           </div>
         </div>
       </div>
@@ -381,26 +381,10 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
           <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>
-            History Live Streaming
+            History Streaming
           </div>
           <div style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
             Selamat datang, {user?.name || 'Admin'}! Lihat riwayat live streaming yang telah dilakukan.
-          </div>
-        </div>
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '120px',
-          height: '120px',
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
-          borderRadius: '12px',
-          marginLeft: isMobile ? 0 : 32,
-          marginTop: isMobile ? 18 : 0,
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <div style={{ fontSize: '24px', color: '#10b981' }}>📊</div>
-            <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>Analytics</div>
           </div>
         </div>
       </div>
@@ -436,7 +420,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             }}
           >
             <i className="fas fa-history" style={{ fontSize: '16px' }}></i>
-            History Live Streaming <span style={{ color: '#1f2937', fontWeight: 600 }}>({filteredAndSortedHistory.length})</span>
+            History Streaming <span style={{ color: '#1f2937', fontWeight: 600 }}>({filteredAndSortedHistory.length})</span>
           </h2>
           
           <button
@@ -589,7 +573,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
           >
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>📺</div>
             <div style={{ fontSize: "18px", fontWeight: 500, marginBottom: "8px" }}>
-              Belum ada history live streaming
+              Belum ada History Streaming
             </div>
             <div style={{ fontSize: "14px" }}>
               Mulai live streaming untuk melihat history di sini
@@ -617,7 +601,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                 borderBottom: '1px solid #e5e7eb'
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  Thumbnail
+                  video
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
                   Judul
@@ -876,16 +860,18 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                     flexWrap: "wrap",
                   }}>
                     <button
-                      onClick={() => handlePlayVideo(stream)}
+                      onClick={() => stream.status !== 'active' && handlePlayVideo(stream)}
+                      disabled={stream.status === 'active'}
+                      title={stream.status === 'active' ? 'Stream masih berlangsung. Tidak dapat ditonton saat Live.' : 'Tonton rekaman'}
                       style={{
                         padding: "8px",
-                        background: '#ffffff',
-                        color: '#10b981',
-                        border: "1px solid #10b981",
+                        background: stream.status === 'active' ? '#f3f4f6' : '#ffffff',
+                        color: stream.status === 'active' ? '#9ca3af' : '#10b981',
+                        border: stream.status === 'active' ? "1px solid #d1d5db" : "1px solid #10b981",
                         borderRadius: 8,
                         fontSize: "12px",
                         fontWeight: 500,
-                        cursor: "pointer",
+                        cursor: stream.status === 'active' ? "not-allowed" : "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -894,20 +880,25 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
                         flex: isMobile ? "1 1 auto" : "0 0 auto",
                         minWidth: isMobile ? "50px" : "40px",
                         height: "36px",
+                        opacity: stream.status === 'active' ? 0.6 : 1,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#10b981';
-                        e.currentTarget.style.color = '#ffffff';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        if (stream.status !== 'active') {
+                          e.currentTarget.style.background = '#10b981';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#ffffff';
-                        e.currentTarget.style.color = '#10b981';
-                        e.currentTarget.style.transform = 'translateY(0)';
+                        if (stream.status !== 'active') {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.color = '#10b981';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
                       }}
                     >
                       <i className="fas fa-play" style={{ fontSize: "12px" }}></i>
-                      {isMobile && "Play"}
+                      {isMobile && "Tonton"}
                     </button>
 
                     <button

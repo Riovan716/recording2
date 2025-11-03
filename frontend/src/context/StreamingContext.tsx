@@ -1772,7 +1772,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       updateStatus(`Recording ${selectedCameras.length} kamera${screenSource ? ' + layar' : ''} berjalan...`);
 
     } catch (error: any) {
-      console.error("Error starting multi-camera recording:", error);
+      console.error("Error starting Multi-Camera Recorder:", error);
       updateStatus(error.message || "Gagal memulai recording multi-kamera.");
     }
   };

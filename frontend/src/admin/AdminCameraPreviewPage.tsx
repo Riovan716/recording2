@@ -33,12 +33,48 @@ const AdminCameraPreviewPage: React.FC = () => {
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       
       setAvailableCameras(videoDevices);
+      
+      // Automatically start all camera streams
+      await startAllCameraStreams(videoDevices);
     } catch (err) {
       console.error('Error getting cameras:', err);
       setError('Gagal mengakses kamera. Pastikan izin kamera sudah diberikan.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Start all camera streams automatically
+  const startAllCameraStreams = async (cameras: CameraDevice[]) => {
+    // Stop existing streams first
+    setActiveStreams(prev => {
+      prev.forEach(streamData => {
+        streamData.stream.getTracks().forEach(track => track.stop());
+      });
+      return [];
+    });
+
+    // Start all cameras
+    const streamPromises = cameras.map(async (camera) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: camera.deviceId } },
+          audio: false
+        });
+
+        const label = camera.label || `Kamera ${camera.deviceId.slice(0, 8)}`;
+        
+        return { deviceId: camera.deviceId, stream, label };
+      } catch (err) {
+        console.error(`Error starting camera ${camera.label}:`, err);
+        return null;
+      }
+    });
+
+    const streams = await Promise.all(streamPromises);
+    const validStreams = streams.filter(stream => stream !== null) as CameraStream[];
+    
+    setActiveStreams(validStreams);
   };
 
   // Start camera stream
@@ -148,7 +184,7 @@ const AdminCameraPreviewPage: React.FC = () => {
               color: '#64748b',
               margin: '0'
             }}>
-              Lihat dan kelola kamera yang tersambung ke device
+              Semua kamera yang terdeteksi akan ditampilkan otomatis
             </p>
           </div>
           
@@ -231,125 +267,37 @@ const AdminCameraPreviewPage: React.FC = () => {
           </div>
         )}
 
-        {/* Camera List */}
-        <div style={{
-          background: '#f8fafc',
-          borderRadius: '12px',
-          padding: '16px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#1e293b',
-            margin: '0 0 16px 0'
+        {/* Loading or No Cameras Message */}
+        {isLoading && (
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: '12px',
+            padding: '32px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'center',
+            color: '#64748b'
           }}>
-            Kamera Tersedia ({availableCameras.length})
-          </h3>
-          
-          {availableCameras.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '32px',
-              color: '#64748b'
-            }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>📹</div>
-              <p style={{ margin: '0', fontSize: '14px' }}>
-                {isLoading ? 'Mencari kamera...' : 'Tidak ada kamera yang ditemukan'}
-              </p>
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '12px'
-            }}>
-              {availableCameras.map((camera) => {
-                const isActive = activeStreams.find(s => s.deviceId === camera.deviceId);
-                
-                return (
-                  <div
-                    key={camera.deviceId}
-                    style={{
-                      background: 'white',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      border: `2px solid ${isActive ? '#10b981' : '#e2e8f0'}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      position: 'relative'
-                    }}
-                    onClick={() => toggleCameraSelection(camera.deviceId)}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = isActive ? '#059669' : '#cbd5e1';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = isActive ? '#10b981' : '#e2e8f0';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      marginBottom: '8px'
-                    }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        background: isActive ? '#10b981' : '#f1f5f9',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: isActive ? 'white' : '#64748b'
-                      }}>
-                        📹
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          marginBottom: '4px'
-                        }}>
-                          {camera.label || `Kamera ${camera.deviceId.slice(0, 8)}`}
-                        </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b'
-                        }}>
-                          ID: {camera.deviceId.slice(0, 16)}...
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontSize: '12px',
-                      color: '#64748b'
-                    }}>
-                      <span style={{
-                        background: isActive ? '#dcfce7' : '#f1f5f9',
-                        color: isActive ? '#166534' : '#64748b',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontWeight: '500'
-                      }}>
-                        {isActive ? 'Aktif' : 'Klik untuk mulai'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📹</div>
+            <p style={{ margin: '0', fontSize: '14px' }}>
+              Mencari kamera...
+            </p>
+          </div>
+        )}
+        {!isLoading && availableCameras.length === 0 && activeStreams.length === 0 && (
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: '12px',
+            padding: '32px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'center',
+            color: '#64748b'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📹</div>
+            <p style={{ margin: '0', fontSize: '14px' }}>
+              Tidak ada kamera yang ditemukan
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Camera Previews */}

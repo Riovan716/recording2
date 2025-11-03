@@ -22,9 +22,7 @@ const menu = [
   { label: 'Live Stream', path: '/admin/dashboard/livestream', icon: 'fas fa-wifi' },
   { label: 'History', path: '/admin/dashboard/livestream-history', icon: 'fas fa-clock' },
   { label: 'Recording', path: '/admin/dashboard/recording', icon: 'fas fa-video' },
-  { label: 'Daftar Video', path: '/admin/dashboard/videos', icon: 'fas fa-play-circle' },
   { label: 'Camera', path: '/admin/dashboard/camera-preview', icon: 'fas fa-camera' },
-  { label: 'Profile', path: '/admin/dashboard/profile', icon: 'fas fa-user' },
 ];
 
 const fontFamily = 'Inter, Segoe UI, Poppins, Arial, sans-serif';
@@ -56,7 +54,6 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     // Set initial state based on screen size
     if (typeof window !== 'undefined') {
@@ -99,11 +96,6 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [currentMobileOpen]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   const handleMobileToggle = () => {
     setCurrentMobileOpen(!currentMobileOpen);
@@ -216,6 +208,28 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                   }}>
                     Snap Room
                   </div>
+                  <div style={{ 
+                    margin: 0,
+                    marginTop: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 7,
+                    color: COLORS.sidebarText,
+                    fontWeight: 400,
+                    opacity: 0.6
+                  }}>
+                    <span>Powered by</span>
+                    <img 
+                      src="/assets/umalo.png" 
+                      alt="Umalo" 
+                      style={{ 
+                        height: '10px', 
+                        width: 'auto',
+                        objectFit: 'contain'
+                      }} 
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -293,60 +307,6 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
             </ul>
           </nav>
 
-          {/* Mobile Logout */}
-          {user && (
-            <div style={{ 
-              width: '100%',
-              padding: '16px 16px',
-              borderTop: `1px solid ${COLORS.divider}`,
-              background: COLORS.sidebarBg,
-            }}>
-              <button
-                onClick={handleLogout}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  gap: 0,
-                  padding: '14px 16px',
-                  borderRadius: 12,
-                  background: 'transparent',
-                  color: COLORS.sidebarText,
-                  fontWeight: 600,
-                  fontSize: 15,
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                  outline: 'none',
-                  fontFamily,
-                }}
-                aria-label="Logout"
-                onMouseOver={e => {
-                  e.currentTarget.style.background = COLORS.sidebarHoverBg;
-                  e.currentTarget.style.color = COLORS.sidebarActiveText;
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = COLORS.sidebarText;
-                }}
-              >
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  marginRight: 12,
-                  width: 24,
-                  height: 24,
-                  color: COLORS.logoutText,
-                }}>
-                  <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
-                </span>
-                Logout
-              </button>
-            </div>
-          )}
         </aside>
       </>
     );
@@ -468,7 +428,29 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                   fontWeight: 1000,
                   opacity: 0.9
                 }}>
-                  Snap Room
+                  Snap Stream
+                </div>
+                <div style={{ 
+                  margin: 0,
+                  marginTop: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 8,
+                  color: COLORS.sidebarText,
+                  fontWeight: 400,
+                  opacity: 0.6
+                }}>
+                  <span>Powered by</span>
+                  <img 
+                    src="/assets/umalo.png" 
+                    alt="Umalo" 
+                    style={{ 
+                      height: '12px', 
+                      width: 'auto',
+                      objectFit: 'contain'
+                    }} 
+                  />
                 </div>
               </div>
             </>
@@ -553,60 +535,6 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
         </ul>
       </nav>
 
-      {/* Logout section */}
-      {user && (
-        <div style={{ 
-          width: '100%',
-          padding: collapsed ? '16px 8px' : '16px 16px',
-          borderTop: `1px solid ${COLORS.divider}`,
-          background: COLORS.sidebarBg,
-        }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              gap: 0,
-              padding: collapsed ? '14px 0' : '14px 16px',
-              borderRadius: 12,
-              background: 'transparent',
-              color: COLORS.sidebarText,
-              fontWeight: 600,
-              fontSize: 15,
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              fontFamily,
-            }}
-            aria-label="Logout"
-            onMouseOver={e => {
-              e.currentTarget.style.background = COLORS.sidebarHoverBg;
-              e.currentTarget.style.color = COLORS.sidebarActiveText;
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = COLORS.sidebarText;
-            }}
-          >
-            <span style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              marginRight: collapsed ? 0 : 12,
-              width: 24,
-              height: 24,
-              color: COLORS.logoutText,
-            }}>
-              <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
-            </span>
-            {!collapsed && 'Logout'}
-          </button>
-        </div>
-      )}
     </aside>
   );
 };

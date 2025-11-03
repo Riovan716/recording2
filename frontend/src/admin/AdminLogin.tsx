@@ -25,14 +25,9 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
 
-  // Redirect to dashboard if already authenticated
-  React.useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/admin/dashboard');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  // Note: Auto-redirect removed - users must explicitly log in even if token exists
 
   // Handle window resize
   React.useEffect(() => {
@@ -131,6 +126,37 @@ const AdminLogin = () => {
       color: TEXT_DARK,
       overflow: 'hidden',
     }}>
+      {/* Floating Particles */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}>
+        {[...Array(20)].map((_, i) => {
+          const isReverse = i % 2 === 0;
+          const duration = 15 + (i % 10) * 2;
+          const delay = (i % 5) * 0.5;
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: `${4 + (i % 4) * 2}px`,
+                height: `${4 + (i % 4) * 2}px`,
+                background: `rgba(16, 185, 129, ${0.2 + (i % 3) * 0.1})`,
+                borderRadius: '50%',
+                left: `${(i * 5) % 100}%`,
+                top: `${100 + (i % 20)}%`,
+                animation: `${isReverse ? 'floatParticleReverse' : 'floatParticle'} ${duration}s ease-in-out infinite`,
+                animationDelay: `${delay}s`,
+              }}
+            />
+          );
+        })}
+      </div>
+
       {/* Background Animation */}
       <div style={{
         position: 'fixed',
@@ -225,6 +251,7 @@ const AdminLogin = () => {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
+            animation: 'fadeInLeft 0.8s ease-out',
           }}>
             <div style={{
               display: 'flex',
@@ -248,6 +275,7 @@ const AdminLogin = () => {
                   color: 'white',
                   fontSize: '32px',
                   boxShadow: '0 8px 24px rgba(16, 185, 129, 0.2)',
+                  animation: 'floatLogo 3s ease-in-out infinite',
                 }}>
                   <img 
                     src="/assets/menu.png" 
@@ -335,6 +363,8 @@ const AdminLogin = () => {
                   gap: '12px',
                   transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
+                  animation: 'floatCard 4s ease-in-out infinite',
+                  animationDelay: '0s',
                 }}>
                   <div style={{
                     width: '44px',
@@ -373,6 +403,8 @@ const AdminLogin = () => {
                   gap: '12px',
                   transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
+                  animation: 'floatCard 4s ease-in-out infinite',
+                  animationDelay: '0.5s',
                 }}>
                   <div style={{
                     width: '44px',
@@ -411,6 +443,8 @@ const AdminLogin = () => {
                   gap: '12px',
                   transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
+                  animation: 'floatCard 4s ease-in-out infinite',
+                  animationDelay: '1s',
                 }}>
                   <div style={{
                     width: '44px',
@@ -449,6 +483,8 @@ const AdminLogin = () => {
                   gap: '12px',
                   transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
+                  animation: 'floatCard 4s ease-in-out infinite',
+                  animationDelay: '1.5s',
                 }}>
                   <div style={{
                     width: '44px',
@@ -487,6 +523,7 @@ const AdminLogin = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          animation: 'fadeInRight 0.8s ease-out',
         }}>
           <div style={{
             width: '100%',
@@ -671,6 +708,7 @@ const AdminLogin = () => {
                   boxShadow: '0 8px 20px rgba(16, 185, 129, 0.2)',
                   position: 'relative',
                   overflow: 'hidden',
+                  animation: 'pulseButton 2s ease-in-out infinite',
                 }}
                 onMouseOver={e => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
@@ -750,6 +788,95 @@ const AdminLogin = () => {
         @keyframes float-blob {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(30px, 30px); }
+        }
+
+        @keyframes fadeInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes fadeInRight {
+          from {
+            opacity: 0;
+            transform: translateX(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes floatLogo {
+          0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-10px) rotate(5deg);
+          }
+        }
+
+        @keyframes floatCard {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+
+        @keyframes pulseButton {
+          0%, 100% {
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+          }
+          50% {
+            box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
+          }
+        }
+
+        @keyframes floatParticle {
+          0% {
+            transform: translateY(100vh) translateX(0px);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-10vh) translateX(100px);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes floatParticleReverse {
+          0% {
+            transform: translateY(100vh) translateX(0px);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-10vh) translateX(-100px);
+            opacity: 0;
+          }
+        }
+
+        /* Input focus animations */
+        input:focus + div,
+        input:focus ~ div {
+          border-color: ${PRIMARY} !important;
         }
       `}</style>
     </div>
