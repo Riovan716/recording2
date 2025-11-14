@@ -62,7 +62,7 @@ app.get('/stream/:roomId', (req, res) => {
     try {
       // Create consumer transport for this stream
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -404,7 +404,7 @@ app.get('/webrtc-stream/:roomId', (req, res) => {
       '3. Use the consumer to get video data',
       '4. Feed the video data to FFmpeg for YouTube RTMP'
     ],
-    webrtcUrl: `ws://192.168.1.14:4000`,
+    webrtcUrl: `ws://192.168.1.6:4000`,
     producerId: roomProducers.video.id
   });
 });
@@ -428,7 +428,7 @@ app.get('/direct-video/:roomId', async (req, res) => {
   try {
     // Create a consumer transport to get video data
     const consumerTransport = await router.createWebRtcTransport({
-      listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
+      listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
       enableUdp: true,
       enableTcp: true,
       preferUdp: true
@@ -674,7 +674,7 @@ io.on('connection', socket => {
   socket.on('createProducerTransport', async (_, cb) => {
     try {
       const producerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -753,7 +753,7 @@ io.on('connection', socket => {
   socket.on('createConsumerTransport', async (_, cb) => {
     try {
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.14', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -1011,6 +1011,6 @@ io.on('connection', socket => {
 });
 
 const PORT = 4000;
-server.listen(PORT, '192.168.1.14', () => {
-  console.log(`MediaSoup server running on http://192.168.1.14:${PORT}`);
+server.listen(PORT, '192.168.1.6', () => {
+  console.log(`MediaSoup server running on http://192.168.1.6:${PORT}`);
 }); 

@@ -121,9 +121,15 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <AdminSidebar mobileOpen={mobileOpen} onMobileToggle={handleMobileToggle} />
-      <div style={{ flex: 1, background: '#f6f8fa' }}>
+      <div style={{ 
+        flex: 1, 
+        background: '#f6f8fa',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh'
+      }}>
         {/* Top Bar */}
         <div style={{
           background: 'white',
@@ -132,7 +138,11 @@ const AdminPanel: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '16px'
+          gap: '16px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          flexShrink: 0
         }}>
           {/* Mobile Hamburger Button - Always show on mobile for testing */}
           <button
@@ -323,14 +333,16 @@ const AdminPanel: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <Routes>
-          <Route index element={<AdminDashboard />} />
-          <Route path="livestream" element={<AdminLiveStreamPage />} />
-          <Route path="livestream-history" element={<AdminLiveStreamHistoryPage />} />
-          <Route path="recording" element={<AdminRecordingPage />} />
-          <Route path="camera-preview" element={<AdminCameraPreviewPage />} />
-          <Route path="profile" element={<AdminProfilePage />} />
-        </Routes>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <Routes>
+            <Route index element={<AdminDashboard />} />
+            <Route path="livestream" element={<AdminLiveStreamPage />} />
+            <Route path="livestream-history" element={<AdminLiveStreamHistoryPage />} />
+            <Route path="recording" element={<AdminRecordingPage />} />
+            <Route path="camera-preview" element={<AdminCameraPreviewPage />} />
+            <Route path="profile" element={<AdminProfilePage />} />
+          </Routes>
+        </div>
       </div>
     </div>
   );
