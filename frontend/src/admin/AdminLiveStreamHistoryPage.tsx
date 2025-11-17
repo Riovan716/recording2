@@ -527,40 +527,6 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             />
           </div>
 
-          {/* Filter Button */}
-          <div style={{ flex: '0 0 auto', alignSelf: 'flex-end' }}>
-            <button
-              onClick={() => {
-                // Apply filters logic here
-                console.log('Applying filters...');
-              }}
-              style={{
-                padding: '12px 16px',
-                background: '#10b981',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#059669';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#10b981';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <i className="fas fa-filter" style={{ fontSize: '12px' }}></i>
-              Filter
-            </button>
-          </div>
         </div>
         
         {filteredAndSortedHistory.length === 0 ? (
