@@ -62,7 +62,7 @@ app.get('/stream/:roomId', (req, res) => {
     try {
       // Create consumer transport for this stream
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -404,7 +404,7 @@ app.get('/webrtc-stream/:roomId', (req, res) => {
       '3. Use the consumer to get video data',
       '4. Feed the video data to FFmpeg for YouTube RTMP'
     ],
-    webrtcUrl: `ws://192.168.1.6:4000`,
+    webrtcUrl: `ws://192.168.1.19:4000`,
     producerId: roomProducers.video.id
   });
 });
@@ -428,7 +428,7 @@ app.get('/direct-video/:roomId', async (req, res) => {
   try {
     // Create a consumer transport to get video data
     const consumerTransport = await router.createWebRtcTransport({
-      listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
+      listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
       enableUdp: true,
       enableTcp: true,
       preferUdp: true
@@ -655,6 +655,53 @@ io.on('connection', socket => {
     socket.join(roomId);
   });
 
+  // Handle chat room joining
+  socket.on('joinChatRoom', ({ roomId, username, isAdmin }) => {
+    console.log(`[Chat] Socket ${socket.id} (${username}) joining chat room ${roomId}`);
+    socket.join(roomId);
+    socket.data = { ...socket.data, username, isAdmin, roomId };
+    
+    // Notify others that user joined (optional)
+    socket.to(roomId).emit('chatMessage', {
+      id: `system-${Date.now()}`,
+      username: 'System',
+      message: `${username} bergabung ke chat`,
+      timestamp: new Date().toISOString(),
+      isSystem: true
+    });
+  });
+
+  // Handle chat messages
+  socket.on('sendChatMessage', ({ roomId, id, username, message, timestamp, isAdmin }) => {
+    console.log(`[Chat] Message from ${username} (Admin: ${isAdmin}) in room ${roomId}: ${message}`);
+    
+    // Validate message
+    if (!message || !message.trim() || !roomId) {
+      console.log(`[Chat] Invalid message or roomId`);
+      return;
+    }
+
+    // Sanitize message (prevent XSS)
+    const sanitizedMessage = message.trim().substring(0, 500); // Max 500 characters
+
+    const chatMessage = {
+      id: id || `msg-${Date.now()}-${socket.id}`,
+      username: username || 'Anonymous',
+      message: sanitizedMessage,
+      timestamp: timestamp || new Date().toISOString(),
+      isAdmin: Boolean(isAdmin) // Ensure boolean value
+    };
+
+    console.log(`[Chat] Prepared message:`, { id: chatMessage.id, username: chatMessage.username, isAdmin: chatMessage.isAdmin, message: chatMessage.message });
+
+    // Broadcast to ALL users in the room (including sender) to ensure consistency
+    const room = io.sockets.adapter.rooms.get(roomId);
+    const roomSize = room ? room.size : 0;
+    console.log(`[Chat] Broadcasting to room ${roomId} with ${roomSize} users`);
+    io.to(roomId).emit('chatMessage', chatMessage);
+    console.log(`[Chat] ✅ Broadcasted message to room ${roomId} - Message ID: ${chatMessage.id} - Recipients: ${roomSize} users - Admin: ${chatMessage.isAdmin}`);
+  });
+
   // Handle stream ended notification
   socket.on('streamEnded', ({ roomId }) => {
     console.log(`[StreamEnded] Admin ended stream for room: ${roomId}`);
@@ -674,7 +721,7 @@ io.on('connection', socket => {
   socket.on('createProducerTransport', async (_, cb) => {
     try {
       const producerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -753,7 +800,7 @@ io.on('connection', socket => {
   socket.on('createConsumerTransport', async (_, cb) => {
     try {
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.6', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -1011,6 +1058,6 @@ io.on('connection', socket => {
 });
 
 const PORT = 4000;
-server.listen(PORT, '192.168.1.6', () => {
-  console.log(`MediaSoup server running on http://192.168.1.6:${PORT}`);
+server.listen(PORT, '192.168.1.19', () => {
+  console.log(`MediaSoup server running on http://192.168.1.19:${PORT}`);
 }); 

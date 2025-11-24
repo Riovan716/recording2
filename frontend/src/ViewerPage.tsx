@@ -3,26 +3,24 @@ import { useParams } from 'react-router-dom';
 import { API_URL } from './config';
 import { io } from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
+import ChatSidebar from './components/ChatSidebar';
 
-// Color palette konsisten
-const LIGHT_GREEN = "#BBF7D0";
-const WHITE = "#fff";
-const GRAY_TEXT = "#64748b";
-const CARD_RADIUS = 18;
-const SHADOW = "0 4px 24px rgba(187,247,208,0.12)";
-const FONT_FAMILY = "Poppins, Inter, Segoe UI, Arial, sans-serif";
-
+// YouTube-like color palette
 const COLORS = {
-  primary: LIGHT_GREEN,
-  primaryDark: "#86EFAC",
-  text: "#1e293b",
-  subtext: GRAY_TEXT,
-  border: "#e5e7eb",
-  bg: "#f5f5f5",
-  white: WHITE,
-  red: "#ef4444",
-  green: "#22c55e",
+  background: '#0f0f0f',
+  surface: '#ffffff',
+  surfaceDark: '#272727',
+  text: '#0f0f0f',
+  textSecondary: '#606060',
+  textTertiary: '#aaaaaa',
+  border: '#e5e5e5',
+  red: '#ff0000',
+  redDark: '#cc0000',
+  blue: '#065fd4',
+  hover: '#f5f5f5',
 };
+
+const FONT_FAMILY = '"Roboto", "Arial", sans-serif';
 
 interface LiveStreamData {
   id: string;
@@ -47,9 +45,13 @@ const ViewerPage: React.FC = () => {
   const [currentBitrate, setCurrentBitrate] = useState(0);
   const [streamStartTime, setStreamStartTime] = useState<number | null>(null);
   const [showStreamEndedModal, setShowStreamEndedModal] = useState(false);
+  const [showChatSidebar, setShowChatSidebar] = useState(true);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [username, setUsername] = useState<string>('Pengunjung');
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
+  const chatSocketRef = useRef<any>(null);
   const deviceRef = useRef<any>(null);
   const consumerRef = useRef<any>(null);
   const audioConsumerRef = useRef<any>(null);
@@ -58,6 +60,22 @@ const ViewerPage: React.FC = () => {
   const bufferResetRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Generate or get username from localStorage
+    const savedUsername = localStorage.getItem('viewer_username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    } else {
+      const generatedUsername = `Pengunjung_${Math.floor(Math.random() * 10000)}`;
+      setUsername(generatedUsername);
+      localStorage.setItem('viewer_username', generatedUsername);
+    }
+
+    // Initialize chat socket connection
+    if (streamId && !chatSocketRef.current) {
+      chatSocketRef.current = io('http://192.168.1.19:4000');
+      console.log('[ViewerPage] Chat socket initialized for stream:', streamId);
+    }
+
     if (streamId) {
       fetchStreamData();
     }
@@ -66,6 +84,10 @@ const ViewerPage: React.FC = () => {
       // Cleanup on unmount
       if (socketRef.current) {
         socketRef.current.disconnect();
+      }
+      if (chatSocketRef.current) {
+        chatSocketRef.current.disconnect();
+        chatSocketRef.current = null;
       }
       if (consumerRef.current) {
         consumerRef.current.close();
@@ -106,7 +128,6 @@ const ViewerPage: React.FC = () => {
   useEffect(() => {
     if (!streamId || !isConnected) return;
     
-    // Check status every 5 seconds for faster response
     const statusInterval = setInterval(async () => {
       const streamEnded = await checkStreamStatus();
       if (streamEnded) {
@@ -125,33 +146,23 @@ const ViewerPage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setStreamData(data.data);
-        
-        // Update viewers count
         setViewers(data.data.viewers || 0);
         
-        // Live streaming concept: handle different stream states
         if (data.data.status === 'active') {
-          // Stream is active, try to connect to live stream
           try {
             await connectToStream();
           } catch (err) {
             console.error('WebRTC connection failed:', err);
-            // If live connection fails, check if there's a recording available
             if (data.data.recordingPath) {
-              console.log('Live connection failed, but recording available. Showing recording instead.');
               setStreamData(prev => prev ? { ...prev, status: 'recording' } : null);
             } else {
               setError('Gagal terhubung ke live stream. Pastikan admin sedang streaming dan coba lagi.');
             }
           }
         } else if (data.data.status === 'ended') {
-          // Stream has ended, check if recording is available
           if (data.data.recordingPath) {
-            // Stream has ended and has recording, show recording
             setStreamData(prev => prev ? { ...prev, status: 'recording' } : null);
           } else {
-            // Stream has ended but no recording available yet, wait a bit and retry
-            console.log('Stream ended but no recording available yet. Retrying in 3 seconds...');
             setTimeout(async () => {
               try {
                 const retryResponse = await fetch(`${API_URL}/api/livestream/detail/${streamId}`);
@@ -170,10 +181,8 @@ const ViewerPage: React.FC = () => {
             }, 3000);
           }
         } else if (data.data.status === 'recording') {
-          // Stream is in recording mode, show recording
           setStreamData(prev => prev ? { ...prev, status: 'recording' } : null);
         } else {
-          // Stream status is unknown or invalid
           setError('Status live stream tidak valid atau tidak dikenali.');
         }
       } else {
@@ -200,10 +209,9 @@ const ViewerPage: React.FC = () => {
           if (stats && stats.length > 0) {
             const videoStats = stats.find((stat: any) => stat.type === 'inbound-rtp' && stat.kind === 'video');
             if (videoStats) {
-              const bitrate = videoStats.bytesReceived * 8 / 1000; // kbps
+              const bitrate = videoStats.bytesReceived * 8 / 1000;
               setCurrentBitrate(bitrate);
               
-              // Determine network quality based on bitrate and packet loss
               if (bitrate > 2000 && (!videoStats.packetsLost || videoStats.packetsLost < 5)) {
                 setNetworkQuality('good');
               } else if (bitrate > 1000 && (!videoStats.packetsLost || videoStats.packetsLost < 15)) {
@@ -212,11 +220,9 @@ const ViewerPage: React.FC = () => {
                 setNetworkQuality('poor');
               }
               
-              // Check for stream issues and delay accumulation
               if (bitrate === 0 || videoStats.packetsLost > 50) {
                 console.warn('Stream quality degraded, attempting recovery...');
                 setError('Kualitas stream menurun. Mencoba perbaikan...');
-                // Attempt to reconnect
                 setTimeout(() => {
                   if (streamId) {
                     connectToStream();
@@ -224,10 +230,8 @@ const ViewerPage: React.FC = () => {
                 }, 3000);
               }
               
-              // Check for delay accumulation (high packet loss or low bitrate)
               if (videoStats.packetsLost > 20 || bitrate < 500) {
                 console.warn('Delay accumulation detected, attempting recovery...');
-                // Gentle recovery without aggressive buffer reset
                 if (videoRef.current && videoRef.current.readyState >= 2) {
                   const buffered = videoRef.current.buffered;
                   if (buffered.length > 0) {
@@ -235,10 +239,9 @@ const ViewerPage: React.FC = () => {
                     const currentTime = videoRef.current.currentTime;
                     const bufferSize = bufferEnd - currentTime;
                     
-                    // Only reset if buffer is really large (> 15 seconds)
                     if (bufferSize > 15) {
                       console.log('Large buffer detected, performing gentle reset...');
-                      videoRef.current.currentTime = bufferEnd - 5; // Keep 5 seconds buffer
+                      videoRef.current.currentTime = bufferEnd - 5;
                     }
                   }
                 }
@@ -249,10 +252,9 @@ const ViewerPage: React.FC = () => {
           console.warn('Error getting network stats:', error);
         }
       }
-    }, 5000); // Check every 5 seconds (reduced frequency)
+    }, 5000);
   };
 
-  // Buffer reset to prevent delay accumulation - STABLE VERSION
   const startBufferReset = () => {
     if (bufferResetRef.current) {
       clearInterval(bufferResetRef.current);
@@ -263,33 +265,28 @@ const ViewerPage: React.FC = () => {
         const currentTime = Date.now();
         const streamDuration = currentTime - streamStartTime;
         
-        // Reset buffer every 5 minutes to prevent delay accumulation (more stable)
-        if (streamDuration > 0 && streamDuration % 300000 < 10000) { // Every 5 minutes
+        if (streamDuration > 0 && streamDuration % 300000 < 10000) {
           console.log('Performing gentle buffer reset to prevent delay...');
           
-          // Gentle buffer reset without disrupting playback
           if (videoRef.current && videoRef.current.readyState >= 2) {
-            // Only reset if video is playing and has data
             const currentTime = videoRef.current.currentTime;
             const buffered = videoRef.current.buffered;
             
-            // Check if buffer is getting too large (> 10 seconds)
             if (buffered.length > 0) {
               const bufferEnd = buffered.end(buffered.length - 1);
               const bufferSize = bufferEnd - currentTime;
               
               if (bufferSize > 10) {
                 console.log('Buffer too large, performing gentle reset...');
-                videoRef.current.currentTime = bufferEnd - 2; // Keep 2 seconds buffer
+                videoRef.current.currentTime = bufferEnd - 2;
               }
             }
           }
         }
       }
-    }, 30000); // Check every 30 seconds (less aggressive)
+    }, 30000);
   };
 
-  // Check stream status from database
   const checkStreamStatus = async () => {
     if (!streamId) return;
     
@@ -300,16 +297,12 @@ const ViewerPage: React.FC = () => {
         const data = await response.json();
         
         if (data.data) {
-          // Check if stream status is 'ended' or 'recording' (stream has ended)
           if (data.data.status === 'ended' || data.data.status === 'recording') {
             setShowStreamEndedModal(true);
-            // Stop video playback
             if (videoRef.current) {
               videoRef.current.pause();
             }
-            // Disconnect from stream
             setIsConnected(false);
-            // Clear the interval to prevent further checks
             return true;
           }
         }
@@ -321,22 +314,18 @@ const ViewerPage: React.FC = () => {
 
   const connectToStream = async () => {
     try {
-      // Set timeout for WebRTC connection
       const connectionTimeout = setTimeout(() => {
         console.log('WebRTC connection timeout');
         setError('Timeout terhubung ke live stream. Pastikan admin sedang streaming dan coba lagi.');
-      }, 10000); // 10 second timeout
+      }, 10000);
       
-      // Connect to MediaSoup server
-      socketRef.current = io('http://192.168.1.6:4000');
+      socketRef.current = io('http://192.168.1.19:4000');
       
       socketRef.current.on('connect', async () => {
         console.log('Connected to MediaSoup server');
         setIsConnected(true);
-        clearTimeout(connectionTimeout); // Clear timeout on successful connection
-        console.log('Connection status updated to: true');
+        clearTimeout(connectionTimeout);
         
-        // Listen for viewer count updates
         socketRef.current.on('viewerCountUpdate', (data: { roomId: string; viewers: number }) => {
           if (data.roomId === streamId) {
             setViewers(data.viewers);
@@ -344,7 +333,6 @@ const ViewerPage: React.FC = () => {
           }
         });
         
-        // Check if producer exists for this room
         console.log('Checking producer for room:', streamId);
         const producerCheck: any = await Promise.race([
           new Promise((resolve) => {
@@ -358,27 +346,19 @@ const ViewerPage: React.FC = () => {
           return { hasVideoProducer: false, hasAudioProducer: false, error: error.message };
         });
         
-        console.log('Producer check result:', producerCheck);
-        if (producerCheck.allRooms) {
-          console.log('Available rooms:', producerCheck.allRooms);
-        }
-        
         if (!producerCheck.hasVideoProducer) {
           console.log('No video producer found for live stream');
           setError('Admin belum memulai streaming. Silakan tunggu atau hubungi admin untuk memulai live stream.');
           return;
         }
         
-        // Get RTP capabilities
         const rtpCapabilities = await new Promise((resolve) => {
           socketRef.current.emit('getRtpCapabilities', null, resolve);
         });
         
-        // Create device
         deviceRef.current = new mediasoupClient.Device();
         await deviceRef.current.load({ routerRtpCapabilities: rtpCapabilities });
         
-        // Create consumer transport
         const transportParams = await new Promise((resolve) => {
           socketRef.current.emit('createConsumerTransport', null, resolve);
         });
@@ -386,7 +366,6 @@ const ViewerPage: React.FC = () => {
         const consumerTransport = deviceRef.current.createRecvTransport(transportParams);
         consumerTransportRef.current = consumerTransport;
         
-        // Connect transport
         consumerTransport.on('connect', async ({ dtlsParameters }: any, callback: any, errback: any) => {
           try {
             await new Promise((resolve) => {
@@ -398,10 +377,8 @@ const ViewerPage: React.FC = () => {
           }
         });
         
-        // Wait a bit for transport to be ready
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Consume video stream with retry
         console.log('Attempting to consume stream for room:', streamId);
         let consumeParams: any = null;
         let retryCount = 0;
@@ -410,7 +387,7 @@ const ViewerPage: React.FC = () => {
         while (retryCount < maxRetries && (!consumeParams || consumeParams.error)) {
           if (retryCount > 0) {
             console.log(`Retry ${retryCount} for consume...`);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
           consumeParams = await new Promise((resolve) => {
@@ -424,28 +401,17 @@ const ViewerPage: React.FC = () => {
           retryCount++;
         }
         
-        console.log('Consume params received after', retryCount, 'attempts:', consumeParams);
-        
         if (consumeParams && !consumeParams.error) {
-          // Backend returns {consumers: Array} or direct array
           const consumers = consumeParams.consumers || (Array.isArray(consumeParams) ? consumeParams : [consumeParams]);
           
-          console.log('Consumers array:', consumers);
-          console.log('Consumer details:', consumers.map((c: any) => ({ kind: c.kind, id: c.id, producerId: c.producerId })));
-          
-          // Find video and audio consumers
           const videoConsumer = consumers.find((c: any) => c.kind === 'video');
           const audioConsumer = consumers.find((c: any) => c.kind === 'audio');
-          console.log('Video consumer found:', videoConsumer);
-          console.log('Audio consumer found:', audioConsumer);
           
           const tracks = [];
           let videoConsumerRef = null;
           let audioConsumerLocal = null;
           
-          // Create video consumer
           if (videoConsumer && videoConsumer.producerId) {
-            console.log('Creating video consumer with producerId:', videoConsumer.producerId);
             try {
               videoConsumerRef = await consumerTransport.consume({
                 id: videoConsumer.id,
@@ -453,16 +419,13 @@ const ViewerPage: React.FC = () => {
                 kind: videoConsumer.kind,
                 rtpParameters: videoConsumer.rtpParameters
               });
-              console.log('Video consumer created successfully:', videoConsumerRef);
               tracks.push(videoConsumerRef.track);
             } catch (error) {
               console.error('Error creating video consumer:', error);
             }
           }
           
-          // Create audio consumer
           if (audioConsumer && audioConsumer.producerId) {
-            console.log('Creating audio consumer with producerId:', audioConsumer.producerId);
             try {
               audioConsumerLocal = await consumerTransport.consume({
                 id: audioConsumer.id,
@@ -470,12 +433,9 @@ const ViewerPage: React.FC = () => {
                 kind: audioConsumer.kind,
                 rtpParameters: audioConsumer.rtpParameters
               });
-              console.log('Audio consumer created successfully:', audioConsumerLocal);
               
-              // Ensure audio track is enabled
               if (audioConsumerLocal.track) {
                 audioConsumerLocal.track.enabled = true;
-                console.log('Audio track enabled:', audioConsumerLocal.track.enabled);
               }
               
               tracks.push(audioConsumerLocal.track);
@@ -484,147 +444,58 @@ const ViewerPage: React.FC = () => {
             }
           }
           
-          // Store consumers for cleanup
           consumerRef.current = videoConsumerRef;
           audioConsumerRef.current = audioConsumerLocal;
           
-              if (tracks.length > 0 && videoRef.current) {
-                const stream = new MediaStream(tracks);
-                console.log('Created MediaStream with tracks:', tracks.length);
-                console.log('MediaStream tracks:', stream.getTracks());
-                console.log('Video tracks:', stream.getVideoTracks());
-                console.log('Audio tracks:', stream.getAudioTracks());
-                
-                // Simplified track handling
+          if (tracks.length > 0 && videoRef.current) {
+            const stream = new MediaStream(tracks);
             
-            // Log audio track details
             const audioTracks = stream.getAudioTracks();
             if (audioTracks.length > 0) {
-              console.log('Audio track details:', audioTracks.map(track => ({
-                id: track.id,
-                kind: track.kind,
-                enabled: track.enabled,
-                muted: track.muted,
-                readyState: track.readyState,
-                label: track.label
-              })));
               setHasAudio(true);
             } else {
-              console.warn('No audio tracks found in stream!');
               setHasAudio(false);
             }
             
-            // Set connection status to true since we have a valid stream
             setIsConnected(true);
             
             if (videoRef.current) {
               try {
                 videoRef.current.srcObject = stream;
-                console.log('Assigned stream to video element');
-                console.log('Stream tracks:', stream.getTracks().length);
-                console.log('Video element ready state:', videoRef.current.readyState);
               } catch (error) {
                 console.error('Error assigning stream to video element:', error);
                 setError('Gagal mengaitkan stream ke video element');
               }
             }
             
-            // Start network monitoring for adaptive bitrate
             startNetworkMonitoring();
-            
-            // Set stream start time for delay monitoring
             setStreamStartTime(Date.now());
-            
-            // Start periodic buffer reset to prevent delay accumulation
             startBufferReset();
             
-            // Wait a bit for the stream to be ready
             setTimeout(() => {
               if (videoRef.current) {
-                // Ensure audio is not muted
                 videoRef.current.muted = false;
                 videoRef.current.volume = 1.0;
                 
-                // Optimize video element for low latency
-                // Note: webkitVideoDecodedByteCount is read-only, cannot be set
-                
                 videoRef.current.play().then(() => {
                   console.log('Video started playing successfully');
-                  console.log('Audio enabled:', !videoRef.current?.muted);
-                  console.log('Volume:', videoRef.current?.volume);
-                  console.log('Video dimensions:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
                   
-                  // Reset buffer to prevent delay
                   if (videoRef.current) {
                     videoRef.current.currentTime = 0;
                   }
-                  
-                  // Additional audio verification
-                  const srcObject = videoRef.current?.srcObject;
-                  if (srcObject && 'getAudioTracks' in srcObject) {
-                    const audioTracks = (srcObject as MediaStream).getAudioTracks();
-                    if (audioTracks && audioTracks.length > 0) {
-                      console.log('Audio tracks in video element:', audioTracks.length);
-                      audioTracks.forEach((track: MediaStreamTrack, index: number) => {
-                        console.log(`Audio track ${index}:`, {
-                          enabled: track.enabled,
-                          muted: track.muted,
-                          readyState: track.readyState
-                        });
-                      });
-                    } else {
-                      console.warn('No audio tracks found in video element!');
-                    }
-                  } else {
-                    console.warn('No audio tracks found in video element!');
-                  }
                 }).catch((error) => {
                   console.error('Error playing video:', error);
-                  console.log('Trying to play with user interaction...');
-                  // If autoplay fails, try to play on user interaction
-                  const playButton = document.createElement('button');
-                  playButton.textContent = 'Klik untuk memutar video';
-                  playButton.style.cssText = `
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: #2563EB;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    z-index: 1000;
-                  `;
-                  playButton.onclick = () => {
-                    if (videoRef.current) {
-                      videoRef.current.play().then(() => {
-                        console.log('Video started playing after user interaction');
-                        playButton.remove();
-                      }).catch(err => {
-                        console.error('Still failed to play:', err);
-                      });
-                    }
-                  };
-                  const videoElement = videoRef.current;
-                  if (videoElement && videoElement.parentElement) {
-                    videoElement.parentElement.appendChild(playButton);
-                  }
                 });
               }
             }, 500);
           } else if (videoConsumer && !videoConsumer.producerId) {
-            console.log('Video consumer found but missing producerId');
             setError('Error: Video consumer tidak memiliki producerId. Silakan coba lagi.');
           } else if (!videoConsumer) {
-            console.log('No video producer available');
             setError('Admin belum memulai streaming video. Silakan tunggu atau hubungi admin.');
           } else {
             setError('Gagal mengonsumsi stream.');
           }
         } else {
-          console.error('Consume error:', consumeParams?.error);
           setError('Gagal mengonsumsi stream: ' + (consumeParams?.error || 'Unknown error'));
         }
       });
@@ -634,20 +505,16 @@ const ViewerPage: React.FC = () => {
         setIsConnected(false);
         setError('Koneksi ke server terputus. Mencoba menyambung kembali...');
         
-        // Attempt to reconnect
         setTimeout(() => {
           if (streamId) {
-            console.log('Attempting to reconnect...');
             connectToStream();
           }
         }, 3000);
       });
       
-      // Listen for new producers
       socketRef.current.on('newProducer', async ({ roomId, kind }: any) => {
         console.log('New producer detected:', { roomId, kind });
         if (roomId === streamId && deviceRef.current) {
-          // Try to consume the new producer (both video and audio)
           try {
             const consumeParams: any = await new Promise((resolve) => {
               socketRef.current.emit('consume', { 
@@ -664,7 +531,6 @@ const ViewerPage: React.FC = () => {
               
               const tracks = [];
               
-              // Create video consumer if not exists
               if (videoConsumer && !consumerRef.current) {
                 const videoConsumerRef = await consumerTransportRef.current.consume({
                   id: videoConsumer.id,
@@ -676,7 +542,6 @@ const ViewerPage: React.FC = () => {
                 tracks.push(videoConsumerRef.track);
               }
               
-              // Create audio consumer if not exists
               if (audioConsumer) {
                 const audioConsumerRef = await consumerTransportRef.current.consume({
                   id: audioConsumer.id,
@@ -726,30 +591,13 @@ const ViewerPage: React.FC = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return COLORS.green;
-      case 'ended':
-        return COLORS.subtext;
-      case 'recording':
-        return COLORS.red;
-      default:
-        return COLORS.subtext;
+  const formatViewers = (count: number) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)} jt`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)} rb`;
     }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'LIVE';
-      case 'ended':
-        return 'BERAKHIR';
-      case 'recording':
-        return 'RECORDING';
-      default:
-        return 'TIDAK DIKETAHUI';
-    }
+    return count.toString();
   };
 
   if (loading) {
@@ -759,7 +607,7 @@ const ViewerPage: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: COLORS.bg,
+        background: COLORS.surface,
         fontFamily: FONT_FAMILY,
       }}>
         <div style={{ textAlign: 'center' }}>
@@ -767,12 +615,12 @@ const ViewerPage: React.FC = () => {
             width: '50px',
             height: '50px',
             border: `4px solid ${COLORS.border}`,
-            borderTop: `4px solid ${COLORS.primary}`,
+            borderTop: `4px solid ${COLORS.red}`,
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }} />
-          <div style={{ fontSize: '18px', color: COLORS.text, fontWeight: 500 }}>
+          <div style={{ fontSize: '16px', color: COLORS.text, fontWeight: 500 }}>
             Memuat live stream...
           </div>
         </div>
@@ -787,22 +635,22 @@ const ViewerPage: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: COLORS.bg,
+        background: COLORS.surface,
         fontFamily: FONT_FAMILY,
       }}>
         <div style={{
-          background: COLORS.white,
-          borderRadius: CARD_RADIUS,
+          background: COLORS.surface,
+          borderRadius: '12px',
           padding: '48px',
           textAlign: 'center',
-          boxShadow: SHADOW,
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)',
           maxWidth: '500px',
           margin: '0 20px'
         }}>
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>📺</div>
           <h1 style={{
             fontSize: '24px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: COLORS.text,
             margin: '0 0 16px 0'
           }}>
@@ -810,7 +658,7 @@ const ViewerPage: React.FC = () => {
           </h1>
           <p style={{
             fontSize: '16px',
-            color: COLORS.subtext,
+            color: COLORS.textSecondary,
             margin: '0 0 24px 0',
             lineHeight: 1.5
           }}>
@@ -820,55 +668,20 @@ const ViewerPage: React.FC = () => {
             <button
               onClick={() => window.location.reload()}
               style={{
-                background: COLORS.primary,
-                color: COLORS.white,
+                background: COLORS.red,
+                color: COLORS.surface,
                 border: 'none',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                fontSize: '16px',
+                borderRadius: '18px',
+                padding: '10px 16px',
+                fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
                 transition: 'background 0.2s ease'
               }}
-              onMouseOver={e => e.currentTarget.style.background = COLORS.primaryDark}
-              onMouseOut={e => e.currentTarget.style.background = COLORS.primary}
+              onMouseOver={e => e.currentTarget.style.background = COLORS.redDark}
+              onMouseOut={e => e.currentTarget.style.background = COLORS.red}
             >
               🔄 Coba Lagi
-            </button>
-            <button
-              onClick={async () => {
-                setLoading(true);
-                setError(null);
-                try {
-                  if (streamData?.status === 'active') {
-                    console.log('Manual retry: attempting WebRTC connection...');
-                    await connectToStream();
-                  } else {
-                    console.log('Manual retry: fetching stream data...');
-                    await fetchStreamData();
-                  }
-                } catch (err) {
-                  console.error('Manual retry failed:', err);
-                  setError('Gagal terhubung ke stream. Silakan coba lagi.');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              style={{
-                background: COLORS.green,
-                color: COLORS.white,
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'background 0.2s ease'
-              }}
-              onMouseOver={e => e.currentTarget.style.background = '#16a34a'}
-              onMouseOut={e => e.currentTarget.style.background = COLORS.green}
-            >
-              📡 Hubungkan ke Stream
             </button>
           </div>
         </div>
@@ -879,287 +692,380 @@ const ViewerPage: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#ffffff',
+      background: COLORS.surface,
       fontFamily: FONT_FAMILY,
       color: COLORS.text,
     }}>
-      {/* Header */}
+      {/* YouTube-like Header */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '16px 20px',
-        position: 'fixed',
+        background: COLORS.surface,
+        padding: '0 16px',
+        position: 'sticky',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 100,
+        zIndex: 1000,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '1px solid #e5e7eb',
+        height: '56px',
+        borderBottom: `1px solid ${COLORS.border}`,
       }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          flex: 1,
+          minWidth: 0
+        }}>
+          {/* Logo/Title */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            textDecoration: 'none',
+            cursor: 'pointer'
+          }}>
+            <img 
+              src="/assets/umalo.png" 
+              alt="Umalo" 
+              style={{
+                height: '40px',
+                width: 'auto',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Right side - Status */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '12px'
         }}>
-          <div style={{
-            background: getStatusColor(streamData.status),
-            color: COLORS.white,
-            padding: '6px 12px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
+          {streamData.status === 'active' && (
             <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: COLORS.white,
-              animation: streamData.status === 'active' ? 'pulse 1s infinite' : 'none'
-            }} />
-            {getStatusText(streamData.status)}
-          </div>
-        </div>
-      </div>
-
-      {/* Video Container */}
-      <div
-        ref={containerRef}
-        style={{
-          paddingTop: '80px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          background: '#ffffff'
-        }}
-      >
-        {streamData.status === 'active' ? (
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '1200px',
-            aspectRatio: '16/9',
-            background: '#000',
-            borderRadius: isFullscreen ? '0' : '12px',
-            overflow: 'hidden',
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
-          }}>
-            {/* Live Stream Video */}
-            <video
-              ref={videoRef}
-              autoPlay
-              controls
-              playsInline
-              muted={false}
-              preload="none"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-              // Low latency optimizations
-              onLoadedData={() => {
-                // Reset buffer to prevent delay
-                if (videoRef.current) {
-                  videoRef.current.currentTime = 0;
-                  // Set low latency buffer settings
-                  // Note: webkitVideoDecodedByteCount is read-only, cannot be set
-                }
-              }}
-              onError={(e) => {
-                console.error('Video load error:', e);
-                setError('Gagal memuat video live stream');
-              }}
-              onLoadedMetadata={() => {
-                console.log('Video metadata loaded');
-              }}
-              onCanPlay={() => {
-                console.log('Video can play');
-              }}
-              onPlay={() => {
-                console.log('Video started playing');
-              }}
-              onPause={() => {
-                console.log('Video paused');
-              }}
-              onWaiting={() => {
-                console.log('Video buffering...');
-              }}
-              onStalled={() => {
-                console.log('Video stalled');
-              }}
-              onSuspend={() => {
-                console.log('Video suspended');
-              }}
-              onAbort={() => {
-                console.log('Video aborted');
-                setError('Video stream terputus. Mencoba menyambung kembali...');
-                // Attempt to reconnect
-                setTimeout(() => {
-                  if (streamId) {
-                    connectToStream();
-                  }
-                }, 2000);
-              }}
-            >
-              Browser Anda tidak mendukung video player.
-            </video>
-            
-            {/* Connection Status */}
-            {!isConnected && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: 'rgba(255, 255, 255, 0.95)',
-                color: COLORS.text,
-                padding: '20px',
-                borderRadius: '8px',
-                textAlign: 'center',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
-              }}>
-                <div style={{ fontSize: '18px', marginBottom: '8px' }}>🔄</div>
-                <div>Menghubungkan ke live stream...</div>
-                <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>
-                  Pastikan admin sedang streaming
-                </div>
-              </div>
-            )}
-
-            {/* Live Indicator */}
-            <div style={{
-              position: 'absolute',
-              top: '20px',
-              left: '20px',
-              background: COLORS.red,
-              color: COLORS.white,
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '6px',
+              padding: '6px 12px',
+              background: COLORS.red,
+              color: COLORS.surface,
+              borderRadius: '18px',
+              fontSize: '12px',
+              fontWeight: 500
             }}>
               <div style={{
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: COLORS.white,
+                background: COLORS.surface,
                 animation: 'pulse 1s infinite'
               }} />
               LIVE
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Viewers Count */}
+      {/* Main Content - YouTube Layout */}
+      <div 
+        ref={containerRef}
+        style={{
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0 auto',
+          paddingTop: '24px',
+          paddingBottom: '40px',
+          paddingLeft: '24px',
+          paddingRight: showChatSidebar ? '424px' : '24px', // 400px sidebar + 24px margin
+          transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Video Container */}
+        <div style={{
+          width: '100%',
+          maxWidth: '100%',
+        }}>
+          {/* Video Player */}
+          {streamData.status === 'active' ? (
             <div style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'rgba(0, 0, 0, 0.7)',
-              color: COLORS.white,
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: 500
-              }}>
-                👥 {viewers} penonton
-              </div>
-          </div>
-        ) : (streamData.status === 'ended' || streamData.status === 'recording') && streamData.recordingPath ? (
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '1200px',
-            aspectRatio: '16/9',
-            background: '#000',
-            borderRadius: isFullscreen ? '0' : '12px',
-            overflow: 'hidden',
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)'
-          }}>
-            <video
-              ref={videoRef}
-              controls
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-              src={`${API_URL}${streamData.recordingPath}`}
-              onError={(e) => {
-                console.error('Video load error:', e);
-                setError('Gagal memuat recording');
-              }}
-            >
-              Browser Anda tidak mendukung video player.
-            </video>
-
-            <div style={{
-              position: 'absolute',
-              top: '20px',
-              left: '20px',
-              background: COLORS.subtext,
-              color: COLORS.white,
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: 600
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '16/9',
+              background: '#000',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              marginBottom: '16px'
             }}>
-              BERAKHIR
+              <video
+                ref={videoRef}
+                autoPlay
+                controls
+                playsInline
+                muted={false}
+                preload="none"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain'
+                }}
+                onError={(e) => {
+                  console.error('Video load error:', e);
+                  setError('Gagal memuat video live stream');
+                }}
+              >
+                Browser Anda tidak mendukung video player.
+              </video>
+              
+              {!isConnected && (
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  color: COLORS.surface,
+                  padding: '20px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '18px', marginBottom: '8px' }}>🔄</div>
+                  <div>Menghubungkan ke live stream...</div>
+                </div>
+              )}
+
+              {/* Live Badge on Video */}
+              <div style={{
+                position: 'absolute',
+                top: '12px',
+                left: '12px',
+                background: COLORS.red,
+                color: COLORS.surface,
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <div style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: COLORS.surface,
+                  animation: 'pulse 1s infinite'
+                }} />
+                LIVE
+              </div>
+
+              {/* Chat Toggle Button - Small Icon (YouTube Style) */}
+              {!showChatSidebar && (
+                <button
+                  onClick={() => {
+                    setShowChatSidebar(true);
+                    setUnreadMessages(0);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '16px',
+                    right: '16px',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '48px',
+                    height: '48px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '20px',
+                    fontWeight: 400,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                    transition: 'all 0.2s ease',
+                    zIndex: 10
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                  }}
+                  title="Buka Live Chat"
+                >
+                  💬
+                  {unreadMessages > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      background: COLORS.red,
+                      color: '#ffffff',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      border: '2px solid #000000',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                    }}>
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '400px',
-            background: '#f8f9fa',
-            borderRadius: '12px',
-            color: COLORS.subtext,
-            fontSize: '18px',
-            border: '1px solid #e5e7eb'
-          }}>
-            Live stream sudah berakhir dan tidak ada recording tersedia
-          </div>
-        )}
+          ) : (streamData.status === 'ended' || streamData.status === 'recording') && streamData.recordingPath ? (
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '16/9',
+              background: '#000',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              marginBottom: '16px'
+            }}>
+              <video
+                ref={videoRef}
+                controls
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain'
+                }}
+                src={`${API_URL}${streamData.recordingPath}`}
+                onError={(e) => {
+                  console.error('Video load error:', e);
+                  setError('Gagal memuat recording');
+                }}
+              >
+                Browser Anda tidak mendukung video player.
+              </video>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              aspectRatio: '16/9',
+              background: COLORS.hover,
+              borderRadius: '12px',
+              color: COLORS.textSecondary,
+              fontSize: '16px',
+              marginBottom: '16px'
+            }}>
+              Live stream sudah berakhir dan tidak ada recording tersedia
+            </div>
+          )}
+
+          {/* Video Info Section - YouTube Style */}
+          {streamData.status === 'active' && (
+            <div style={{
+              padding: '0 4px',
+              marginBottom: '24px'
+            }}>
+              {/* Title */}
+              <h1 style={{
+                fontSize: '20px',
+                fontWeight: 500,
+                lineHeight: '28px',
+                color: COLORS.text,
+                margin: '0 0 12px 0',
+                wordBreak: 'break-word'
+              }}>
+                {streamData.title || 'Live Stream'}
+              </h1>
+
+              {/* Video Metadata */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingBottom: '12px',
+                borderBottom: `1px solid ${COLORS.border}`,
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  fontSize: '14px',
+                  color: COLORS.textSecondary
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>👥</span>
+                    <span style={{ fontWeight: 500, color: COLORS.text }}>{formatViewers(viewers)}</span>
+                    <span>penonton</span>
+                  </div>
+                  {streamData.startTime && (
+                    <div>
+                      Dimulai {new Date(streamData.startTime).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{
+                background: COLORS.hover,
+                borderRadius: '12px',
+                padding: '16px',
+                fontSize: '14px',
+                lineHeight: '20px',
+                color: COLORS.text,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                <div style={{ fontWeight: 500, marginBottom: '8px', color: COLORS.text }}>
+                  Tentang Live Stream
+                </div>
+                <div style={{ color: COLORS.textSecondary }}>
+                  {streamData.title ? `Streaming langsung: ${streamData.title}` : 'Live streaming sedang berlangsung. Nikmati tayangan langsung!'}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Footer Info */}
-      <div style={{
-        background: 'rgba(248, 249, 250, 0.95)',
-        padding: '20px',
-        textAlign: 'center',
-        color: COLORS.subtext,
-        fontSize: '14px',
-        borderTop: '1px solid #e5e7eb'
-      }}>
-        <p style={{ margin: '0 0 8px 0' }}>
-          Powered by Umalo
-        </p>
-        <p style={{ margin: 0, fontSize: '12px' }}>
-          © 2025 - Semua hak dilindungi
-        </p>
-      </div>
-
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+      {/* Chat Sidebar - Fixed Position (Outside Main Container) */}
+      {streamData.status === 'active' && (
+        <ChatSidebar
+          isOpen={showChatSidebar}
+          onToggle={() => {
+            setShowChatSidebar(!showChatSidebar);
+            if (showChatSidebar) {
+              setUnreadMessages(0);
+            }
+          }}
+          streamId={streamId || ''}
+          socket={chatSocketRef.current}
+          currentUsername={username}
+          isAdmin={false}
+          readOnly={false}
+          onNewMessage={() => {
+            if (!showChatSidebar) {
+              setUnreadMessages(prev => prev + 1);
+            }
+          }}
+        />
+      )}
 
       {/* Stream Ended Modal */}
       {showStreamEndedModal && (
@@ -1173,78 +1079,76 @@ const ViewerPage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '20px'
         }}>
           <div style={{
-            background: COLORS.white,
-            borderRadius: '16px',
+            background: COLORS.surface,
+            borderRadius: '12px',
             padding: '32px',
             maxWidth: '400px',
             width: '100%',
             textAlign: 'center',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-            animation: 'fadeIn 0.3s ease-out'
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
           }}>
-            <div style={{
-              fontSize: '48px',
-              marginBottom: '16px'
-            }}>
-              📺
-            </div>
-            
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📺</div>
             <h2 style={{
-              fontSize: '24px',
-              fontWeight: '600',
+              fontSize: '20px',
+              fontWeight: 500,
               color: COLORS.text,
               margin: '0 0 16px 0'
             }}>
               Livestream Berakhir
             </h2>
-            
             <p style={{
-              fontSize: '16px',
-              color: COLORS.subtext,
+              fontSize: '14px',
+              color: COLORS.textSecondary,
               margin: '0 0 24px 0',
               lineHeight: '1.5'
             }}>
               Admin telah mengakhiri livestream. Terima kasih telah menonton!
             </p>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
-              <button
-                onClick={() => {
-                  setShowStreamEndedModal(false);
-                  // Refresh the page to show recording if available
-                  window.location.reload();
-                }}
-                style={{
-                  background: COLORS.primary,
-                  color: COLORS.text,
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 32px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = COLORS.primaryDark;
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = COLORS.primary;
-                }}
-              >
-                Tutup
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setShowStreamEndedModal(false);
+                window.location.reload();
+              }}
+              style={{
+                background: COLORS.red,
+                color: COLORS.surface,
+                border: 'none',
+                borderRadius: '18px',
+                padding: '10px 24px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = COLORS.redDark;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = COLORS.red;
+              }}
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 };

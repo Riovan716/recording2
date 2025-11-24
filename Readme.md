@@ -102,7 +102,7 @@ Buat file `.env` di folder `backend/`:
 # Server Configuration
 PORT=3000
 NODE_ENV=development
-HOST=192.168.1.6
+HOST=192.168.1.19
 
 # Database Configuration
 DB_HOST=localhost
@@ -117,19 +117,19 @@ JWT_EXPIRES_IN=7d
 
 # Media Server
 MEDIA_PORT=8000
-MEDIA_HOST=192.168.1.6
+MEDIA_HOST=192.168.1.19
 
 # CORS
 CORS_ORIGIN=http://localhost:5173
 ```
 
-> **Catatan:** Ganti `192.168.1.6` dengan IP address komputer Anda. Gunakan `localhost` jika hanya menjalankan di satu mesin.
+> **Catatan:** Ganti `192.168.1.19` dengan IP address komputer Anda. Gunakan `localhost` jika hanya menjalankan di satu mesin.
 
 ### 3. Konfigurasi Frontend
 
 Edit file `frontend/src/config.ts`:
 ```typescript
-export const API_URL = "http://192.168.1.6:3000";
+export const API_URL = "http://192.168.1.19:3000";
 ```
 
 > **Catatan:** Pastikan IP address sesuai dengan konfigurasi backend.

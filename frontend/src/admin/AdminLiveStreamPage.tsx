@@ -6,6 +6,7 @@ import ModalNotifikasi from "../components/ModalNotifikasi";
 import MultiCameraStreamer from "../components/MultiCameraStreamer";
 import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import SimpleYouTube from "../components/SimpleYouTube";
+import ChatModal from "../components/ChatModal";
 import { API_URL } from "../config";
 import { io } from 'socket.io-client';
 
@@ -82,7 +83,9 @@ const AdminLiveStreamPage: React.FC = () => {
   const [streamingLayouts, setStreamingLayouts] = useState<any[]>([]);
   const [currentStreamingLayoutType, setCurrentStreamingLayoutType] = useState<string>('');
   const [currentViewers, setCurrentViewers] = useState(0);
+  const [showChatModal, setShowChatModal] = useState(false);
   const socketRef = useRef<any>(null);
+  const chatSocketRef = useRef<any>(null);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -92,7 +95,7 @@ const AdminLiveStreamPage: React.FC = () => {
 
   // Socket connection for real-time viewer count updates
   useEffect(() => {
-    socketRef.current = io('http://192.168.1.6:4000');
+    socketRef.current = io('http://192.168.1.19:4000');
     
     socketRef.current.on('connect', () => {
       console.log('[AdminLiveStreamPage] Connected to MediaSoup server');
@@ -120,6 +123,21 @@ const AdminLiveStreamPage: React.FC = () => {
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+      }
+    };
+  }, [streamingState.roomId]);
+
+  // Initialize chat socket connection
+  useEffect(() => {
+    if (streamingState.roomId && !chatSocketRef.current) {
+      chatSocketRef.current = io('http://192.168.1.19:4000');
+      console.log('[AdminLiveStreamPage] Chat socket initialized for room:', streamingState.roomId);
+    }
+
+    return () => {
+      if (chatSocketRef.current) {
+        chatSocketRef.current.disconnect();
+        chatSocketRef.current = null;
       }
     };
   }, [streamingState.roomId]);
@@ -197,7 +215,7 @@ const AdminLiveStreamPage: React.FC = () => {
     
     try {
       console.log(`[AdminLiveStreamPage] Fetching viewer count for room: ${streamingState.roomId}`);
-      const response = await fetch(`http://192.168.1.6:4000/api/viewer-count/${streamingState.roomId}`);
+      const response = await fetch(`http://192.168.1.19:4000/api/viewer-count/${streamingState.roomId}`);
       if (response.ok) {
         const data = await response.json();
         console.log(`[AdminLiveStreamPage] Viewer count response:`, data);
@@ -366,7 +384,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.6:3000/#/view/${roomId}`;
+    return `http://192.168.1.19:3000/#/view/${roomId}`;
   };
 
   if (loading) {
@@ -1244,6 +1262,58 @@ const AdminLiveStreamPage: React.FC = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* Chat Modal for Admin - View all comments */}
+      {streamingState.isStreaming && streamingState.roomId && (
+        <>
+          {/* Button to open chat modal */}
+          <button
+            onClick={() => setShowChatModal(true)}
+            style={{
+              position: 'fixed',
+              bottom: '30px',
+              right: '30px',
+              background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
+              color: '#1e293b',
+              border: '2px solid rgba(134, 239, 172, 0.8)',
+              borderRadius: '50%',
+              width: '64px',
+              height: '64px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '28px',
+              fontWeight: 600,
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.3s ease',
+              zIndex: 1000
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+            }}
+            title="Lihat Komentar Penonton"
+          >
+            💬
+          </button>
+
+          {/* Chat Modal */}
+          <ChatModal
+            isOpen={showChatModal}
+            onClose={() => setShowChatModal(false)}
+            streamId={streamingState.roomId}
+            socket={chatSocketRef.current}
+            currentUsername={user?.name || 'Admin'}
+            isAdmin={true}
+            readOnly={false}
+          />
+        </>
       )}
       </div>
     </>
