@@ -161,18 +161,13 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
     }
   };
 
-  // Real-time stats updates
+  // HAPUS AUTO-REFRESH - Hanya load sekali saat component mount
   useEffect(() => {
     fetchStreamingStats();
     fetchLiveStreamHistory();
-
-    const interval = setInterval(() => {
-      fetchStreamingStats();
-      fetchLiveStreamHistory();
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+    
+    // TIDAK ADA INTERVAL LAGI - jadi tidak akan auto refresh
+  }, []); // Empty dependency array - hanya run sekali
 
   const formatTime = (time: string) => {
     return new Date(`2000-01-01T${time}`).toLocaleTimeString("id-ID", {
@@ -197,6 +192,18 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
     const days = Math.floor(hours / 24);
     const remainingHours = hours % 24;
     return `${days}h ${remainingHours.toFixed(1)}j`;
+  };
+
+  // Format durasi video dalam format mm:ss atau hh:mm:ss
+  const formatVideoDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handlePlayVideo = (stream: LiveStream) => {
@@ -1058,7 +1065,7 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
         )}
       </div>
 
-      {/* Video Player Modal */}
+          {/* Video Player Modal - COMPACT & RESPONSIVE VERSION */}
       {showVideoModal && selectedVideo && (
         <div
           style={{
@@ -1067,44 +1074,59 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.8)",
+            background: "rgba(0, 0, 0, 0.75)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
-            padding: "20px",
+            padding: isMobile ? "12px" : "20px",
           }}
+          onClick={handleCloseVideoModal}
         >
           <div
             style={{
               background: COLORS.white,
-              borderRadius: 12,
-              padding: "16px",
-              maxWidth: "800px",
-              maxHeight: "80vh",
-              width: "90%",
+              borderRadius: isMobile ? 12 : 16,
+              padding: isMobile ? "16px" : "20px",
+              maxWidth: isMobile ? "100%" : "700px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
               position: "relative",
+              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
               onClick={handleCloseVideoModal}
               style={{
                 position: "absolute",
-                top: "12px",
-                right: "12px",
+                top: isMobile ? "8px" : "12px",
+                right: isMobile ? "8px" : "12px",
                 background: COLORS.red,
                 color: COLORS.white,
                 border: "none",
                 borderRadius: "50%",
-                width: "32px",
-                height: "32px",
+                width: isMobile ? "32px" : "36px",
+                height: isMobile ? "32px" : "36px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "16px",
+                fontSize: isMobile ? "16px" : "18px",
                 zIndex: 1001,
+                fontWeight: "bold",
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = COLORS.redDark;
+                e.currentTarget.style.transform = "scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = COLORS.red;
+                e.currentTarget.style.transform = "scale(1)";
               }}
             >
               ✕
@@ -1113,10 +1135,13 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
             {/* Video Title */}
             <h3
               style={{
-                margin: "0 0 12px 0",
-                fontSize: "16px",
+                margin: "0 40px 12px 0",
+                fontSize: isMobile ? "16px" : "18px",
                 fontWeight: 600,
                 color: COLORS.text,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
               {selectedVideo.title || `Live Stream #${selectedVideo.id}`}
@@ -1127,16 +1152,20 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               style={{
                 width: "100%",
                 margin: "0 auto",
+                borderRadius: 8,
+                overflow: "hidden",
+                background: "#000",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
               }}
             >
               <video
                 controls
+                controlsList="nodownload"
                 autoPlay
                 style={{
                   width: "100%",
-                  maxHeight: "400px",
-                  borderRadius: 8,
-                  border: `1px solid ${COLORS.border}`,
+                  maxHeight: isMobile ? "250px" : "400px",
+                  display: "block",
                 }}
                 src={selectedVideo.recordingPath ? `${API_URL}${selectedVideo.recordingPath}` : `${API_URL}/api/livestream/stream/${selectedVideo.id}`}
                 onError={(e) => {
@@ -1148,18 +1177,86 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
               </video>
             </div>
 
-            {/* Video Info */}
+            {/* Video Info - Compact */}
             <div
               style={{
-                marginTop: "12px",
-                fontSize: "13px",
-                color: COLORS.subtext,
+                marginTop: "16px",
+                padding: isMobile ? "10px" : "12px",
+                background: "#f9fafb",
+                borderRadius: 8,
+                border: "1px solid #e5e7eb",
               }}
             >
-              <div>
-                <strong>Tanggal:</strong> {selectedVideo.startTime && formatDate(selectedVideo.startTime)}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gap: isMobile ? "8px" : "10px",
+                fontSize: isMobile ? "12px" : "13px",
+                color: COLORS.text,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: isMobile ? "14px" : "16px" }}>📅</span>
+                  <span style={{ fontSize: isMobile ? "11px" : "12px", color: "#6b7280" }}>
+                    {selectedVideo.startTime && new Date(selectedVideo.startTime).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </span>
+                </div>
+                
+                {selectedVideo.duration && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: isMobile ? "14px" : "16px" }}>⏱️</span>
+                    <span style={{ fontSize: isMobile ? "11px" : "12px", color: "#6b7280" }}>
+                      {formatDuration(selectedVideo.duration)}
+                    </span>
+                  </div>
+                )}
+                
+                {selectedVideo.viewers !== undefined && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: isMobile ? "14px" : "16px" }}>👥</span>
+                    <span style={{ fontSize: isMobile ? "11px" : "12px", color: "#6b7280" }}>
+                      {selectedVideo.viewers} viewers
+                    </span>
+                  </div>
+                )}
+                
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: isMobile ? "14px" : "16px" }}>🔴</span>
+                  <span style={{
+                    background: selectedVideo.status === 'active' ? '#fef2f2' : '#f0fdf4',
+                    color: selectedVideo.status === 'active' ? '#dc2626' : '#16a34a',
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    fontSize: isMobile ? "10px" : "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}>
+                    {selectedVideo.status === 'active' ? 'LIVE' : 'SAVED'}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Compact Tips */}
+            {!isMobile && (
+              <div style={{
+                marginTop: "12px",
+                padding: "10px",
+                background: "#ecfdf5",
+                borderRadius: 6,
+                border: "1px solid #a7f3d0",
+                fontSize: "11px",
+                color: "#065f46",
+                lineHeight: 1.5,
+              }}>
+                💡 <strong>Tips:</strong> Gunakan kontrol untuk play/pause, fast forward, atur volume & kecepatan pemutaran
+              </div>
+            )}
           </div>
         </div>
       )}

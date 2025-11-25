@@ -95,7 +95,7 @@ const AdminLiveStreamPage: React.FC = () => {
 
   // Socket connection for real-time viewer count updates
   useEffect(() => {
-    socketRef.current = io('http://192.168.1.19:4000');
+    socketRef.current = io('http://192.168.1.8:4000');
     
     socketRef.current.on('connect', () => {
       console.log('[AdminLiveStreamPage] Connected to MediaSoup server');
@@ -130,7 +130,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Initialize chat socket connection
   useEffect(() => {
     if (streamingState.roomId && !chatSocketRef.current) {
-      chatSocketRef.current = io('http://192.168.1.19:4000');
+      chatSocketRef.current = io('http://192.168.1.8:4000');
       console.log('[AdminLiveStreamPage] Chat socket initialized for room:', streamingState.roomId);
     }
 
@@ -215,7 +215,7 @@ const AdminLiveStreamPage: React.FC = () => {
     
     try {
       console.log(`[AdminLiveStreamPage] Fetching viewer count for room: ${streamingState.roomId}`);
-      const response = await fetch(`http://192.168.1.19:4000/api/viewer-count/${streamingState.roomId}`);
+      const response = await fetch(`http://192.168.1.8:4000/api/viewer-count/${streamingState.roomId}`);
       if (response.ok) {
         const data = await response.json();
         console.log(`[AdminLiveStreamPage] Viewer count response:`, data);
@@ -384,7 +384,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.19:3000/#/view/${roomId}`;
+    return `http://192.168.1.8:3000/#/view/${roomId}`;
   };
 
   if (loading) {

@@ -1,89 +1,100 @@
+// backend/controller/liveStreamController.js
 const { LiveStream } = require('../models');
 const path = require('path');
 const fs = require('fs');
+const { roomViewers } = require('../mediasoupState');
+const multer = require('multer');
+const { Op } = require('sequelize');
+
+// =====================
+// MULTER CONFIG (AMAN)
+// =====================
+/**
+ * Multer akan langsung menyimpan file ke folder `uploads/`
+ * dengan nama: <streamId>.webm
+ * Jadi TIDAK PERLU rename lagi di controller.
+ */
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const { streamId } = req.body;
+
+    // Fallback kalau streamId tidak ada (supaya tidak crash)
+    const safeId = streamId || `stream_${Date.now()}`;
+    cb(null, `${safeId}.webm`);
+  },
+});
+
+const upload = multer({ storage });
+exports.uploadRecordingMiddleware = upload.single('recording');
+
+// Kalau mau dipakai di routes:
+// module.exports.uploadRecordingMiddleware = upload.single('recording');
 
 let liveStreams = [];
 let streamingStats = {
   totalStreams: 0,
-  totalDuration: 0, // in hours
+  totalDuration: 0,
   totalViewers: 0,
   activeStreams: 0,
   averageViewers: 0,
-  streamHistory: [] // untuk tracking history
+  streamHistory: []
 };
-
-// Hapus mock data statis dan gunakan data dinamis sepenuhnya
-// const mockStats = {
-//   totalStreams: 12,
-//   totalDuration: 48,
-//   totalViewers: 156,
-//   activeStreams: 0,
-//   averageViewers: 13
-// };
 
 exports.startLive = async (req, res) => {
   const { id, title } = req.body;
-  
+
   try {
     console.log('Starting live stream with data:', { id, title });
-    
-    // Validasi input
+
     if (!id) {
       console.log('Stream ID is missing');
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Stream ID is required',
-        success: false 
+        success: false
       });
     }
 
-    // Cek apakah ID sudah ada di database (untuk mencegah duplikat)
-    console.log('Checking for existing stream with ID:', id);
     const existingStream = await LiveStream.findOne({
       where: { id: id }
     });
     console.log('Existing stream found:', existingStream ? 'Yes' : 'No');
-    
+
     if (existingStream) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Live stream with this ID already exists',
-        success: false 
+        success: false
       });
     }
-    
-    // Cek apakah ID sudah ada di memory (untuk mencegah duplikat)
-    console.log('Checking memory for existing stream with ID:', id);
+
     const existingInMemory = liveStreams.find(s => s.id === id);
     console.log('Existing in memory:', existingInMemory ? 'Yes' : 'No');
-    
+
     if (!existingInMemory) {
-      const newStream = { 
+      const newStream = {
         id,
-        title: title || `Live Stream ${id}`,
+title: title, // Tidak ada fallback
         startTime: new Date().toISOString(),
         viewers: 0,
-        isRecording: false // Semua live stream otomatis tersimpan
+        isRecording: false
       };
       liveStreams.push(newStream);
-      
-      // Simpan ke database (semua live stream otomatis tersimpan)
+
       console.log('Creating live stream record in database...');
-      const liveStreamRecord = await LiveStream.create({
+      await LiveStream.create({
         id,
-        title: title || `Live Stream ${id}`,
+  title: title, // <= hanya judul dari user
         startTime: new Date(),
         viewers: 0,
         isRecording: false,
         status: 'active'
       });
       console.log('Live stream record created successfully');
-      
-      console.log('Live stream automatically saved to database:', liveStreamRecord.toJSON());
-      
-      // Update stats
+
       streamingStats.activeStreams = liveStreams.length;
-      // totalStreams now calculated from database, no need to increment in memory
-      
-      // Add to history
+
       streamingStats.streamHistory.push({
         id,
         startTime: newStream.startTime,
@@ -92,83 +103,92 @@ exports.startLive = async (req, res) => {
         viewers: 0,
         isRecording: false
       });
-      
+
       res.json({ success: true });
     } else {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Live stream with this ID is already active',
-        success: false 
+        success: false
       });
     }
   } catch (error) {
     console.error('Error starting live stream:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to start live stream',
       details: error.message,
-      success: false 
+      success: false
     });
   }
 };
 
+// ✅ PERBAIKAN 1: Fix viewers count saat stop live
 exports.stopLive = async (req, res) => {
   const { id } = req.body;
-  const streamToStop = liveStreams.find(s => s.id === id);
-  
+
   try {
-    if (streamToStop) {
-      const endTime = new Date();
-      const startTime = new Date(streamToStop.startTime);
-      const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-      
-      // Check if there's a recording available
-      const existingStream = await LiveStream.findByPk(id);
-      const hasRecording = existingStream && existingStream.recordingPath;
-      
-      // Update database - set status based on whether recording exists
-      await LiveStream.update({
-        endTime: endTime,
-        duration: durationHours,
-        viewers: streamToStop.viewers || 0,
-        status: hasRecording ? 'recording' : 'ended' // If recording exists, set to 'recording', otherwise 'ended'
-      }, {
-        where: { id: id }
-      });
-      
-      console.log('Live stream stopped and updated in database:', { 
-        id, 
-        duration: durationHours, 
-        status: hasRecording ? 'recording' : 'ended',
-        hasRecording 
-      });
-      
-      // Verify the update was successful
-      const updatedStream = await LiveStream.findByPk(id);
-      console.log('Verification - Updated stream status:', updatedStream ? updatedStream.status : 'NOT FOUND');
-      
-      // Update history
-      const historyEntry = streamingStats.streamHistory.find(h => h.id === id);
-      if (historyEntry) {
-        historyEntry.endTime = endTime.toISOString();
-        historyEntry.duration = durationHours;
-        historyEntry.viewers = streamToStop.viewers || 0;
-        
-        // Update total duration
-        streamingStats.totalDuration += durationHours;
-        // Update total viewers
-        streamingStats.totalViewers += historyEntry.viewers;
-      }
+    const streamToStop = liveStreams.find(s => s.id === id);
+    const existingStream = await LiveStream.findByPk(id);
+
+    if (!existingStream) {
+      return res.status(404).json({ error: 'Live stream tidak ditemukan' });
     }
-    
-    // Remove from active streams
+
+    if (existingStream.status !== 'active') {
+      console.log(`⏹️ Stream ${id} already stopped earlier`);
+      return res.json({ success: true, alreadyStopped: true });
+    }
+
+    const roomViewerCount = roomViewers[id] ? roomViewers[id].size : 0;
+    const memoryViewerCount = streamToStop ? (streamToStop.viewers || 0) : 0;
+    const dbViewerCount = existingStream.viewers || 0;
+
+    const finalViewerCount = Math.max(
+      roomViewerCount,
+      memoryViewerCount,
+      dbViewerCount
+    );
+
+    console.log(`📌 FINAL VIEWER COUNT for ${id}:`, {
+      roomViewerCount,
+      memoryViewerCount,
+      dbViewerCount,
+      finalViewerCount
+    });
+
+    const endTime = new Date();
+    const startTime = streamToStop
+      ? new Date(streamToStop.startTime)
+      : new Date(existingStream.startTime);
+
+    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+    const hasRecording = !!existingStream.recordingPath;
+
+    await LiveStream.update(
+      {
+        endTime,
+        duration: durationHours,
+        viewers: finalViewerCount,
+        status: hasRecording ? 'recording' : 'ended',
+      },
+      { where: { id } }
+    );
+
+    console.log('✅ DB updated:', {
+      id,
+      finalViewerCount,
+      status: hasRecording ? 'recording' : 'ended'
+    });
+
     liveStreams = liveStreams.filter(s => s.id !== id);
     streamingStats.activeStreams = liveStreams.length;
-    
-    res.json({ success: true });
+
+    res.json({ success: true, viewers: finalViewerCount });
   } catch (error) {
-    console.error('Error stopping live stream:', error);
-    res.status(500).json({ error: 'Failed to stop live stream' });
+    console.error('❌ Error stopping live stream:', error);
+    res.status(500).json({
+      error: 'Failed to stop live stream',
+      details: error.message,
+    });
   }
 };
 
@@ -178,30 +198,32 @@ exports.getActive = (req, res) => {
 
 exports.getStats = async (req, res) => {
   try {
-    // Get total streams from database instead of memory
     const totalStreamsFromDB = await LiveStream.count();
-    
-    // Calculate real stats from history
+
     const completedStreams = streamingStats.streamHistory.filter(h => h.endTime);
     const totalCompletedStreams = completedStreams.length;
     const totalDuration = streamingStats.totalDuration;
     const totalViewers = streamingStats.totalViewers;
-    
-    // Hitung rata-rata penonton dengan lebih akurat
+
     let averageViewers = 0;
     if (totalCompletedStreams > 0 && totalViewers > 0) {
       averageViewers = Math.round(totalViewers / totalCompletedStreams);
     }
-    
+
     const stats = {
-      totalStreams: totalStreamsFromDB, // Use database count instead of memory
-      totalDuration: Math.round(totalDuration * 100) / 100, // Round to 2 decimal places
+      totalStreams: totalStreamsFromDB,
+      totalDuration: Math.round(totalDuration * 100) / 100,
       totalViewers: totalViewers,
       activeStreams: liveStreams.length,
       averageViewers: averageViewers
     };
-    
-    console.log('Stats requested - Database count:', totalStreamsFromDB, 'Memory count:', streamingStats.totalStreams);
+
+    console.log(
+      'Stats requested - Database count:',
+      totalStreamsFromDB,
+      'Memory count:',
+      streamingStats.totalStreams
+    );
     res.json(stats);
   } catch (error) {
     console.error('Error getting stats:', error);
@@ -213,17 +235,17 @@ exports.updateViewers = (req, res) => {
   const { id, viewers } = req.body;
   const stream = liveStreams.find(s => s.id === id);
   if (stream) {
-    // Tambahkan viewers baru ke stream yang sedang aktif
     const oldViewers = stream.viewers || 0;
     stream.viewers = oldViewers + viewers;
-    
-    // Update history entry juga
-    const historyEntry = streamingStats.streamHistory.find(h => h.id === id && !h.endTime);
+
+    const historyEntry = streamingStats.streamHistory.find(
+      h => h.id === id && !h.endTime
+    );
     if (historyEntry) {
       historyEntry.viewers = stream.viewers;
     }
-    
-    console.log(`Updated viewers for stream ${id}: ${stream.viewers}`);
+
+    console.log(`👥 Updated viewers for stream ${id}: ${oldViewers} → ${stream.viewers}`);
   }
   res.json({ success: true });
 };
@@ -231,17 +253,16 @@ exports.updateViewers = (req, res) => {
 exports.getStreamInfo = (req, res) => {
   const { id } = req.params;
   const stream = liveStreams.find(s => s.id === id);
-  
+
   if (stream) {
-    // Hitung durasi stream saat ini
     const startTime = new Date(stream.startTime);
     const currentTime = new Date();
     const durationHours = (currentTime - startTime) / (1000 * 60 * 60);
-    
+
     res.json({
       startTime: stream.startTime,
       viewers: stream.viewers || 0,
-      duration: durationHours, // Tambahkan durasi real-time
+      duration: durationHours,
       streamId: stream.id,
       isRecording: stream.isRecording || false
     });
@@ -250,25 +271,23 @@ exports.getStreamInfo = (req, res) => {
   }
 };
 
-// Tambahkan fungsi untuk mendapatkan statistik satu stream
 exports.getCurrentStreamStats = (req, res) => {
   const { id } = req.params;
   const stream = liveStreams.find(s => s.id === id);
-  
+
   if (stream) {
-    // Hitung durasi stream saat ini
     const startTime = new Date(stream.startTime);
     const currentTime = new Date();
     const durationHours = (currentTime - startTime) / (1000 * 60 * 60);
-    
+
     const stats = {
-      totalStreams: 1, // Selalu 1 karena ini hanya untuk stream saat ini
+      totalStreams: 1,
       totalDuration: durationHours,
       totalViewers: stream.viewers || 0,
-      activeStreams: 1, // Selalu 1 karena ini stream yang aktif
-      averageViewers: stream.viewers || 0 // Sama dengan total viewers untuk satu stream
+      activeStreams: 1,
+      averageViewers: stream.viewers || 0
     };
-    
+
     res.json(stats);
   } else {
     res.status(404).json({ error: 'Stream not found' });
@@ -277,9 +296,8 @@ exports.getCurrentStreamStats = (req, res) => {
 
 exports.resetStats = async (req, res) => {
   try {
-    // Reset memory stats to match database
     const totalStreamsFromDB = await LiveStream.count();
-    
+
     streamingStats = {
       totalStreams: totalStreamsFromDB,
       totalDuration: 0,
@@ -288,28 +306,34 @@ exports.resetStats = async (req, res) => {
       averageViewers: 0,
       streamHistory: []
     };
-    
-    console.log('Stats reset to match database:', { totalStreams: totalStreamsFromDB });
-    res.json({ success: true, message: 'Statistik berhasil direset', totalStreams: totalStreamsFromDB });
+
+    console.log('Stats reset to match database:', {
+      totalStreams: totalStreamsFromDB
+    });
+    res.json({
+      success: true,
+      message: 'Statistik berhasil direset',
+      totalStreams: totalStreamsFromDB
+    });
   } catch (error) {
     console.error('Error resetting stats:', error);
     res.status(500).json({ error: 'Failed to reset stats' });
   }
 };
 
-// Endpoint untuk memaksa sync stats dengan database
 exports.syncStats = async (req, res) => {
   try {
     const totalStreamsFromDB = await LiveStream.count();
-    
-    // Update memory stats to match database
+
     streamingStats.totalStreams = totalStreamsFromDB;
-    
-    console.log('Stats synced with database:', { totalStreams: totalStreamsFromDB });
-    res.json({ 
-      success: true, 
-      message: 'Stats berhasil disinkronkan dengan database', 
-      totalStreams: totalStreamsFromDB 
+
+    console.log('Stats synced with database:', {
+      totalStreams: totalStreamsFromDB
+    });
+    res.json({
+      success: true,
+      message: 'Stats berhasil disinkronkan dengan database',
+      totalStreams: totalStreamsFromDB
     });
   } catch (error) {
     console.error('Error syncing stats:', error);
@@ -317,13 +341,8 @@ exports.syncStats = async (req, res) => {
   }
 };
 
-
-// Tambahkan di bagian atas file, setelah deklarasi variabel
-
-// Fungsi untuk inisialisasi data awal jika belum ada data
 const initializeDefaultStats = async () => {
   try {
-    // Reset memory stats to match database
     const totalStreamsFromDB = await LiveStream.count();
     streamingStats.totalStreams = totalStreamsFromDB;
     streamingStats.totalDuration = 0;
@@ -331,11 +350,12 @@ const initializeDefaultStats = async () => {
     streamingStats.activeStreams = 0;
     streamingStats.averageViewers = 0;
     streamingStats.streamHistory = [];
-    
-    console.log('Stats initialized from database:', { totalStreams: totalStreamsFromDB });
+
+    console.log('Stats initialized from database:', {
+      totalStreams: totalStreamsFromDB
+    });
   } catch (error) {
     console.error('Error initializing stats:', error);
-    // Fallback to default values
     streamingStats.totalStreams = 0;
     streamingStats.totalDuration = 0;
     streamingStats.totalViewers = 0;
@@ -345,29 +365,27 @@ const initializeDefaultStats = async () => {
   }
 };
 
-// Panggil fungsi inisialisasi setelah database siap
 setTimeout(() => {
   initializeDefaultStats();
-}, 1000); // Delay 1 detik untuk memastikan database siap
+}, 1000);
 
-// Fungsi untuk mendapatkan history live stream dari database
 exports.getLiveStreamHistory = async (req, res) => {
   try {
     const { page = 1, limit = 10, status } = req.query;
     const offset = (page - 1) * limit;
-    
+
     let whereClause = {};
     if (status) {
       whereClause.status = status;
     }
-    
+
     const { count, rows } = await LiveStream.findAndCountAll({
       where: whereClause,
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
-    
+
     res.json({
       success: true,
       data: rows,
@@ -384,21 +402,22 @@ exports.getLiveStreamHistory = async (req, res) => {
   }
 };
 
-// Fungsi untuk mendapatkan detail live stream
 exports.getLiveStreamDetail = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`[getLiveStreamDetail] Fetching stream detail for ID: ${id}`);
-    
+
     const stream = await LiveStream.findByPk(id);
-    
+
     if (!stream) {
       console.log(`[getLiveStreamDetail] Stream not found for ID: ${id}`);
       return res.status(404).json({ error: 'Live stream not found' });
     }
-    
-    console.log(`[getLiveStreamDetail] Stream found - Status: ${stream.status}, Title: ${stream.title}`);
-    
+
+    console.log(
+      `[getLiveStreamDetail] Stream found - Status: ${stream.status}, Title: ${stream.title}`
+    );
+
     res.json({
       success: true,
       data: stream
@@ -409,134 +428,284 @@ exports.getLiveStreamDetail = async (req, res) => {
   }
 };
 
-// Fungsi untuk mengupdate recording path
 exports.updateRecordingPath = async (req, res) => {
   try {
     const { id, recordingPath } = req.body;
-    
-    // Update the recording path and set status to 'recording' if stream was 'ended'
-    const updated = await LiveStream.update({
-      recordingPath: recordingPath,
-      status: 'recording' // Always set to recording when recording path is available
-    }, {
-      where: { id: id }
+
+    console.log('📝 Updating recording path:', { id, recordingPath });
+
+    const [updatedRows] = await LiveStream.update(
+      {
+        recordingPath: recordingPath,
+        status: 'recording',
+        isRecording: true
+      },
+      {
+        where: { id: id }
+      }
+    );
+
+    console.log('✅ Recording path updated:', {
+      id,
+      recordingPath,
+      updatedRows
     });
-    
-    console.log('Recording path updated:', { id, recordingPath, updated: updated[0] });
-    
+
+    const updatedStream = await LiveStream.findByPk(id);
+    if (updatedStream) {
+      console.log('✅ Verification - Updated stream:', {
+        id: updatedStream.id,
+        recordingPath: updatedStream.recordingPath,
+        status: updatedStream.status
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
-    console.error('Error updating recording path:', error);
+    console.error('❌ Error updating recording path:', error);
     res.status(500).json({ error: 'Failed to update recording path' });
   }
 };
 
-// Fungsi untuk streaming video live stream
-exports.streamVideo = (req, res) => {
-  const { id } = req.params;
-  const filePath = path.join(__dirname, '../uploads', `${id}.webm`);
-  
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Video file tidak ditemukan' });
-  }
+// ✅ STREAM VIDEO (dengan path benar)
+exports.streamVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🎥 Stream video requested for ID: ${id}`);
 
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
+    const stream = await LiveStream.findByPk(id);
+    if (!stream) {
+      console.log(`❌ Stream not found in database for ID: ${id}`);
+      return res.status(404).json({ error: 'Live stream tidak ditemukan' });
+    }
 
-  // Set CORS headers for video streaming
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Range');
-  res.setHeader('Accept-Ranges', 'bytes');
+    let filePath;
+    if (stream.recordingPath) {
+      filePath = path.join(__dirname, '..', stream.recordingPath);
+      console.log(`📁 Using recording path from DB: ${filePath}`);
+    } else {
+      filePath = path.join(__dirname, '../uploads', `${id}.webm`);
+      console.log(`📁 Using default path: ${filePath}`);
+    }
 
-  if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = (end - start) + 1;
-    const file = fs.createReadStream(filePath, { start, end });
-    const head = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'video/webm',
-      'Cache-Control': 'no-cache',
+    if (filePath.endsWith('.part') || filePath.includes('.part')) {
+      console.warn('Attempt to serve temp file (part):', filePath);
+      return res
+        .status(404)
+        .json({ error: 'Video file belum tersedia' });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ Video file not found at path: ${filePath}`);
+      return res.status(404).json({
+        error: 'Video file tidak ditemukan',
+        details: 'File tidak ada di server'
+      });
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+
+    const MIN_VALID_BYTES = 10 * 1024;
+    if (fileSize < MIN_VALID_BYTES) {
+      console.warn(
+        `File ${filePath} too small (${fileSize} bytes). Treat as not ready.`
+      );
+      return res.status(404).json({
+        error: 'Video file belum tersedia (masih diproses)'
+      });
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeMap = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.mov': 'video/quicktime',
+      '.m4v': 'video/x-m4v'
     };
-    res.writeHead(206, head);
-    file.pipe(res);
-  } else {
-    const head = {
-      'Content-Length': fileSize,
-      'Content-Type': 'video/webm',
-      'Cache-Control': 'no-cache',
-    };
-    res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (
+        isNaN(start) ||
+        isNaN(end) ||
+        start > end ||
+        start < 0
+      ) {
+        return res
+          .status(416)
+          .setHeader('Content-Range', `bytes */${fileSize}`)
+          .end();
+      }
+
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': contentType
+      };
+      res.writeHead(206, head);
+      console.log(
+        `📤 Streaming chunk: ${start}-${end}/${fileSize} (${contentType})`
+      );
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      };
+      res.writeHead(200, head);
+      console.log(
+        `📤 Streaming full video: ${fileSize} bytes (${contentType})`
+      );
+      fs.createReadStream(filePath).pipe(res);
+    }
+  } catch (error) {
+    console.error('❌ Error streaming video:', error);
+    res.status(500).json({
+      error: 'Gagal streaming video',
+      details: error.message
+    });
   }
 };
 
-// Fungsi untuk download video live stream
-exports.downloadVideo = (req, res) => {
-  const { id } = req.params;
-  const filePath = path.join(__dirname, '../uploads', `${id}.webm`);
-  
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Video file tidak ditemukan' });
-  }
+// ✅ DOWNLOAD VIDEO
+exports.downloadVideo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`⬇️ Download video requested for ID: ${id}`);
 
-  res.download(filePath, `live_stream_${id}.webm`);
+    const stream = await LiveStream.findByPk(id);
+
+    if (!stream) {
+      console.log(`❌ Stream not found in database for ID: ${id}`);
+      return res.status(404).json({ error: 'Live stream tidak ditemukan' });
+    }
+
+    let filePath;
+
+    if (stream.recordingPath) {
+      filePath = path.join(__dirname, '..', stream.recordingPath);
+      console.log(`📁 Using recording path from DB: ${filePath}`);
+    } else {
+      filePath = path.join(__dirname, '../uploads', `${id}.webm`);
+      console.log(`📁 Using default path: ${filePath}`);
+    }
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ Video file not found at path: ${filePath}`);
+      return res.status(404).json({ error: 'Video file tidak ditemukan' });
+    }
+
+    console.log(`✅ Starting download for file: ${filePath}`);
+    res.download(filePath, `live_stream_${id}.webm`);
+  } catch (error) {
+    console.error('❌ Error downloading video:', error);
+    res.status(500).json({
+      error: 'Gagal download video',
+      details: error.message
+    });
+  }
 };
 
-// Fungsi untuk upload recording dari live stream
+// ✅ PERBAIKAN 3: Upload recording TANPA rename (aman)
 exports.uploadLiveStreamRecording = async (req, res) => {
   try {
     const { streamId, judul } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    if (!streamId) return res.status(400).json({ error: 'Stream ID wajib diisi' });
 
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    if (!streamId) {
+      return res.status(400).json({ error: 'Stream ID wajib diisi' });
+    }
+
+    // Karena Multer sudah pakai nama <streamId>.webm,
+    // filename di sini sudah konsisten.
     const filename = req.file.filename;
     const recordingPath = `/uploads/${filename}`;
 
-    // Update LiveStream record with recording path and set status to 'recording'
-    const updated = await LiveStream.update({
-      recordingPath: recordingPath,
-      isRecording: true,
-      status: 'recording' // Set status to 'recording' when recording is uploaded
-    }, {
-      where: { id: streamId }
+    console.log('📤 Uploading recording (NO RENAME):', {
+      streamId,
+      filename,
+      recordingPath
     });
 
-    if (updated[0] > 0) {
-      console.log('Live stream recording path updated:', { streamId, recordingPath, status: 'recording' });
+    const [updatedRows] = await LiveStream.update(
+      {
+        recordingPath,
+        isRecording: true,
+        status: 'recording',
+      },
+      {
+        where: { id: streamId }
+      }
+    );
+
+    if (updatedRows > 0) {
+      console.log('✅ Live stream recording saved:', {
+        streamId,
+        recordingPath,
+        filename,
+        updatedRows
+      });
+
+      const updatedStream = await LiveStream.findByPk(streamId);
+      if (updatedStream) {
+        console.log('✅ Verification - Updated stream:', {
+          id: updatedStream.id,
+          recordingPath: updatedStream.recordingPath,
+          status: updatedStream.status,
+          isRecording: updatedStream.isRecording
+        });
+      }
+
       res.json({ success: true, recordingPath, filename });
     } else {
+      console.log('❌ No rows updated - stream not found:', streamId);
+
+      const fullPath = path.join(__dirname, '..', 'uploads', filename);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        console.log('🗑️ Rolled back file upload:', fullPath);
+      }
+
       res.status(404).json({ error: 'Live stream tidak ditemukan' });
     }
   } catch (err) {
-    console.error('Error uploading live stream recording:', err);
+    console.error('❌ Error uploading live stream recording:', err);
     res.status(500).json({ error: 'Gagal upload live stream recording' });
   }
 };
 
-// Fungsi untuk mendapatkan recording live stream
 exports.getRecordings = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-    
+
     const { count, rows } = await LiveStream.findAndCountAll({
       where: {
         isRecording: true,
-        recordingPath: { [require('sequelize').Op.ne]: null }
+        recordingPath: { [Op.ne]: null }
       },
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });
-    
+
     res.json({
       success: true,
       data: rows,
@@ -553,106 +722,107 @@ exports.getRecordings = async (req, res) => {
   }
 };
 
-// Fungsi untuk menghapus live stream dari database dan file system
 exports.deleteLiveStream = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Delete request received for ID:', id);
-    
-    // Cari live stream di database
+    console.log('🗑️ Delete request received for ID:', id);
+
     const stream = await LiveStream.findByPk(id);
     console.log('Stream found:', stream ? 'Yes' : 'No');
-    
+
     if (!stream) {
-      console.log('Stream not found in database');
-      return res.status(404).json({ 
+      console.log('❌ Stream not found in database');
+      return res.status(404).json({
         success: false,
-        error: 'Live stream tidak ditemukan' 
+        error: 'Live stream tidak ditemukan'
       });
     }
-    
-    // Hapus file recording jika ada
+
     if (stream.recordingPath) {
       const filePath = path.join(__dirname, '..', stream.recordingPath);
       if (fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);
-          console.log('Recording file deleted:', filePath);
+          console.log('✅ Recording file deleted:', filePath);
         } catch (fileError) {
-          console.error('Error deleting recording file:', fileError);
+          console.error('❌ Error deleting recording file:', fileError);
         }
+      } else {
+        console.log('⚠️ Recording file not found:', filePath);
       }
     }
-    
-    // Hapus thumbnail jika ada
-    const thumbnailPath = path.join(__dirname, '../uploads', `thumb_${id}.jpg`);
+
+    const thumbnailPath = path.join(
+      __dirname,
+      '../uploads',
+      `thumb_${id}.jpg`
+    );
     if (fs.existsSync(thumbnailPath)) {
       try {
         fs.unlinkSync(thumbnailPath);
-        console.log('Thumbnail file deleted:', thumbnailPath);
+        console.log('✅ Thumbnail file deleted:', thumbnailPath);
       } catch (fileError) {
-        console.error('Error deleting thumbnail file:', fileError);
+        console.error('❌ Error deleting thumbnail file:', fileError);
       }
     }
-    
-    // Hapus dari database
+
     await stream.destroy();
-    
-    // Hapus dari memory jika masih ada
+
     liveStreams = liveStreams.filter(s => s.id !== id);
     streamingStats.activeStreams = liveStreams.length;
-    
-    // Hapus dari history
-    streamingStats.streamHistory = streamingStats.streamHistory.filter(h => h.id !== id);
-    
-    console.log('Live stream deleted successfully:', id);
-    
-    res.json({ 
-      success: true, 
-      message: 'Live stream berhasil dihapus' 
+    streamingStats.streamHistory = streamingStats.streamHistory.filter(
+      h => h.id !== id
+    );
+
+    console.log('✅ Live stream deleted successfully:', id);
+
+    res.json({
+      success: true,
+      message: 'Live stream berhasil dihapus'
     });
-    
   } catch (error) {
-    console.error('Error deleting live stream:', error);
-    res.status(500).json({ 
+    console.error('❌ Error deleting live stream:', error);
+    res.status(500).json({
       success: false,
-      error: 'Gagal menghapus live stream' 
+      error: 'Gagal menghapus live stream'
     });
   }
 };
 
-// Fungsi untuk notifikasi stream ended
 exports.notifyStreamEnded = async (req, res) => {
   try {
     const { roomId } = req.body;
-    
+
     if (!roomId) {
       return res.status(400).json({ error: 'Room ID is required' });
     }
-    
+
     console.log('Stream ended notification received for room:', roomId);
-    
-    // Here you can add logic to notify all viewers that the stream has ended
-    // For now, we'll just log it and return success
-    
-    res.json({ success: true, message: 'Stream ended notification processed' });
+
+    res.json({
+      success: true,
+      message: 'Stream ended notification processed'
+    });
   } catch (error) {
     console.error('Error processing stream ended notification:', error);
-    res.status(500).json({ error: 'Failed to process stream ended notification' });
+    res.status(500).json({
+      error: 'Failed to process stream ended notification'
+    });
   }
 };
 
-// Fungsi untuk membersihkan live stream yang sudah berakhir dari memory
 exports.cleanupEndedStreams = () => {
-  // Hapus live stream yang sudah berakhir dari memory (lebih dari 1 jam yang lalu)
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  
+
   liveStreams = liveStreams.filter(stream => {
     const startTime = new Date(stream.startTime);
     return startTime > oneHourAgo;
   });
-  
+
   streamingStats.activeStreams = liveStreams.length;
-  
-  console.log('Cleaned up ended streams from memory. Active streams:', liveStreams.length);
+
+  console.log(
+    'Cleaned up ended streams from memory. Active streams:',
+    liveStreams.length
+  );
 };

@@ -5,6 +5,8 @@ const mediasoup = require('mediasoup');
 const fs = require('fs');
 const path = require('path');
 const { LiveStream } = require('./models');
+const mediasoupState = require('./mediasoupState');
+const { startFfmpegRecording, stopFfmpegRecording } = require('./recording/ffmpegRecorder');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,7 +64,7 @@ app.get('/stream/:roomId', (req, res) => {
     try {
       // Create consumer transport for this stream
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.8', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
@@ -404,7 +406,7 @@ app.get('/webrtc-stream/:roomId', (req, res) => {
       '3. Use the consumer to get video data',
       '4. Feed the video data to FFmpeg for YouTube RTMP'
     ],
-    webrtcUrl: `ws://192.168.1.19:4000`,
+    webrtcUrl: `ws://192.168.1.8:4000`,
     producerId: roomProducers.video.id
   });
 });
@@ -428,7 +430,7 @@ app.get('/direct-video/:roomId', async (req, res) => {
   try {
     // Create a consumer transport to get video data
     const consumerTransport = await router.createWebRtcTransport({
-      listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
+      listenIps: [{ ip: '192.168.1.8', announcedIp: null }],
       enableUdp: true,
       enableTcp: true,
       preferUdp: true
@@ -531,13 +533,8 @@ let worker, router;
 // let producerTransport, consumerTransports = [];
 let producerVideo = null;
 let producerAudio = null;
-const producers = {}; // { [roomId]: { video: Producer, audio: Producer } }
+const { producers, clientTransports, roomViewers } = require('./mediasoupState');
 
-// Store transports per client
-const clientTransports = {}; // { [socketId]: { producer: Transport, consumers: [Transport] } }
-
-// Store active viewers for each room
-const roomViewers = {}; // { [roomId]: Set<socketId> }
 
 // Function to update viewer count in database
 const updateViewerCount = async (roomId) => {
@@ -570,36 +567,38 @@ const updateViewerCount = async (roomId) => {
 
 // Function to add viewer to room
 const addViewerToRoom = (roomId, socketId) => {
-  console.log(`[ViewerCount] Adding viewer ${socketId} to room ${roomId}`);
-  
   if (!roomViewers[roomId]) {
     roomViewers[roomId] = new Set();
-    console.log(`[ViewerCount] Created new room ${roomId}`);
   }
-  
+
   roomViewers[roomId].add(socketId);
-  console.log(`[ViewerCount] Room ${roomId} now has ${roomViewers[roomId].size} viewers:`, Array.from(roomViewers[roomId]));
-  
+
+  console.log(`[ViewerCount] Viewer joined: ${socketId}, room: ${roomId}, total: ${roomViewers[roomId].size}`);
+
   updateViewerCount(roomId);
 };
 
 // Function to remove viewer from room
-const removeViewerFromRoom = (roomId, socketId) => {
-  console.log(`[ViewerCount] Removing viewer ${socketId} from room ${roomId}`);
-  
-  if (roomViewers[roomId]) {
-    roomViewers[roomId].delete(socketId);
-    console.log(`[ViewerCount] Room ${roomId} now has ${roomViewers[roomId].size} viewers:`, Array.from(roomViewers[roomId]));
-    
-    if (roomViewers[roomId].size === 0) {
-      delete roomViewers[roomId];
-      console.log(`[ViewerCount] Deleted empty room ${roomId}`);
-    }
-    
-    updateViewerCount(roomId);
-  } else {
-    console.log(`[ViewerCount] Room ${roomId} not found when trying to remove viewer ${socketId}`);
+const removeViewerFromRoom = async (roomId, socketId) => {
+  // Cek status livestream di DB
+  const stream = await LiveStream.findByPk(roomId);
+
+  if (!stream || stream.status !== "active") {
+    console.log(`[ViewerCount] Skip: stream is not active (${stream?.status})`);
+    return;
   }
+
+  if (!roomViewers[roomId]) return;
+
+  roomViewers[roomId].delete(socketId);
+
+  console.log(`[ViewerCount] Viewer removed: ${socketId}, room: ${roomId}, total: ${roomViewers[roomId].size}`);
+
+  if (roomViewers[roomId].size === 0) {
+    delete roomViewers[roomId];
+  }
+
+  updateViewerCount(roomId);
 };
 
 // Recording functionality
@@ -721,7 +720,7 @@ io.on('connection', socket => {
   socket.on('createProducerTransport', async (_, cb) => {
     try {
       const producerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.8', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -800,7 +799,7 @@ io.on('connection', socket => {
   socket.on('createConsumerTransport', async (_, cb) => {
     try {
       const consumerTransport = await router.createWebRtcTransport({
-        listenIps: [{ ip: '192.168.1.19', announcedIp: null }],
+        listenIps: [{ ip: '192.168.1.8', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true,
@@ -910,54 +909,51 @@ io.on('connection', socket => {
   });
 
   // Recording events
-  socket.on('startRecording', ({ roomId, isRecording }) => {
-    console.log(`Starting recording for room ${roomId}:`, isRecording);
-    
-    if (isRecording) {
-      recordings[roomId] = {
-        isRecording: true,
-        startTime: new Date(),
-        filePath: path.join(__dirname, 'uploads', `recording_${roomId}_${Date.now()}.webm`)
-      };
-      
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(__dirname, 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      
-      console.log(`Recording started for room ${roomId}`);
-    } else {
-      if (recordings[roomId]) {
-        recordings[roomId].isRecording = false;
-        console.log(`Recording stopped for room ${roomId}`);
-      }
-    }
-  });
+  socket.on('startRecording', async ({ roomId, isRecording }) => {
+  console.log(`Starting recording request for room ${roomId}:`, isRecording);
+  if (!isRecording) {
+    return socket.emit('recordingError', { roomId, message: 'isRecording flag false' });
+  }
 
-  socket.on('stopRecording', ({ roomId }) => {
-    if (recordings[roomId]) {
-      recordings[roomId].isRecording = false;
-      console.log(`Recording stopped for room ${roomId}`);
-      
-      // Emit recording path to client
-      socket.emit('recordingStopped', {
-        roomId,
-        filePath: recordings[roomId].filePath,
-        duration: new Date() - recordings[roomId].startTime
-      });
-    }
-  });
+  // avoid duplicate
+  if (recordings[roomId] && recordings[roomId].isRecording) {
+    return socket.emit('recordingStarted', { roomId, message: 'already recording' });
+  }
 
-  socket.on('getRecordingStatus', ({ roomId }, cb) => {
-    const recording = recordings[roomId];
-    cb({
-      isRecording: recording ? recording.isRecording : false,
-      startTime: recording ? recording.startTime : null,
-      filePath: recording ? recording.filePath : null
-    });
-  });
+  try {
+    // Try to use the local HTTP ffmpeg-stream endpoint as input (easier to wire)
+    const httpUrl = `http://127.0.0.1:${PORT}/ffmpeg-stream/${roomId}`;
+    const rec = startFfmpegRecording(roomId, { httpUrl });
 
+    // store in local socket recordings map if needed
+    socket.emit('recordingStarted', { roomId, recordingPath: rec.finalPath });
+    console.log(`Recording started for ${roomId}, tentative path: ${rec.finalPath}`);
+  } catch (err) {
+    console.error(`Failed to start recording for ${roomId}:`, err);
+    socket.emit('recordingError', { roomId, message: err.message });
+  }
+});
+
+  socket.on('stopRecording', async ({ roomId }) => {
+  console.log(`Stop recording requested for room ${roomId}`);
+  try {
+    const result = await stopFfmpegRecording(roomId);
+    console.log(`Recording stopped for ${roomId}:`, result);
+    socket.emit('recordingStopped', { roomId, finalPath: result.finalPath });
+  } catch (err) {
+    console.error(`Failed to stop recording for ${roomId}:`, err);
+    socket.emit('recordingError', { roomId, message: err.message });
+  }
+});
+// optional query endpoint to get recording status
+socket.on('getRecordingStatus', ({ roomId }, cb) => {
+  const r = require('./recording/ffmpegRecorder').recordings[roomId];
+  cb({
+    isRecording: !!r,
+    startedAt: r ? r.startedAt : null,
+    tempPath: r ? r.tempPath : null
+  });
+});
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     
@@ -1058,6 +1054,6 @@ io.on('connection', socket => {
 });
 
 const PORT = 4000;
-server.listen(PORT, '192.168.1.19', () => {
-  console.log(`MediaSoup server running on http://192.168.1.19:${PORT}`);
+server.listen(PORT, '192.168.1.8', () => {
+  console.log(`MediaSoup server running on http://192.168.1.8:${PORT}`);
 }); 

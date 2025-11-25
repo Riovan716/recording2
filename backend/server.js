@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const app = express();
 const livestreamRoutes = require('./routes/livestream');
@@ -6,6 +8,7 @@ const userRoutes = require('./routes/users');
 const recordingRoutes = require('./routes/recording');
 const activityLogRoutes = require('./routes/activityLog');
 const simpleYouTubeRoutes = require('./routes/simpleYouTube');
+
 
 const cors = require('cors');
 const { spawn } = require('child_process');
