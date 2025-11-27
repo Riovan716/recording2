@@ -148,6 +148,7 @@ const AdminRecordingPage: React.FC = () => {
   const [videoToDelete, setVideoToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentRecordingTime, setCurrentRecordingTime] = useState(0);
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -174,15 +175,40 @@ const AdminRecordingPage: React.FC = () => {
     fetchRecordings();
   }, []);
 
-  // Reset recording state when recording stops
+  // Reset recording state when recording stops (but keep currentRecordingTime for finished page)
   React.useEffect(() => {
-    if (!streamingState.isRecording && !streamingState.isScreenRecording) {
+    if (!streamingState.isRecording && !streamingState.isScreenRecording && !showFinishedPage) {
       setRecordingCameras([]);
       setRecordingScreenSource(null);
       setRecordingLayouts([]);
       setCurrentRecordingLayoutType('');
+      // Don't reset currentRecordingTime here, it's needed for finished page
+      // It will be reset when user goes back to recording page
     }
-  }, [streamingState.isRecording, streamingState.isScreenRecording]);
+  }, [streamingState.isRecording, streamingState.isScreenRecording, showFinishedPage]);
+
+  // Update recording timer in real-time
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (streamingState.isRecording || streamingState.isScreenRecording) {
+      interval = setInterval(() => {
+        if (streamingState.recordingStartTime) {
+          const elapsed = Math.floor((Date.now() - streamingState.recordingStartTime) / 1000);
+          setCurrentRecordingTime(elapsed);
+        } else {
+          // Fallback to recordingDuration if recordingStartTime is not available
+          setCurrentRecordingTime(streamingState.recordingDuration);
+        }
+      }, 1000); // Update every second
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [streamingState.isRecording, streamingState.isScreenRecording, streamingState.recordingStartTime, streamingState.recordingDuration]);
 
 
   const handleStartCameraRecording = () => {
@@ -228,9 +254,20 @@ const AdminRecordingPage: React.FC = () => {
       console.log('Debug - streamingState.videoBlob:', streamingState.videoBlob);
       console.log('Debug - streamingState.videoUrl:', streamingState.videoUrl);
       
+      // Calculate actual duration from recordingStartTime
+      const actualDuration = streamingState.recordingStartTime 
+        ? Math.floor((Date.now() - streamingState.recordingStartTime) / 1000)
+        : (currentRecordingTime || streamingState.recordingDuration || 1);
+      
+      console.log('Finished recording duration:', actualDuration, {
+        recordingStartTime: streamingState.recordingStartTime,
+        currentRecordingTime,
+        streamingStateDuration: streamingState.recordingDuration
+      });
+      
       const finishedData = {
-        judul: recordingJudul || 'Recording Baru',
-        duration: streamingState.recordingDuration || 1,
+        judul: streamingState.recordingTitle || recordingJudul || 'Recording Baru',
+        duration: actualDuration,
         resolution: '1080p (Full HD)',
         frameRate: 60,
         size: 0, // Initial size is 0, will be updated after upload
@@ -263,26 +300,56 @@ const AdminRecordingPage: React.FC = () => {
       return;
     }
     try {
-      // Perform the actual upload
-      await uploadRecording();
-      fetchRecordings(); // Refresh the list of recordings
-
-      // Update finishedRecordingData to reflect upload status and actual size
-      setFinishedRecordingData((prevData: any) => ({
-        ...prevData,
-        size: streamingState.videoBlob ? streamingState.videoBlob.size : prevData.size,
-        isUploaded: true,
-      }));
-      setNotification({
-        message: 'Video berhasil diunggah!',
-        type: 'success',
-        duration: 3000,
+      // Get the correct duration from finishedRecordingData or calculate it
+      const uploadDuration = finishedRecordingData?.duration || 
+        (streamingState.recordingStartTime 
+          ? Math.floor((Date.now() - streamingState.recordingStartTime) / 1000)
+          : currentRecordingTime || streamingState.recordingDuration || 0);
+      
+      console.log('Upload duration:', uploadDuration, {
+        finishedDataDuration: finishedRecordingData?.duration,
+        currentRecordingTime,
+        streamingStateDuration: streamingState.recordingDuration,
+        recordingStartTime: streamingState.recordingStartTime
       });
       
-      // Redirect to recording page after upload
-      setTimeout(() => {
-        handleBackToRecording();
-      }, 1000);
+      // Create formData with correct duration
+      const formData = new FormData();
+      formData.append('recording', streamingState.videoBlob, 'recording.webm');
+      formData.append('kelas', streamingState.selectedKelas);
+      formData.append('judul', streamingState.recordingTitle || finishedRecordingData?.judul || 'Recording');
+      formData.append('duration', uploadDuration.toString());
+
+      const response = await fetch(`${API_URL}/api/recordings/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        fetchRecordings(); // Refresh the list of recordings
+
+        // Update finishedRecordingData to reflect upload status and actual size
+        setFinishedRecordingData((prevData: any) => ({
+          ...prevData,
+          size: streamingState.videoBlob ? streamingState.videoBlob.size : prevData.size,
+          isUploaded: true,
+        }));
+        setNotification({
+          message: 'Video berhasil diunggah!',
+          type: 'success',
+          duration: 3000,
+        });
+        
+        // Redirect to recording page after upload
+        setTimeout(() => {
+          handleBackToRecording();
+        }, 1000);
+      } else {
+        throw new Error('Upload failed');
+      }
     } catch (err) {
       console.error("Error uploading video:", err);
       setNotification({
@@ -456,6 +523,7 @@ const AdminRecordingPage: React.FC = () => {
     setRecordingScreenSource(null);
     setRecordingLayouts([]);
     setCurrentRecordingLayoutType('');
+    setCurrentRecordingTime(0); // Reset timer when going back
   };
 
   const formatDuration = (seconds: number) => {
@@ -625,23 +693,20 @@ const AdminRecordingPage: React.FC = () => {
               alignItems: 'start',
             }}>
               <div style={{ fontWeight: 600, color: '#374151' }}>JUDUL RECORDING:</div>
-              <div style={{ color: '#6b7280' }}>{finishedRecordingData.judul}</div>
+              <div style={{ color: '#6b7280' }}>
+                {streamingState.recordingTitle || finishedRecordingData.judul || recordingJudul || 'Recording Baru'}
+              </div>
 
               <div style={{ fontWeight: 600, color: '#374151' }}>DURASI:</div>
-              <div style={{ color: '#6b7280' }}>{formatDuration(finishedRecordingData.duration)}</div>
+              <div style={{ color: '#6b7280' }}>
+                {formatDuration(finishedRecordingData.duration || currentRecordingTime || 0)}
+              </div>
 
               <div style={{ fontWeight: 600, color: '#374151' }}>RESOLUTION:</div>
               <div style={{ color: '#6b7280' }}>{finishedRecordingData.resolution}</div>
 
               <div style={{ fontWeight: 600, color: '#374151' }}>FRAME RATE:</div>
               <div style={{ color: '#6b7280' }}>{finishedRecordingData.frameRate} FPS</div>
-
-              <div style={{ fontWeight: 600, color: '#374151' }}>UKURAN FILE:</div>
-              <div style={{ color: '#6b7280' }}>
-                {finishedRecordingData.isUploaded && finishedRecordingData.size > 0
-                  ? formatFileSize(finishedRecordingData.size)
-                  : 'Belum diunggah'}
-              </div>
 
               <div style={{ fontWeight: 600, color: '#374151' }}>WAKTU SIMPAN:</div>
               <div style={{ color: '#6b7280' }}>{formatDate(finishedRecordingData.uploadedAt)}</div>
@@ -1078,7 +1143,7 @@ const AdminRecordingPage: React.FC = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500, color: '#6b7280', lineHeight: 1.3 }}>{recording.judul || recording.filename}</div>
                     </div>
                     <div style={{ display: isMobile ? "none" : "flex", justifyContent: "center", alignItems: "center", fontSize: "13px", color: '#6b7280' }}>
-                      {recording.duration ? `${Math.floor(recording.duration / 60)}m` : '0m'}
+                      {formatDuration(recording.duration || 0)}
                     </div>
                     <div style={{ display: isMobile ? "none" : "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", fontSize: "13px", color: '#6b7280' }}>
                       <div style={{ fontWeight: 500, marginBottom: "2px" }}>{new Date(recording.uploadedAt || recording.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
@@ -1185,7 +1250,7 @@ const AdminRecordingPage: React.FC = () => {
                     fontWeight: '600',
                     fontFamily: 'monospace'
                   }}>
-                    {Math.floor(streamingState.recordingDuration / 60)}:{(streamingState.recordingDuration % 60).toString().padStart(2, '0')}
+                    {Math.floor(currentRecordingTime / 60)}:{(currentRecordingTime % 60).toString().padStart(2, '0')}
                   </div>
                 </div>
               </div>

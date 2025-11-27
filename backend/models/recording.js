@@ -15,6 +15,12 @@ const Recording = sequelize.define('Recording', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  duration: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+    comment: 'Duration in seconds',
+  },
   uploadedAt: {
     type: DataTypes.DATE,
     allowNull: false,

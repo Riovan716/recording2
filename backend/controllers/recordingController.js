@@ -6,7 +6,7 @@ const fs = require('fs');
 // Upload recording
 exports.uploadRecording = async (req, res) => {
   try {
-    const { judul } = req.body;
+    const { judul, duration } = req.body;
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
 
@@ -14,6 +14,7 @@ exports.uploadRecording = async (req, res) => {
     await Recording.create({ 
       filename, 
       judul,
+      duration: duration ? parseInt(duration) : 0,
       uploadedAt: new Date() 
     });
     
@@ -57,8 +58,9 @@ exports.listRecordings = async (req, res) => {
         id: rec.id,
         filename: rec.filename,
         judul: rec.judul,
+        duration: rec.duration || 0,
         uploadedAt: rec.uploadedAt,
-        url: `http://192.168.1.8:3000/api/recording/stream/${rec.filename}`,
+        url: `http://192.168.1.15:3000/api/recording/stream/${rec.filename}`,
         tanggal: uploadedDate.toLocaleDateString('id-ID', {
           year: 'numeric',
           month: 'long',

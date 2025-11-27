@@ -107,7 +107,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [streamingLayoutVersion]);
 
   useEffect(() => {
-    socket.current = io('http://192.168.1.8:4000');
+    socket.current = io('http://192.168.1.15:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();
@@ -1021,7 +1021,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.8') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.15') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
@@ -1219,6 +1219,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       formData.append('recording', streamingState.videoBlob, 'recording.webm');
       formData.append('kelas', streamingState.selectedKelas);
       formData.append('judul', streamingState.recordingTitle || 'Recording');
+      formData.append('duration', streamingState.recordingDuration.toString());
 
       const response = await fetch(`${API_URL}/api/recordings/upload`, {
         method: 'POST',
