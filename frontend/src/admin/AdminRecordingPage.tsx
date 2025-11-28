@@ -858,40 +858,103 @@ const AdminRecordingPage: React.FC = () => {
             padding: isMobile ? "0" : "0 88px 0 0",
           }}
         >
-          {/* Welcome Card */}
-          <div style={{
-     background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
-            borderRadius: CARD_RADIUS,
-            color: '#1e293b',
-            padding: isMobile ? '18px 12px' : '32px 40px',
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: SHADOW,
-            minHeight: 120,
-            width: '100%',
-          }}>
-            <div>
-              <div style={{ 
-                fontSize: 14, 
-                color: '#6b7280', 
-                marginBottom: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontWeight: 500
-              }}>
-                <i className="fas fa-calendar-days" style={{ fontSize: '14px' }}></i>
-                {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>Video Recording</div>
-              <div style={{ fontSize: 14, color: '#9ca3af', lineHeight: '1.5', maxWidth: '500px', fontWeight: 400 }}>
-                Selamat datang, {user?.name || 'Admin'}! Buat dan kelola video pembelajaran Anda dengan mudah.
-              </div>
-            </div>
-            <span style={{ height: 100, fontSize: 100, objectFit: 'contain', marginLeft: isMobile ? 0 : 32, marginTop: isMobile ? 18 : 0, display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 4px 24px #0002)' }}>🎥</span>
-          </div>
+          {/* Welcome Card (MATCHED STYLE) */}
+<div style={{
+  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  borderRadius: '16px',
+  padding: isMobile ? '24px' : '32px',
+  marginBottom: '32px',
+  color: '#ffffff',
+  position: 'relative',
+  overflow: 'hidden',
+  boxShadow: '0 10px 30px rgba(16, 185, 129, 0.2)',
+  animation: 'fadeIn 0.6s ease-out',
+  width: '100%',
+  display: 'flex',
+  flexDirection: isMobile ? 'column' : 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}}>
+
+  {/* Decorative circles */}
+  <div style={{
+    position: 'absolute',
+    top: '-50px',
+    right: '-50px',
+    width: '200px',
+    height: '200px',
+    background: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: '50%',
+    filter: 'blur(40px)'
+  }} />
+
+  <div style={{
+    position: 'absolute',
+    bottom: '-30px',
+    left: '-30px',
+    width: '150px',
+    height: '150px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '50%',
+    filter: 'blur(30px)'
+  }} />
+
+  {/* Content */}
+  <div style={{ position: 'relative', zIndex: 2 }}>
+    <div style={{
+      fontSize: isMobile ? 13 : 15,
+      marginBottom: 10,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      color: 'rgba(255, 255, 255, 0.9)',
+      fontWeight: 500
+    }}>
+      <i className="fas fa-calendar-days" style={{ fontSize: '14px' }}></i>
+      {new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}
+    </div>
+
+    <h1 style={{
+      fontSize: isMobile ? '20px' : '28px',
+      fontWeight: 700,
+      margin: 0,
+      marginBottom: '12px',
+      letterSpacing: '-0.5px'
+    }}>
+      Video Recording
+    </h1>
+
+    <div style={{
+      fontSize: isMobile ? '13px' : '15px',
+      color: 'rgba(255, 255, 255, 0.9)',
+      lineHeight: '1.6',
+      maxWidth: '500px'
+    }}>
+      Selamat datang, {user?.name || 'Admin'}! Buat dan kelola video pembelajaran Anda dengan mudah.
+    </div>
+  </div>
+
+  {/* Icon Section */}
+  <div style={{
+    position: 'relative',
+    zIndex: 2,
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: isMobile ? 20 : 0,
+    marginLeft: isMobile ? 0 : 40
+  }}>
+    <span style={{
+      fontSize: isMobile ? 70 : 100,
+      filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.25))'
+    }}>
+      🎥
+    </span>
+  </div>
+</div>
 
 
           {/* Recording Controls */}
@@ -960,49 +1023,56 @@ const AdminRecordingPage: React.FC = () => {
                   <>
                  
                     <button
-                      onClick={handleStartMultiCameraRecording}
-                      disabled={streamingState.isRecording || streamingState.isScreenRecording || streamingState.isStreaming}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        background: streamingState.isStreaming 
-                          ? 'linear-gradient(135deg, #64748b 0%, #64748b 100%)' 
-                          : 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
-                        color: "white",
-                        border: 'none',
-                        borderRadius: 16,
-                        padding: '14px 24px',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        cursor: streamingState.isStreaming ? 'not-allowed' : 'pointer',
-                        opacity: streamingState.isStreaming ? 0.6 : 1,
-                        width: 'auto',
-                        boxShadow: streamingState.isStreaming
-                          ? 'none'
-                          : '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
-                        transition: 'all 0.3s ease',
-                        position: 'relative',
-                        overflow: 'hidden',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!streamingState.isStreaming) {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!streamingState.isStreaming) {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
-                        }
-                      }}
-                      title={streamingState.isStreaming ? 'Live streaming sedang aktif. Stop live streaming terlebih dahulu untuk memulai recording.' : ''}
-                    >
-                      <span style={{ fontSize: '18px' }}>🎥</span>
-                      Multi-Camera Recording {streamingState.isStreaming ? '(Live Streaming Aktif)' : ''}
-                    </button>
+  onClick={handleStartMultiCameraRecording}
+  disabled={streamingState.isRecording || streamingState.isScreenRecording || streamingState.isStreaming}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    background: streamingState.isStreaming
+      ? 'linear-gradient(135deg, #64748b 0%, #64748b 100%)' 
+      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',  // 🌟 MATCHED WITH BANNER
+    color: "white",
+    border: 'none',
+    borderRadius: 16,
+    padding: '14px 24px',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: streamingState.isStreaming ? 'not-allowed' : 'pointer',
+    opacity: streamingState.isStreaming ? 0.6 : 1,
+    width: 'auto',
+    boxShadow: streamingState.isStreaming
+      ? 'none'
+      : '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)', // 🌟 cocok dengan shadow banner
+    transition: 'all 0.3s ease',
+    position: 'relative',
+    overflow: 'hidden',
+  }}
+  onMouseEnter={(e) => {
+    if (!streamingState.isStreaming) {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow =
+        '0 12px 28px rgba(16, 185, 129, 0.45), 0 6px 12px rgba(16, 185, 129, 0.35)';
+    }
+  }}
+  onMouseLeave={(e) => {
+    if (!streamingState.isStreaming) {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow =
+        '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)';
+    }
+  }}
+  title={
+    streamingState.isStreaming
+      ? 'Live streaming sedang aktif. Stop live streaming terlebih dahulu untuk memulai recording.'
+      : ''
+  }
+>
+  <span style={{ fontSize: '18px' }}>🎥</span>
+  Multi-Camera Recording {streamingState.isStreaming ? '(Live Streaming Aktif)' : ''}
+</button>
+
                   </>
                 ) : (
                   <>

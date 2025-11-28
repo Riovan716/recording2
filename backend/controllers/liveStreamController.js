@@ -5,30 +5,31 @@ const fs = require('fs');
 const { roomViewers } = require('../mediasoupState');
 const multer = require('multer');
 const { Op } = require('sequelize');
+const { spawn } = require('child_process');
 
+/// =====================
+// MULTER CONFIG FIXED
 // =====================
-// MULTER CONFIG (AMAN)
-// =====================
-/**
- * Multer akan langsung menyimpan file ke folder `uploads/`
- * dengan nama: <streamId>.webm
- * Jadi TIDAK PERLU rename lagi di controller.
- */
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    const { streamId } = req.body;
+    const originalName = file.originalname;
 
-    // Fallback kalau streamId tidak ada (supaya tidak crash)
-    const safeId = streamId || `stream_${Date.now()}`;
-    cb(null, `${safeId}.webm`);
-  },
+    const safeName =
+      originalName && originalName.trim() !== ""
+        ? originalName
+        : `stream_${Date.now()}.webm`;
+
+    cb(null, safeName);
+  }
 });
 
-const upload = multer({ storage });
-exports.uploadRecordingMiddleware = upload.single('recording');
+const upload = multer({ storage }); // <-- HARUS instance, tanpa .single()
+exports.uploadRecordingMiddleware = upload.single('recording'); // <-- Baru call single()
+
 
 // Kalau mau dipakai di routes:
 // module.exports.uploadRecordingMiddleware = upload.single('recording');
@@ -371,29 +372,29 @@ setTimeout(() => {
 
 exports.getLiveStreamHistory = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
-    const offset = (page - 1) * limit;
+    // ✅ Ambil SEMUA data tanpa limit, atau set limit sangat besar
+    const { page, limit, status } = req.query;
 
     let whereClause = {};
     if (status) {
       whereClause.status = status;
     }
 
+    // ✅ OPSI 1: Ambil semua data (recommended untuk history)
     const { count, rows } = await LiveStream.findAndCountAll({
       where: whereClause,
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset)
+      order: [['createdAt', 'DESC']], // Sort terbaru dulu
+      // ❌ HAPUS limit dan offset - ambil semua
     });
 
     res.json({
       success: true,
-      data: rows,
+      data: rows, // ✅ Kirim semua data
       pagination: {
         total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / limit)
+        page: 1,
+        limit: count, // Total = limit
+        totalPages: 1
       }
     });
   } catch (error) {
@@ -624,72 +625,88 @@ exports.downloadVideo = async (req, res) => {
 // ✅ PERBAIKAN 3: Upload recording TANPA rename (aman)
 exports.uploadLiveStreamRecording = async (req, res) => {
   try {
-    const { streamId, judul } = req.body;
+    const { streamId } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
+
     if (!streamId) {
-      return res.status(400).json({ error: 'Stream ID wajib diisi' });
+      return res.status(400).json({ error: 'streamId wajib diisi' });
     }
 
-    // Karena Multer sudah pakai nama <streamId>.webm,
-    // filename di sini sudah konsisten.
-    const filename = req.file.filename;
-    const recordingPath = `/uploads/${filename}`;
+    // Path file WEBM hasil upload
+    const webmFilename = req.file.filename; // harusnya <streamId>.webm
+    const webmPath = path.join(__dirname, '..', 'uploads', webmFilename);
 
-    console.log('📤 Uploading recording (NO RENAME):', {
-      streamId,
-      filename,
-      recordingPath
+    // Nama file MP4 output
+    const mp4Filename = `${streamId}_${Date.now()}.mp4`;
+    const mp4Path = path.join(__dirname, '..', 'uploads', mp4Filename);
+
+    console.log('🎥 Converting WebM to MP4 with ffmpeg:', {
+      webmPath,
+      mp4Path,
     });
 
-    const [updatedRows] = await LiveStream.update(
-      {
-        recordingPath,
-        isRecording: true,
-        status: 'recording',
-      },
-      {
-        where: { id: streamId }
-      }
-    );
+    // Jalankan ffmpeg: convert webm -> mp4 dengan faststart
+    const ffmpegArgs = [
+      '-i', webmPath,
+      '-c:v', 'libx264',
+      '-c:a', 'aac',
+      '-b:v', '2000k',
+      '-movflags', '+faststart',
+      '-y',
+      mp4Path,
+    ];
 
-    if (updatedRows > 0) {
-      console.log('✅ Live stream recording saved:', {
-        streamId,
+    const ff = spawn('ffmpeg', ffmpegArgs);
+
+    ff.stderr.on('data', (data) => {
+      console.log(`[ffmpeg convert ${streamId}] ${data.toString()}`);
+    });
+
+    ff.on('error', (err) => {
+      console.error('❌ ffmpeg spawn error:', err);
+    });
+
+    ff.on('close', async (code) => {
+      if (code !== 0) {
+        console.error(`❌ ffmpeg exited with code ${code}`);
+        return res.status(500).json({ error: 'Gagal convert video di server' });
+      }
+
+      console.log('✅ ffmpeg convert done:', mp4Path);
+
+      // Optional: hapus file webm asli
+      try {
+        fs.unlinkSync(webmPath);
+      } catch (e) {
+        console.warn('⚠️ gagal hapus webm (boleh diabaikan):', e.message);
+      }
+
+      // Update LiveStream di DB -> pakai file MP4
+      const recordingPath = `/uploads/${mp4Filename}`;
+
+      await LiveStream.update(
+        {
+          recordingPath,
+          isRecording: false,
+          status: 'recording',
+        },
+        { where: { id: streamId } }
+      );
+
+      return res.json({
+        success: true,
         recordingPath,
-        filename,
-        updatedRows
       });
-
-      const updatedStream = await LiveStream.findByPk(streamId);
-      if (updatedStream) {
-        console.log('✅ Verification - Updated stream:', {
-          id: updatedStream.id,
-          recordingPath: updatedStream.recordingPath,
-          status: updatedStream.status,
-          isRecording: updatedStream.isRecording
-        });
-      }
-
-      res.json({ success: true, recordingPath, filename });
-    } else {
-      console.log('❌ No rows updated - stream not found:', streamId);
-
-      const fullPath = path.join(__dirname, '..', 'uploads', filename);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        console.log('🗑️ Rolled back file upload:', fullPath);
-      }
-
-      res.status(404).json({ error: 'Live stream tidak ditemukan' });
-    }
+    });
   } catch (err) {
-    console.error('❌ Error uploading live stream recording:', err);
-    res.status(500).json({ error: 'Gagal upload live stream recording' });
+    console.error('❌ Error uploadLiveStreamRecording:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 exports.getRecordings = async (req, res) => {
   try {

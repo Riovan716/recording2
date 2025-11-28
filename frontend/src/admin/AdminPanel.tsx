@@ -189,28 +189,26 @@ const AdminPanel: React.FC = () => {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            <span style={{
-              width: 48,
-              height: 48,
-              background: LIGHT_GREEN,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 20,
-              border: `3px solid ${WHITE}`,
-              marginLeft: 8,
-              userSelect: 'none',
-              boxShadow: SHADOW,
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease',
-            }}
-            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-            >
-              {initials}
-            </span>
+           <span style={{
+  width: 48,
+  height: 48,
+  background: '#10b981', // 🌟 MATCH DENGAN BANNER
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ffffff',
+  fontWeight: 700,
+  fontSize: 20,
+  border: '3px solid #ffffff',
+  marginLeft: 8,
+  userSelect: 'none',
+  boxShadow: '0 6px 18px rgba(16,185,129,0.25)', // 🌟 soft shadow ala banner
+  cursor: 'pointer',
+  transition: 'transform 0.2s ease',
+}}>
+  {initials}
+</span>
 
             {/* Dropdown Menu */}
             {showProfileDropdown && (
@@ -233,22 +231,23 @@ const AdminPanel: React.FC = () => {
                 {/* Profile Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '16px' }}>
                   <span style={{
-                    width: 48,
-                    height: 48,
-                    background: LIGHT_GREEN,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontWeight: 700,
-                    fontSize: 20,
-                    border: `3px solid ${LIGHT_GREEN}`,
-                    userSelect: 'none',
-                    boxShadow: SHADOW,
-                  }}>
-                    {initials}
-                  </span>
+  width: 48,
+  height: 48,
+  background: '#10b981', // 🌟 SAME AS BANNER
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ffffff',
+  fontWeight: 700,
+  fontSize: 20,
+  border: '3px solid #059669', // 🌟 darker emerald, cocok dengan gradient banner
+  userSelect: 'none',
+  boxShadow: '0 6px 18px rgba(16,185,129,0.25)', // 🌟 emerald glow seperti banner
+}}>
+  {initials}
+</span>
+
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, color: GRAY_TEXT, fontSize: 16 }}>{displayName}</div>
                     <div style={{ fontSize: 13, color: GRAY_TEXT, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>

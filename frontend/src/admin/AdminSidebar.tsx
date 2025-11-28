@@ -57,7 +57,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
   const [collapsed, setCollapsed] = useState(() => {
     // Set initial state based on screen size
     if (typeof window !== 'undefined') {
-      const width = window.innerWidth;
+      const width = window. innerWidth;
       return width <= 1024; // Collapsed on mobile and tablet by default, expanded on desktop
     }
     return false; // Default to expanded on server-side
@@ -67,7 +67,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
 
   // Use external mobileOpen if provided, otherwise use internal state
-  const currentMobileOpen = onMobileToggle ? mobileOpen : internalMobileOpen;
+  const currentMobileOpen = onMobileToggle ?  mobileOpen : internalMobileOpen;
   const setCurrentMobileOpen = onMobileToggle ? 
     (open: boolean) => {
       // Always call onMobileToggle when setCurrentMobileOpen is called
@@ -155,7 +155,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
             alignItems: 'stretch',
             padding: '24px 24px 16px 24px',
             borderBottom: `1px solid ${COLORS.divider}`,
-            background: COLORS.sidebarBg,
+            background: COLORS. sidebarBg,
           }}>
             <div style={{
               display: 'flex',
@@ -176,7 +176,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                   }}
                   style={{
                     background: 'none',
-                    border: 'none',
+                    borderTop: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    borderLeft: 'none',
                     cursor: 'pointer',
                     padding: 8,
                     outline: 'none',
@@ -188,12 +191,12 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                     transition: 'background 0.2s, color 0.2s',
                   }}
                   onMouseOver={e => {
-                    e.currentTarget.style.background = COLORS.sidebarActiveBg;
-                    e.currentTarget.style.color = COLORS.iconActive;
+                    e. currentTarget.style.background = COLORS.sidebarActiveBg;
+                    e. currentTarget.style.color = COLORS.iconActive;
                   }}
                   onMouseOut={e => {
-                    e.currentTarget.style.background = 'none';
-                    e.currentTarget.style.color = COLORS.icon;
+                    e.currentTarget. style.background = 'none';
+                    e.currentTarget.style.color = COLORS. icon;
                   }}
                 >
                   <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
@@ -238,8 +241,8 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
           {/* Mobile Menu */}
           <nav style={{ flex: 1, width: '100%', padding: '16px 0' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {menu.map((item, idx) => {
-                const isActive = location.pathname === item.path;
+              {menu. map((item, idx) => {
+                const isActive = location. pathname === item.path;
                 return (
                   <li key={item.label} style={{ 
                     marginBottom: 4, 
@@ -257,13 +260,15 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                         gap: 0,
                         padding: '14px 16px',
                         borderRadius: 12,
-                        background: isActive ? COLORS.sidebarActiveBg : 'transparent',
-                        color: isActive ? COLORS.sidebarActiveText : COLORS.sidebarText,
+                        background: isActive ?  COLORS.sidebarActiveBg : 'transparent',
+                        color: isActive ? COLORS. sidebarActiveText : COLORS.sidebarText,
                         fontWeight: isActive ? 600 : 500,
                         borderLeft: isActive ? `4px solid ${COLORS.sidebarBorderActive}` : 'none',
+                        borderRight: 'none',
+                        borderTop: 'none',
+                        borderBottom: 'none',
                         paddingLeft: isActive ? '12px' : '16px',
                         fontSize: 15,
-                        border: 'none',
                         cursor: 'pointer',
                         textAlign: 'left',
                         transition: 'all 0.2s ease',
@@ -363,7 +368,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
               onClick={() => setCollapsed(false)}
               style={{
                 background: 'none',
-                border: 'none',
+                borderTop: 'none',
+                borderRight: 'none',
+                borderBottom: 'none',
+                borderLeft: 'none',
                 cursor: 'pointer',
                 padding: 10,
                 outline: 'none',
@@ -372,15 +380,15 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                 justifyContent: 'center',
                 color: COLORS.icon,
                 borderRadius: '50%',
-                transition: 'background 0.2s, color 0.2s',
+                transition: 'background 0. 2s, color 0.2s',
                 boxShadow: '0 2px 8px rgba(34,57,86,0.10)',
               }}
               onMouseOver={e => {
                 e.currentTarget.style.background = COLORS.sidebarActiveBg;
-                e.currentTarget.style.color = COLORS.iconActive;
+                e.currentTarget.style.color = COLORS. iconActive;
               }}
               onMouseOut={e => {
-                e.currentTarget.style.background = 'none';
+                e.currentTarget.style. background = 'none';
                 e.currentTarget.style.color = COLORS.icon;
               }}
             >
@@ -395,20 +403,23 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
                 onClick={() => setCollapsed(true)}
                 style={{
                   background: 'none',
-                  border: 'none',
+                  borderTop: 'none',
+                  borderRight: 'none',
+                  borderBottom: 'none',
+                  borderLeft: 'none',
                   cursor: 'pointer',
                   padding: 8,
                   outline: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: COLORS.icon,
+                  color: COLORS. icon,
                   borderRadius: '50%',
                   transition: 'background 0.2s, color 0.2s',
                   marginRight: 8,
                 }}
                 onMouseOver={e => {
-                  e.currentTarget.style.background = COLORS.sidebarActiveBg;
+                  e.currentTarget.style.background = COLORS. sidebarActiveBg;
                   e.currentTarget.style.color = COLORS.iconActive;
                 }}
                 onMouseOut={e => {
@@ -485,8 +496,10 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
           color: isActive ? COLORS.sidebarActiveText : COLORS.sidebarText,
           fontWeight: isActive ? 600 : 500,
           borderLeft: isActive ? `4px solid ${COLORS.sidebarBorderActive}` : 'none',
+          borderRight: 'none',
+          borderTop: 'none',
+          borderBottom: 'none',
           fontSize: 15,
-          border: 'none',
           cursor: 'pointer',
           textAlign: 'left',
           transition: 'all 0.2s ease',
@@ -515,7 +528,7 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
         }}>
           <i className={item.icon} style={{ fontSize: '16px' }}></i>
         </span>
-        {!collapsed && (
+        {! collapsed && (
           <span style={{
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -539,4 +552,4 @@ const AdminSidebar: React.FC<{ mobileOpen?: boolean; onMobileToggle?: () => void
   );
 };
 
-export default AdminSidebar; 
+export default AdminSidebar;

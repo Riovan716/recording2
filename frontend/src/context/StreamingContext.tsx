@@ -107,7 +107,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [streamingLayoutVersion]);
 
   useEffect(() => {
-    socket.current = io('http://192.168.1.15:4000');
+    socket.current = io('http://192.168.1.4:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();
@@ -531,43 +531,47 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       mediaRecorder.onstop = async () => {
-        // Clear monitoring interval to prevent memory leaks
-        if (streamMonitorRef.current) {
-          clearInterval(streamMonitorRef.current);
-          streamMonitorRef.current = null;
-        }
-        
-        const videoBlob = new Blob(chunks, { type: 'video/webm' });
-        
-        // Clear chunks array to free memory
-        chunks.length = 0;
-        
-        // Upload recording to backend
-        try {
-          const formData = new FormData();
-          formData.append('recording', videoBlob, `${roomId}.webm`);
-          formData.append('streamId', roomId);
-          formData.append('judul', `Live Stream ${roomId}`);
+  console.log("⏹ MediaRecorder stopped, assembling final Blob...");
 
-          const response = await fetch(`${API_URL}/api/livestream/upload-recording`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
-          });
+  // Tunggu 300–500ms agar chunk terakhir masuk
+  await new Promise(resolve => setTimeout(resolve, 500));
 
-          if (response.ok) {
-            console.log('Live stream recording uploaded successfully');
-          } else {
-            console.error('Failed to upload live stream recording');
-          }
-        } catch (error) {
-          console.error('Error uploading live stream recording:', error);
-        }
-      };
+  // Jangan hapus chunks sebelum final blob dibuat!
+  const finalBlob = new Blob([...chunks], { type: "video/webm" });
 
-      mediaRecorder.start(1000); // Record in 1s chunks for stability
+  if (finalBlob.size < 5000) {
+    console.error("❌ Blob size too small, recording is corrupted");
+    return;
+  }
+
+  // Setelah berhasil jadi blob, baru clear chunks
+  chunks.length = 0;
+
+  // Upload
+  try {
+    const formData = new FormData();
+    formData.append("recording", finalBlob, `${roomId}.webm`);
+    formData.append("streamId", roomId);
+    formData.append("judul", `Live Stream ${roomId}`);
+
+    const res = await fetch(`${API_URL}/api/livestream/upload-recording`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      console.error("❌ Upload failed");
+    } else {
+      console.log("✅ Upload success!");
+    }
+  } catch (err) {
+    console.error("❌ Upload error:", err);
+  }
+};
+
+
+mediaRecorder.start(); // biarkan browser buffer sendiri
       console.log('Live stream recording started');
 
       // Update state
@@ -723,19 +727,19 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           body: JSON.stringify({ id: streamingState.roomId }),
         });
         
-        // Notify all viewers that stream has ended
-        try {
-          await fetch(`${API_URL}/api/stream-ended`, {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ roomId: streamingState.roomId }),
-          });
-          console.log('Stream ended notification sent to all viewers');
-        } catch (error) {
-          console.error('Failed to send stream ended notification:', error);
-        }
+        // // Notify all viewers that stream has ended
+        // try {
+        //   await fetch(`${API_URL}/api/stream-ended`, {
+        //     method: "POST",
+        //     headers: { 
+        //       "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify({ roomId: streamingState.roomId }),
+        //   });
+        //   console.log('Stream ended notification sent to all viewers');
+        // } catch (error) {
+        //   console.error('Failed to send stream ended notification:', error);
+        // }
       }
 
       // Call cleanup function if available
@@ -1021,7 +1025,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.15') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.4') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 

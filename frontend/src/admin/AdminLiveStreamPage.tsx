@@ -95,7 +95,7 @@ const AdminLiveStreamPage: React.FC = () => {
 
   // Socket connection for real-time viewer count updates
   useEffect(() => {
-    socketRef.current = io('http://192.168.1.15:4000');
+    socketRef.current = io('http://192.168.1.4:4000');
     
     socketRef.current.on('connect', () => {
       console.log('[AdminLiveStreamPage] Connected to MediaSoup server');
@@ -130,7 +130,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Initialize chat socket connection
   useEffect(() => {
     if (streamingState.roomId && !chatSocketRef.current) {
-      chatSocketRef.current = io('http://192.168.1.15:4000');
+      chatSocketRef.current = io('http://192.168.1.4:4000');
       console.log('[AdminLiveStreamPage] Chat socket initialized for room:', streamingState.roomId);
     }
 
@@ -215,7 +215,7 @@ const AdminLiveStreamPage: React.FC = () => {
     
     try {
       console.log(`[AdminLiveStreamPage] Fetching viewer count for room: ${streamingState.roomId}`);
-      const response = await fetch(`http://192.168.1.15:4000/api/viewer-count/${streamingState.roomId}`);
+      const response = await fetch(`http://192.168.1.4:4000/api/viewer-count/${streamingState.roomId}`);
       if (response.ok) {
         const data = await response.json();
         console.log(`[AdminLiveStreamPage] Viewer count response:`, data);
@@ -384,7 +384,7 @@ const AdminLiveStreamPage: React.FC = () => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.15:3000/#/view/${roomId}`;
+    return `http://192.168.1.4:3000/#/view/${roomId}`;
   };
 
   if (loading) {
@@ -460,29 +460,92 @@ const AdminLiveStreamPage: React.FC = () => {
           fontFamily: FONT_FAMILY,
         }}
       >
-         {/* Welcome Card */}
-         <div style={{
-       background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05))',
-          borderRadius: 12,
-          color: '#1f2937',
-          padding: isMobile ? '18px 12px' : '32px 40px',
-          marginBottom: 32,
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          minHeight: 120,
-          
-        }}>
-          <div>
-            <div style={{ fontSize: 15, color: '#64748b', marginBottom: 8 }}>{new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1f2937' }}>Live Streaming</div>
-            <div style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', maxWidth: '500px' }}>
-              Selamat datang, {user?.name || 'Admin'}! Mulai live streaming pembelajaran dengan mudah.
-            </div>
-          </div>
-        </div>
+       {/* Welcome Card (MATCHED STYLE) */}
+<div style={{
+  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  borderRadius: '16px',
+  padding: isMobile ? '24px' : '32px',
+  marginBottom: '32px',
+  color: '#ffffff',
+  position: 'relative',
+  overflow: 'hidden',
+  boxShadow: '0 10px 30px rgba(16, 185, 129, 0.2)',
+  animation: 'fadeIn 0.6s ease-out'
+}}>
+
+  {/* Decorative circles */}
+  <div style={{
+    position: 'absolute',
+    top: '-50px',
+    right: '-50px',
+    width: '200px',
+    height: '200px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '50%',
+    filter: 'blur(40px)'
+  }} />
+  <div style={{
+    position: 'absolute',
+    bottom: '-30px',
+    left: '-30px',
+    width: '150px',
+    height: '150px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: '50%',
+    filter: 'blur(30px)'
+  }} />
+
+  {/* Content */}
+  <div style={{ position: 'relative', zIndex: 1 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+      <div style={{
+        fontSize: '32px',
+        animation: 'pulse 2s infinite'
+      }}>
+        🎥
+      </div>
+      <h1 style={{
+        fontSize: isMobile ? '20px' : '28px',
+        fontWeight: 700,
+        margin: 0,
+        letterSpacing: '-0.5px'
+      }}>
+        Live Streaming
+      </h1>
+    </div>
+
+    <div style={{
+      fontSize: isMobile ? '13px' : '15px',
+      margin: 0,
+      color: 'rgba(255, 255, 255, 0.9)',
+      lineHeight: '1.6',
+      maxWidth: '600px',
+      fontWeight: 400
+    }}>
+      Selamat datang, {user?.name || 'Admin'}! Mulai live streaming pembelajaran dengan mudah.
+    </div>
+
+    <div style={{
+      marginTop: '16px',
+      padding: '8px 16px',
+      background: 'rgba(255, 255, 255, 0.15)',
+      borderRadius: '8px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '13px',
+      fontWeight: 500
+    }}>
+      <i className="fas fa-calendar-alt"></i>
+      {new Date().toLocaleDateString('id-ID', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}
+    </div>
+  </div>
+</div>
+
 
         {/* Stats Cards */}
          <div
@@ -565,40 +628,43 @@ const AdminLiveStreamPage: React.FC = () => {
                 {/* Streaming Buttons */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
                  
-                  <button
-                    onClick={handleStartMultiCameraStreaming}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '10px',
-                      background: 'linear-gradient(135deg, #86EFAC 0%, #86EFAC 100%)',  
-                      color: "white",
-                      border: 'none',
-                      borderRadius: 16,
-                      padding: '14px 24px',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      opacity: 1,
-                      width: 'auto',
-                      boxShadow: '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)',
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 12px 28px rgba(74, 222, 128, 0.4), 0 6px 12px rgba(74, 222, 128, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 222, 128, 0.3), 0 4px 8px rgba(74, 222, 128, 0.2)';
-                    }}
-                  >
-                    <span style={{ fontSize: '18px' }}>📹</span>
-                    Multi-Camera Stream
-                  </button>
+                <button
+  onClick={handleStartMultiCameraStreaming}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // 🌟 MATCH BANNER
+    color: "white",
+    border: 'none',
+    borderRadius: 16,
+    padding: '14px 24px',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    opacity: 1,
+    width: 'auto',
+    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)', // 🌟 MATCH BANNER STYLE
+    transition: 'all 0.3s ease',
+    position: 'relative',
+    overflow: 'hidden',
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = 'translateY(-2px)';
+    e.currentTarget.style.boxShadow =
+      '0 12px 28px rgba(16, 185, 129, 0.45), 0 6px 12px rgba(16, 185, 129, 0.35)'; // 🌟 hover seperti banner
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow =
+      '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)';
+  }}
+>
+  <span style={{ fontSize: '18px' }}>📹</span>
+  Multi-Camera Stream
+</button>
+
                 </div>
               </>
             ) : (

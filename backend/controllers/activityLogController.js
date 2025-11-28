@@ -16,7 +16,6 @@ const logActivity = async (userId, userRole, userName, action, description, deta
     console.error('Error logging activity:', error);
   }
 };
-
 // Fungsi untuk membersihkan aktivitas yang sudah expired
 const cleanupExpiredActivities = async () => {
   try {
