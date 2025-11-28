@@ -1551,240 +1551,130 @@ const AdminLiveStreamHistoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && streamToDelete && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0. 85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: isMobile ? "20px" : "24px",
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
+    {/* Delete Live Stream Confirmation Modal */}
+{showDeleteModal && streamToDelete && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+    padding: isMobile ? '20px' : '24px'
+  }}>
+    <div style={{
+      background: 'white',
+      borderRadius: 16,
+      padding: isMobile ? '28px' : '32px',
+      maxWidth: '420px',
+      width: '100%',
+      position: 'relative',
+      boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+    }}>
+
+      {/* Close Button */}
+      <button
+        onClick={handleCloseDeleteModal}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          background: 'transparent',
+          color: '#64748b',
+          border: 'none',
+          borderRadius: '50%',
+          width: '32px',
+          height: '32px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          zIndex: 10001
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Modal Content */}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+
+        <h3 style={{
+          margin: '0 0 16px 0',
+          fontSize: isMobile ? '20px' : '22px',
+          fontWeight: 600,
+          color: '#1e293b'
+        }}>
+          Hapus Live Stream?
+        </h3>
+
+        <p style={{
+          margin: '0 0 24px 0',
+          fontSize: '14px',
+          color: '#64748b',
+          lineHeight: 1.6
+        }}>
+          Apakah Anda yakin ingin menghapus live stream <br />
+          <strong>"{streamToDelete.title || `Live Stream #${streamToDelete.id}`}"</strong>?
+          <br /><br />
+          <strong style={{ color: '#ef4444' }}>
+            Tindakan ini tidak dapat dibatalkan!
+          </strong>
+        </p>
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          justifyContent: 'center',
+          flexDirection: isMobile ? 'column' : 'row'
+        }}>
+          <button
+            onClick={handleCloseDeleteModal}
+            disabled={deleting}
             style={{
-              background: COLORS. white,
-              borderRadius: 20,
-              padding: isMobile ? "28px" : "36px",
-              maxWidth: "460px",
-              width: "100%",
-              position: "relative",
-              boxShadow: "0 25px 50px rgba(0, 0, 0, 0.4)",
+              padding: '12px 24px',
+              background: '#e5e7eb',
+              color: '#1e293b',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: deleting ? 'not-allowed' : 'pointer',
+              width: isMobile ? '100%' : 'auto'
             }}
           >
-            {/* Close Button */}
-            <button
-              onClick={handleCloseDeleteModal}
-              style={{
-                position: "absolute",
-                top: "16px",
-                right: "16px",
-                background: "transparent",
-                color: COLORS.subtext,
-                border: "none",
-                borderRadius: "50%",
-                width: "36px",
-                height: "36px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-                zIndex: 1001,
-                transition: "all 0.3s ease",
-              }}
-              onMouseEnter={(e) => {
-                e. currentTarget.style.background = '#f3f4f6';
-                e.currentTarget.style.color = '#1f2937';
-                e. currentTarget.style.transform = 'rotate(90deg)';
-              }}
-              onMouseLeave={(e) => {
-                e. currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = COLORS.subtext;
-                e.currentTarget.style.transform = 'rotate(0deg)';
-              }}
-            >
-              ✕
-            </button>
+            Batal
+          </button>
 
-            {/* Modal Content */}
-            <div style={{ textAlign: "center" }}>
-              <div style={{ 
-                fontSize: "64px", 
-                marginBottom: "20px",
-                animation: 'pulse 2s ease-in-out infinite',
-              }}>
-                ⚠️
-              </div>
-              
-              <h3
-                style={{
-                  margin: "0 0 16px 0",
-                  fontSize: isMobile ? "22px" : "24px",
-                  fontWeight: 700,
-                  color: COLORS. text,
-                  letterSpacing: '-0.5px',
-                }}
-              >
-                Hapus Live Stream? 
-              </h3>
-
-              <div
-                style={{
-                  margin: "0 0 24px 0",
-                  fontSize: "15px",
-                  color: COLORS.subtext,
-                  lineHeight: 1.7,
-                  textAlign: 'left',
-                }}
-              >
-                Apakah Anda yakin ingin menghapus live stream <br />
-                <strong style={{ color: '#1f2937', fontWeight: 700 }}>"{streamToDelete.title || `Live Stream #${streamToDelete.id}`}"</strong>?
-                <br /><br />
-                
-                <div style={{ 
-                  background: '#fef2f2', 
-                  padding: '14px', 
-                  borderRadius: '10px',
-                  border: '1px solid #fecaca',
-                  marginBottom: '16px',
-                }}>
-                  <strong style={{ color: '#dc2626', display: 'block', marginBottom: '8px' }}>
-                    🗑️ Yang akan dihapus:
-                  </strong>
-                  <div style={{ fontSize: '14px', color: '#991b1b', lineHeight: 1.8 }}>
-                    • Data live stream dari database<br />
-                    • File recording video (jika ada)<br />
-                    • Thumbnail dan metadata<br />
-                  </div>
-                </div>
-                
-                <strong style={{ 
-                  color: COLORS.red, 
-                  fontSize: '16px',
-                  background: '#fee2e2',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  display: 'inline-block',
-                  border: '1px solid #fecaca',
-                }}>
-                  ⚡ Tindakan ini tidak dapat dibatalkan! 
-                </strong>
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  justifyContent: "center",
-                  flexDirection: isMobile ? 'column' : 'row',
-                }}
-              >
-                <button
-                  onClick={handleCloseDeleteModal}
-                  disabled={deleting}
-                  style={{
-                    padding: "14px 28px",
-                    background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-                    color: COLORS.text,
-                    border: "2px solid #d1d5db",
-                    borderRadius: 10,
-                    fontSize: "15px",
-                    fontWeight: 700,
-                    cursor: deleting ? "not-allowed" : "pointer",
-                    opacity: deleting ?  0.6 : 1,
-                    transition: "all 0.3s ease",
-                    flex: isMobile ? '1' : '0',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (! deleting) {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!deleting) {
-                      e.currentTarget.style. background = 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e. currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    }
-                  }}
-                >
-                  ❌ Batal
-                </button>
-                
-                <button
-                  onClick={confirmDelete}
-                  disabled={deleting}
-                  style={{
-                    padding: "14px 28px",
-                    background: deleting 
-                      ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' 
-                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: COLORS.white,
-                    border: "none",
-                    borderRadius: 10,
-                    fontSize: "15px",
-                    fontWeight: 700,
-                    cursor: deleting ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "10px",
-                    transition: "all 0.3s ease",
-                    flex: isMobile ? '1' : '0',
-                    boxShadow: deleting 
-                      ? 'none' 
-                      : '0 4px 12px rgba(239, 68, 68, 0.4)',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!deleting) {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.5)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!deleting) {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
-                    }
-                  }}
-                >
-                  {deleting ? (
-                    <>
-                      <span style={{ 
-                        fontSize: "16px",
-                        animation: 'spin 1s linear infinite',
-                      }}>
-                        ⏳
-                      </span>
-                      Menghapus... 
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: "16px" }}>🗑️</span>
-                      Ya, Hapus Sekarang
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={confirmDelete}
+            disabled={deleting}
+            style={{
+              padding: '12px 24px',
+              background: deleting ? '#64748b' : '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: deleting ? 'not-allowed' : 'pointer',
+              width: isMobile ? '100%' : 'auto'
+            }}
+          >
+            {deleting ? '⏳ Menghapus...' : '🗑️ Ya, Hapus'}
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* Add CSS Animations */}
       <style>{`

@@ -691,7 +691,7 @@ exports.uploadLiveStreamRecording = async (req, res) => {
         {
           recordingPath,
           isRecording: false,
-          status: 'recording',
+          status: 'ended',
         },
         { where: { id: streamId } }
       );
