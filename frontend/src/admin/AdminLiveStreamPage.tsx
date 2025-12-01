@@ -83,9 +83,27 @@ const AdminLiveStreamPage: React.FC = () => {
   const [streamingLayouts, setStreamingLayouts] = useState<any[]>([]);
   const [currentStreamingLayoutType, setCurrentStreamingLayoutType] = useState<string>('');
   const [currentViewers, setCurrentViewers] = useState(0);
+  const [streamStartTime, setStreamStartTime] = useState<string | null>(null);
+
   const [showChatModal, setShowChatModal] = useState(false);
   const socketRef = useRef<any>(null);
   const chatSocketRef = useRef<any>(null);
+// Set waktu mulai streaming
+useEffect(() => {
+  // Jika streaming baru aktif dan belum ada waktu start → set sekarang
+  if (streamingState.isStreaming && !streamStartTime) {
+    const startedAt = new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setStreamStartTime(startedAt);
+  }
+
+  // Jika streaming berhenti → reset
+  if (!streamingState.isStreaming && streamStartTime !== null) {
+    setStreamStartTime(null);
+  }
+}, [streamingState.isStreaming]);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -324,8 +342,7 @@ const AdminLiveStreamPage: React.FC = () => {
       setShowTitleModal(false);
       
       // Start stream with title
-      await startStream("admin", streamTitle);
-      
+       await startStream("admin", streamTitle);
       // Update stats immediately
       await fetchStreamingStats();
       
@@ -410,46 +427,43 @@ const AdminLiveStreamPage: React.FC = () => {
       </div>
     );
   }
+  
 
   return (
     <>
       {/* Add CSS animations */}
-      <style>
-        {`
-          @keyframes fadeInUp {
-            0% {
-              opacity: 0;
-              transform: translateY(30px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          @keyframes slideInRight {
-            0% {
-              opacity: 0;
-              transform: translateX(30px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateX(0);
-            }
-          }
-          
-          @keyframes scaleIn {
-            0% {
-              opacity: 0;
-              transform: scale(0.9);
-            }
-            100% {
-              opacity: 1;
-              transform: scale(1);
-            }
-          }
-        `}
-      </style>
+     <style>
+{`
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideInRight {
+    0% { opacity: 0; transform: translateX(30px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ⬅ WAJIB untuk banner kamu */
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ⬅ WAJIB untuk icon 🎥 */
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+`}
+</style>
+
       
       <div
         style={{
@@ -470,7 +484,7 @@ const AdminLiveStreamPage: React.FC = () => {
   position: 'relative',
   overflow: 'hidden',
   boxShadow: '0 10px 30px rgba(16, 185, 129, 0.2)',
-  animation: 'fadeIn 0.6s ease-out'
+animation: 'fadeInUp 0.6s ease-out'
 }}>
 
   {/* Decorative circles */}
@@ -803,10 +817,10 @@ const AdminLiveStreamPage: React.FC = () => {
                       gap: "4px"
                     }}>
                       <span>⏱️</span>
-                      <span>Dimulai: {new Date().toLocaleTimeString("id-ID", {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}</span>
+<span>
+  Dimulai: {streamStartTime ? streamStartTime : "–"}
+</span>
+
                     </div>
                   </div>
                 </div>

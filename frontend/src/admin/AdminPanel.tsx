@@ -1,338 +1,386 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import AdminSidebar from './AdminSidebar';
-import AdminDashboard from './AdminDashboard';
-import AdminLiveStreamPage from './AdminLiveStreamPage';
-import AdminLiveStreamHistoryPage from './AdminLiveStreamHistoryPage';
-import AdminRecordingPage from './AdminRecordingPage';
-import AdminCameraPreviewPage from './AdminCameraPreviewPage';
-import AdminProfilePage from './AdminProfilePage';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useRef } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import AdminSidebar from "./AdminSidebar";
+import AdminDashboard from "./AdminDashboard";
+import AdminLiveStreamPage from "./AdminLiveStreamPage";
+import AdminLiveStreamHistoryPage from "./AdminLiveStreamHistoryPage";
+import AdminRecordingPage from "./AdminRecordingPage";
+import AdminCameraPreviewPage from "./AdminCameraPreviewPage";
+import AdminProfilePage from "./AdminProfilePage";
 
-// Color palette - Light green theme (#BBF7D0)
-const LIGHT_GREEN = '#BBF7D0';
-const WHITE = '#fff';
-const GRAY_TEXT = '#64748b';
-const SHADOW = '0 4px 24px rgba(187,247,208,0.12)';
+import { useAuth } from "../context/AuthContext";
+
+const GRAY_TEXT = "#64748b";
+const WHITE = "#ffffff";
 
 const AdminPanel: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const navigate = useNavigate();
+
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // All hooks must be called before any conditional returns
+  const hoverTimeout = useRef<NodeJS. Timeout | null>(null);
+
+  // Detect mobile
   useEffect(() => {
-    const handleResize = () => {
-      const newIsMobile = window.innerWidth <= 768;
-      setIsMobile(newIsMobile);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [mobileOpen]);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
-  // Cleanup timeout on unmount (must be before any conditional return)
+  // Clean timeout when unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
+      if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
     };
   }, []);
 
-  // Show loading while checking authentication
+  // Loading state
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: '#f6f8fa'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #10b981',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }}></div>
-          <div style={{ color: '#64748b', fontSize: '16px' }}>Loading...</div>
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "linear-gradient(135deg, #f6f8fa 0%, #e9ecef 100%)",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 50,
+              height: 50,
+              border: "4px solid #e2e8f0",
+              borderTop: "4px solid #10b981",
+              borderRadius: "50%",
+              margin: "0 auto 20px",
+              animation: "spin 0.8s linear infinite",
+            }}
+          />
+          <div style={{ color: "#64748b", fontSize: 16, fontWeight: 500 }}>Loading…</div>
+
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated || !user || user.role !== 'admin') {
+  // Auth check
+  if (!isAuthenticated || ! user || user.role !== "admin") {
     return <Navigate to="/admin" replace />;
   }
 
-  // Fungsi inisial nama
+  // Initials for avatar
   const getInitials = (name: string) => {
-    if (!name) return 'A';
-    const parts = name.trim().split(' ');
-    if (parts.length === 1) return parts[0][0]?.toUpperCase() || 'A';
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
-  const initials = getInitials(user?.name || 'Admin');
-  const displayName = user?.name || 'Administrator';
-  const displayRole = user?.role || 'admin';
-
-  const handleMobileToggle = () => {
-    setMobileOpen(!mobileOpen);
+    if (!name) return "A";
+    const p = name.trim().split(" ");
+    if (p.length === 1) return p[0][0]. toUpperCase();
+    return (p[0][0] + p[p.length - 1][0]).toUpperCase();
   };
 
+  const initials = getInitials(user?. name || "Admin");
+  const displayName = user?.name || "Administrator";
+
+  // Toggle sidebar (mobile only)
+  const handleMobileToggle = () => setMobileOpen(!mobileOpen);
+
+  // Dropdown handlers
   const handleMouseEnter = () => {
-    // Clear any existing timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    // Set dropdown to show after 300ms delay
-    hoverTimeoutRef.current = setTimeout(() => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    hoverTimeout.current = setTimeout(() => {
       setShowProfileDropdown(true);
-    }, 300);
+    }, 150);
   };
 
   const handleMouseLeave = () => {
-    // Clear any existing timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    // Set dropdown to hide after 200ms delay (gives time to move to dropdown)
-    hoverTimeoutRef.current = setTimeout(() => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout. current);
+    hoverTimeout.current = setTimeout(() => {
       setShowProfileDropdown(false);
-    }, 200);
+    }, 120);
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      {/* SIDEBAR */}
       <AdminSidebar mobileOpen={mobileOpen} onMobileToggle={handleMobileToggle} />
-      <div style={{ 
-        flex: 1, 
-        background: '#f6f8fa',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh'
-      }}>
-        {/* Top Bar */}
-        <div style={{
-          background: 'white',
-          padding: '16px 24px',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '16px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          flexShrink: 0
-        }}>
-          {/* Mobile Hamburger Button - Always show on mobile for testing */}
+
+      {/* MAIN CONTAINER */}
+      <div
+        id="admin-content"
+        style={{
+          flex: 1,
+          background: "#f6f8fa",
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* TOP BAR */}
+        <div
+          style={{
+            background: WHITE,
+            padding: "16px 28px",
+            borderBottom: "1px solid #e2e8f0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexShrink: 0,
+            position: "sticky",
+            top: 0,
+            zIndex: 200, // PERBAIKAN: Turunkan dari 9999
+            backdropFilter: "blur(10px)",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+          }}
+        >
+          {/* MOBILE HAMBURGER */}
           <button
             onClick={handleMobileToggle}
             style={{
-              background: isMobile ? '#f1f5f9' : 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 8,
-              outline: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: GRAY_TEXT,
-              borderRadius: '50%',
-              transition: 'background 0.2s, color 0.2s',
-              visibility: isMobile ? 'visible' : 'hidden',
-              minWidth: '40px',
-              minHeight: '40px',
+              background: isMobile ? "#f1f5f9" : "transparent",
+              border: "none",
+              padding: 10,
+              cursor: "pointer",
+              visibility: isMobile ? "visible" : "hidden",
+              minWidth: 44,
+              minHeight: 44,
+              borderRadius: "50%",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-            onMouseOver={e => {
-              e.currentTarget.style.background = '#f1f5f9';
+            onMouseEnter={(e) => {
+              if (isMobile) {
+                e. currentTarget.style.background = "#e2e8f0";
+                e.currentTarget.style. transform = "scale(1.05)";
+              }
             }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = isMobile ? '#f1f5f9' : 'transparent';
+            onMouseLeave={(e) => {
+              if (isMobile) {
+                e. currentTarget.style.background = "#f1f5f9";
+                e.currentTarget.style. transform = "scale(1)";
+              }
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="7" x2="19" y2="7" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <line x1="5" y1="17" x2="19" y2="17" />
-            </svg>
+            <i className="fas fa-bars" style={{ fontSize: 20, color: GRAY_TEXT }} />
           </button>
-          
-          {/* Profile with Dropdown */}
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 16, 
-              marginLeft: isMobile ? 0 : 'auto',
-              position: 'relative'
+
+          {/* GREETING TEXT (Desktop only) */}
+          {! isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <i className="fas fa-sun" style={{ color: "#f59e0b", fontSize: 20 }} />
+              <span style={{ fontSize: 18, fontWeight: 600, color: "#1e293b" }}>
+                Welcome back, {displayName. split(" ")[0]}!  
+              </span>
+            </div>
+          )}
+
+          {/* PROFILE DROPDOWN */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              position: "relative",
+              marginLeft: "auto",
+              zIndex: 300, // PERBAIKAN: Turunkan dari 12000 (harus lebih tinggi dari header tapi lebih rendah dari modal)
             }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-           <span style={{
-  width: 48,
-  height: 48,
-  background: '#10b981', // 🌟 MATCH DENGAN BANNER
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#ffffff',
-  fontWeight: 700,
-  fontSize: 20,
-  border: '3px solid #ffffff',
-  marginLeft: 8,
-  userSelect: 'none',
-  boxShadow: '0 6px 18px rgba(16,185,129,0.25)', // 🌟 soft shadow ala banner
-  cursor: 'pointer',
-  transition: 'transform 0.2s ease',
-}}>
-  {initials}
-</span>
-
-            {/* Dropdown Menu */}
-            {showProfileDropdown && (
-              <div 
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                cursor: "pointer",
+                padding: "6px 12px 6px 6px",
+                borderRadius: 50,
+                transition: "all 0.2s ease",
+                background: showProfileDropdown ? "#f1f5f9" : "transparent",
+              }}
+            >
+              <span
                 style={{
-                  position: 'absolute',
-                  top: '60px',
-                  right: 0,
-                  background: WHITE,
-                  borderRadius: 12,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  padding: '16px',
-                  minWidth: '240px',
-                  zIndex: 1000,
-                  border: '1px solid #e2e8f0'
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "white",
+                  boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
+                  transition: "transform 0.2s ease",
+                  transform: showProfileDropdown ? "scale(1. 05)" : "scale(1)",
                 }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
-                {/* Profile Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '16px' }}>
-                  <span style={{
-  width: 48,
-  height: 48,
-  background: '#10b981', // 🌟 SAME AS BANNER
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#ffffff',
-  fontWeight: 700,
-  fontSize: 20,
-  border: '3px solid #059669', // 🌟 darker emerald, cocok dengan gradient banner
-  userSelect: 'none',
-  boxShadow: '0 6px 18px rgba(16,185,129,0.25)', // 🌟 emerald glow seperti banner
-}}>
-  {initials}
-</span>
+                {initials}
+              </span>
+              {! isMobile && (
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>
+                  {displayName}
+                </span>
+              )}
+              <i
+                className="fas fa-chevron-down"
+                style={{
+                  fontSize: 12,
+                  color: GRAY_TEXT,
+                  transition: "transform 0.2s ease",
+                  transform: showProfileDropdown ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              />
+            </div>
 
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, color: GRAY_TEXT, fontSize: 16 }}>{displayName}</div>
-                    <div style={{ fontSize: 13, color: GRAY_TEXT, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <i className="fas fa-user-circle" style={{ fontSize: 14 }}></i>
-                      {displayRole.charAt(0).toUpperCase() + displayRole.slice(1)}
+            {showProfileDropdown && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 60,
+                  right: 0,
+                  width: 260,
+                  background: "white",
+                  borderRadius: 16,
+                  padding: 20,
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                  border: "1px solid #e2e8f0",
+                  animation: "dropdownFadeIn 0.2s ease-out",
+                }}
+              >
+                {/* PROFILE INFO */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginBottom: 20,
+                    alignItems: "center",
+                    paddingBottom: 16,
+                    borderBottom: "1px solid #e2e8f0",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      color: "white",
+                      fontSize: 20,
+                      fontWeight: 700,
+                      boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
+                    }}
+                  >
+                    {initials}
+                  </span>
+
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>
+                      {displayName}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: GRAY_TEXT,
+                        marginTop: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <i className="fas fa-shield-alt" style={{ fontSize: 12 }} />
+                      Administrator
                     </div>
                   </div>
                 </div>
 
-                {/* Profile Button */}
+                {/* PROFILE BUTTON */}
                 <button
-                  onClick={() => {
-                    navigate('/admin/dashboard/profile');
-                    setShowProfileDropdown(false);
-                  }}
+                  onClick={() => navigate("/admin/dashboard/profile")}
                   style={{
-                    width: '100%',
-                    background: '#f1f5f9',
-                    color: GRAY_TEXT,
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    fontSize: 14,
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: "#f1f5f9",
+                    marginBottom: 10,
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    transition: 'all 0.2s ease',
-                    marginBottom: '8px',
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    color: "#1e293b",
                   }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#e2e8f0';
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#e2e8f0";
+                    e.currentTarget.style.transform = "translateY(-2px)";
                   }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = '#f1f5f9';
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style. background = "#f1f5f9";
+                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
-                  <i className="fas fa-user" style={{ fontSize: 14 }}></i>
-                  Profile
+                  <i className="fas fa-user-circle" />
+                  View Profile
                 </button>
 
-                {/* Logout Button */}
+                {/* LOGOUT BUTTON */}
                 <button
-                  onClick={() => {
-                    logout();
-                    window.location.href = '/';
-                  }}
+                  onClick={logout}
                   style={{
-                    width: '100%',
-                    background: '#ef4444',
-                    color: WHITE,
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '12px 16px',
-                    fontSize: 14,
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                    borderRadius: 10,
+                    border: "none",
+                    color: "white",
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)',
+                    fontSize: 14,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
                   }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = '#dc2626';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+                  onMouseEnter={(e) => {
+                    e. currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(239, 68, 68, 0.4)";
                   }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = '#ef4444';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.2)';
+                  onMouseLeave={(e) => {
+                    e.currentTarget. style.transform = "translateY(0)";
+                    e. currentTarget.style.boxShadow = "0 2px 8px rgba(239, 68, 68, 0.3)";
                   }}
                 >
-                  <i className="fas fa-sign-out-alt" style={{ fontSize: 14 }}></i>
-                  Log Out
+                  <i className="fas fa-sign-out-alt" />
+                  Logout
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Main Content */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* PAGE CONTENT */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="livestream" element={<AdminLiveStreamPage />} />
@@ -343,8 +391,21 @@ const AdminPanel: React.FC = () => {
           </Routes>
         </div>
       </div>
+
+      <style>{`
+        @keyframes dropdownFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default AdminPanel; 
+export default AdminPanel;

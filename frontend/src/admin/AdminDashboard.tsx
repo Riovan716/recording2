@@ -220,7 +220,7 @@ const AdminDashboard: React.FC = () => {
         position: 'relative',
         overflow: 'hidden',
         boxShadow: '0 10px 30px rgba(16, 185, 129, 0.2)',
-        animation: 'fadeIn 0. 6s ease-out'
+        animation: 'fadeIn 0.6s ease-out'
       }}>
         {/* Decorative circles */}
         <div style={{

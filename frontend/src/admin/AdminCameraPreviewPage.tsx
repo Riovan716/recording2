@@ -28,12 +28,12 @@ const AdminCameraPreviewPage: React.FC = () => {
 
       // Request permission first
       await navigator.mediaDevices.getUserMedia({ video: true });
-      
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
+
       setAvailableCameras(videoDevices);
-      
+
       // Automatically start all camera streams
       await startAllCameraStreams(videoDevices);
     } catch (err) {
@@ -63,7 +63,7 @@ const AdminCameraPreviewPage: React.FC = () => {
         });
 
         const label = camera.label || `Kamera ${camera.deviceId.slice(0, 8)}`;
-        
+
         return { deviceId: camera.deviceId, stream, label };
       } catch (err) {
         console.error(`Error starting camera ${camera.label}:`, err);
@@ -73,7 +73,7 @@ const AdminCameraPreviewPage: React.FC = () => {
 
     const streams = await Promise.all(streamPromises);
     const validStreams = streams.filter(stream => stream !== null) as CameraStream[];
-    
+
     setActiveStreams(validStreams);
   };
 
@@ -187,55 +187,64 @@ const AdminCameraPreviewPage: React.FC = () => {
               Semua kamera yang terdeteksi akan ditampilkan otomatis
             </p>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={getAvailableCameras}
               disabled={isLoading}
               style={{
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading ? 0.6 : 1,
-                transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                justifyContent: 'center',
+                gap: 10,
+                background: isLoading
+                  ? "linear-gradient(135deg, #64748b 0%, #64748b 100%)"  // disabled abu-abu
+                  : "linear-gradient(135deg, #10b981 0%, #059669 100%)", // hijau gradasi seperti recording
+                color: "white",
+                border: "none",
+                borderRadius: 16,
+                padding: "12px 18px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: isLoading ? "not-allowed" : "pointer",
+                opacity: isLoading ? 0.6 : 1,
+                boxShadow: isLoading
+                  ? "none"
+                  : "0 8px 20px rgba(16,185,129,0.35)",
+                transition: "all 0.25s ease",
               }}
               onMouseOver={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.background = '#2563eb';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 12px 24px rgba(16,185,129,0.45)";
                 }
               }}
               onMouseOut={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.background = '#3b82f6';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow =
+                    "0 8px 20px rgba(16,185,129,0.35)";
                 }
               }}
             >
               {isLoading ? (
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid #ffffff40',
-                  borderTop: '2px solid #ffffff',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
+                <div
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid #ffffff40",
+                    borderTop: "2px solid #ffffff",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
               ) : (
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M4 4h16v16H4zM4 4l16 16"/>
-                </svg>
+                <span style={{ fontSize: 16 }}>🔄</span>
               )}
               Refresh Kamera
             </button>
+
           </div>
         </div>
 
@@ -317,7 +326,7 @@ const AdminCameraPreviewPage: React.FC = () => {
           }}>
             Preview Kamera ({activeStreams.length})
           </h3>
-          
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: isFullscreen ? '1fr' : 'repeat(auto-fit, minmax(400px, 1fr))',
@@ -340,7 +349,7 @@ const AdminCameraPreviewPage: React.FC = () => {
                   streamTitle={streamData.label}
                   fullScreen={isFullscreen === streamData.deviceId}
                 />
-                
+
                 {/* Fullscreen Exit Button - Top Center */}
                 {isFullscreen === streamData.deviceId && (
                   <button
@@ -406,7 +415,7 @@ const AdminCameraPreviewPage: React.FC = () => {
                     Tekan ESC untuk keluar dari fullscreen
                   </div>
                 )}
-                 
+
                 {/* Camera Controls */}
                 <div style={{
                   position: 'absolute',
@@ -428,7 +437,7 @@ const AdminCameraPreviewPage: React.FC = () => {
                   }}>
                     {streamData.label}
                   </div>
-                  
+
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => toggleFullscreen(streamData.deviceId)}
@@ -455,7 +464,7 @@ const AdminCameraPreviewPage: React.FC = () => {
                     >
                       {isFullscreen === streamData.deviceId ? '⤓ Keluar' : '⤢ Fullscreen'}
                     </button>
-                    
+
                     <button
                       onClick={() => stopCameraStream(streamData.deviceId)}
                       style={{

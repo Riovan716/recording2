@@ -4,9 +4,11 @@ import ModalNotifikasi from '../components/ModalNotifikasi';
 import { API_URL } from '../config';
 
 // Soft professional color palette
-const PRIMARY = '#6ee7b7';
-const PRIMARY_LIGHT = '#a7f3d0';
-const PRIMARY_DARK = '#34d399';
+// Premium Green Palette
+const PRIMARY = '#10b981';      
+const PRIMARY_LIGHT = '#34d399';
+const PRIMARY_DARK = '#059669';
+
 const TEXT_DARK = '#334155';
 const TEXT_GRAY = '#64748b';
 const TEXT_LIGHT = '#94a3b8';
@@ -289,59 +291,118 @@ const AdminProfilePage: React.FC = () => {
                 background-position: 0% 50%;
               }
             }
+              @keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
           `}
         </style>
 
-        {/* Welcome Card */}
-        <div style={{
-          background: `linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(167, 243, 208, 0.1))`,
-          borderRadius: CARD_RADIUS,
-          color: '#1e293b',
-          padding: isMobile ? '20px 20px' : '28px 32px',
-          marginBottom: 24,
-          boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`,
-          position: 'relative',
-          overflow: 'hidden',
-          animation: 'fadeInUp 0.6s ease-out',
-        }}>
-          {/* Background Pattern */}
-          <div style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '250px',
-            height: '250px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%)',
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '-30px',
-            width: '180px',
-            height: '180px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)',
-          }} />
-          
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ 
-              fontSize: isMobile ? 22 : 26, 
-              fontWeight: 600, 
-              marginBottom: 6,
-              color: COLORS.text,
-            }}>
-              Profile Admin
-            </div>
-            <div style={{ 
-              fontSize: 13, 
-              color: COLORS.textGray,
-              fontWeight: 400,
-            }}>
-              Kelola informasi profil dan keamanan akun Anda
-            </div>
-          </div>
-        </div>
+      {/* Welcome Card (MATCHED STYLE) */}
+<div style={{
+  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  borderRadius: '20px',
+  padding: isMobile ? '24px' : '36px',
+  marginBottom: '32px',
+  color: '#ffffff',
+  position: 'relative',
+  overflow: 'hidden',
+  boxShadow: '0 14px 34px rgba(16, 185, 129, 0.25)',
+  animation: 'fadeIn 0.6s ease-out'
+}}>
+
+  {/* Decorative circles */}
+  <div style={{
+    position: 'absolute',
+    top: '-60px',
+    right: '-60px',
+    width: '220px',
+    height: '220px',
+    background: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: '50%',
+    filter: 'blur(45px)'
+  }} />
+  <div style={{
+    position: 'absolute',
+    bottom: '-40px',
+    left: '-40px',
+    width: '170px',
+    height: '170px',
+    background: 'rgba(255, 255, 255, 0.10)',
+    borderRadius: '50%',
+    filter: 'blur(35px)'
+  }} />
+
+  {/* Content */}
+  <div style={{ position: 'relative', zIndex: 1 }}>
+
+    {/* Icon + Title */}
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '12px', 
+      marginBottom: '14px' 
+    }}>
+      <div style={{
+        fontSize: '32px',
+        animation: 'pulse 2s infinite'
+      }}>
+        👤
+      </div>
+
+      <h1 style={{
+        fontSize: isMobile ? '20px' : '28px',
+        fontWeight: 700,
+        margin: 0,
+        letterSpacing: '-0.5px'
+      }}>
+        Profile Admin
+      </h1>
+    </div>
+
+    {/* Subtitle */}
+    <div style={{
+      fontSize: isMobile ? '13px' : '15px',
+      margin: 0,
+      color: 'rgba(255, 255, 255, 0.92)',
+      lineHeight: '1.6',
+      maxWidth: '620px',
+      fontWeight: 400
+    }}>
+      Kelola informasi profil dan keamanan akun Anda. Selamat datang, <b>{user?.name || 'Admin'}</b>!
+    </div>
+
+    {/* Date capsule */}
+    <div style={{
+      marginTop: '16px',
+      padding: '8px 16px',
+      background: 'rgba(255, 255, 255, 0.18)',
+      borderRadius: '10px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '13px',
+      fontWeight: 500,
+      backdropFilter: 'blur(3px)'
+    }}>
+      <i className="fas fa-calendar-alt"></i>
+      {new Date().toLocaleDateString('id-ID', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}
+    </div>
+
+  </div>
+</div>
+
 
         {/* Profile Information Card */}
         <div style={{
@@ -486,39 +547,42 @@ const AdminProfilePage: React.FC = () => {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', flexDirection: isMobile ? 'column' : 'row' }}>
             <button
-              onClick={() => setShowEditProfileModal(true)}
-              style={{
-                flex: 1,
-                background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
-                color: COLORS.white,
-                border: 'none',
-                borderRadius: 10,
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: `0 2px 8px rgba(110, 231, 183, 0.2)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(34, 197, 94, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.3)';
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4C2.89543 4 2 4.89543 2 6V20C2 21.1046 2.89543 22 4 22H18C19.1046 22 20 21.1046 20 20V13"/>
-                <path d="M18.5 2.5C18.8978 2.10218 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10218 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10218 21.5 5. Approach L11 18.5L2 19.5L3 10.5L18.5 2.5Z"/>
-              </svg>
-              Edit Profile
-            </button>
+  onClick={() => setShowEditProfileModal(true)}
+  style={{
+    flex: 1,
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: 16,
+    padding: '14px 20px',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 8px 20px rgba(16,185,129,0.35)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    transition: 'all 0.3s ease',
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = 'translateY(-2px)';
+    e.currentTarget.style.boxShadow =
+      '0 12px 28px rgba(16,185,129,0.45)';
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow =
+      '0 8px 20px rgba(16,185,129,0.35)';
+  }}
+>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
+  Edit Profile
+</button>
+
             <button
               onClick={() => setShowChangePasswordModal(true)}
               style={{
