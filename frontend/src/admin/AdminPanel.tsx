@@ -9,12 +9,14 @@ import AdminCameraPreviewPage from "./AdminCameraPreviewPage";
 import AdminProfilePage from "./AdminProfilePage";
 
 import { useAuth } from "../context/AuthContext";
+import { useStreaming } from "../context/StreamingContext";
 
 const GRAY_TEXT = "#64748b";
 const WHITE = "#ffffff";
 
 const AdminPanel: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { streamingState } = useStreaming();
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -111,24 +113,31 @@ const AdminPanel: React.FC = () => {
     }, 120);
   };
 
+  // Jika streaming aktif, sembunyikan sidebar dan top bar untuk full screen
+  const isStreamingActive = streamingState.isStreaming;
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      {/* SIDEBAR */}
-      <AdminSidebar mobileOpen={mobileOpen} onMobileToggle={handleMobileToggle} />
+      {/* SIDEBAR - Sembunyikan jika streaming aktif */}
+      {!isStreamingActive && (
+        <AdminSidebar mobileOpen={mobileOpen} onMobileToggle={handleMobileToggle} />
+      )}
 
       {/* MAIN CONTAINER */}
       <div
         id="admin-content"
         style={{
           flex: 1,
-          background: "#f6f8fa",
+          background: isStreamingActive ? "transparent" : "#f6f8fa",
           height: "100vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          width: isStreamingActive ? "100%" : "auto",
         }}
       >
-        {/* TOP BAR */}
+        {/* TOP BAR - Sembunyikan jika streaming aktif */}
+        {!isStreamingActive && (
         <div
           style={{
             background: WHITE,
@@ -378,9 +387,16 @@ const AdminPanel: React.FC = () => {
             )}
           </div>
         </div>
+        )}
 
         {/* PAGE CONTENT */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ 
+          flex: 1, 
+          overflowY: isStreamingActive ? "hidden" : "auto",
+          overflowX: "hidden",
+          width: "100%",
+          height: isStreamingActive ? "100vh" : "auto"
+        }}>
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="livestream" element={<AdminLiveStreamPage />} />

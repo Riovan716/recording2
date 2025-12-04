@@ -7,6 +7,7 @@ import MultiCameraStreamer from "../components/MultiCameraStreamer";
 import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import SimpleYouTube from "../components/SimpleYouTube";
 import ChatModal from "../components/ChatModal";
+import ChatSidebar from "../components/ChatSidebar";
 import { API_URL } from "../config";
 import { io } from 'socket.io-client';
 
@@ -86,9 +87,10 @@ const AdminLiveStreamPage: React.FC = () => {
   const [streamStartTime, setStreamStartTime] = useState<string | null>(null);
 
   const [showChatModal, setShowChatModal] = useState(false);
+  const [showChatSidebar, setShowChatSidebar] = useState(true);
   const socketRef = useRef<any>(null);
   const chatSocketRef = useRef<any>(null);
-// Set waktu mulai streaming
+  // Set waktu mulai streaming
 useEffect(() => {
   // Jika streaming baru aktif dan belum ada waktu start → set sekarang
   if (streamingState.isStreaming && !streamStartTime) {
@@ -105,6 +107,13 @@ useEffect(() => {
   }
 }, [streamingState.isStreaming]);
 
+  // Set video stream to video element
+  useEffect(() => {
+    if (videoRef.current && streamingState.localStream) {
+      videoRef.current.srcObject = streamingState.localStream;
+    }
+  }, [streamingState.localStream]);
+
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
@@ -113,7 +122,7 @@ useEffect(() => {
 
   // Socket connection for real-time viewer count updates
   useEffect(() => {
-    socketRef.current = io('http://192.168.1.4:4000');
+    socketRef.current = io('http://192.168.1.15:4000');
     
     socketRef.current.on('connect', () => {
       console.log('[AdminLiveStreamPage] Connected to MediaSoup server');
@@ -148,7 +157,7 @@ useEffect(() => {
   // Initialize chat socket connection
   useEffect(() => {
     if (streamingState.roomId && !chatSocketRef.current) {
-      chatSocketRef.current = io('http://192.168.1.4:4000');
+      chatSocketRef.current = io('http://192.168.1.15:4000');
       console.log('[AdminLiveStreamPage] Chat socket initialized for room:', streamingState.roomId);
     }
 
@@ -233,7 +242,7 @@ useEffect(() => {
     
     try {
       console.log(`[AdminLiveStreamPage] Fetching viewer count for room: ${streamingState.roomId}`);
-      const response = await fetch(`http://192.168.1.4:4000/api/viewer-count/${streamingState.roomId}`);
+      const response = await fetch(`http://192.168.1.15:4000/api/viewer-count/${streamingState.roomId}`);
       if (response.ok) {
         const data = await response.json();
         console.log(`[AdminLiveStreamPage] Viewer count response:`, data);
@@ -401,7 +410,7 @@ useEffect(() => {
   // Helper function to generate stream URL
   const generateStreamUrl = (roomId: string) => {
     // Always use HTTP server to avoid CORS issues
-    return `http://192.168.1.4:3000/#/view/${roomId}`;
+    return `http://192.168.1.15:3000/#/view/${roomId}`;
   };
 
   if (loading) {
@@ -429,6 +438,366 @@ useEffect(() => {
   }
   
 
+  // Jika streaming aktif, tampilkan layout seperti user (full screen)
+  if (streamingState.isStreaming) {
+    return (
+      <>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          minHeight: '100vh',
+          background: '#ffffff',
+          fontFamily: '"Roboto", "Arial", sans-serif',
+          color: '#0f0f0f',
+          overflow: 'hidden',
+          zIndex: 1
+        }}>
+          {/* Header dengan Logo dan Status LIVE */}
+          <div style={{
+            background: '#ffffff',
+            padding: '0 16px',
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            height: '56px',
+            borderBottom: '1px solid #e5e5e5',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              flex: 1,
+              minWidth: 0
+            }}>
+              {/* Logo/Title */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}>
+                <img 
+                  src="/assets/umalo.png" 
+                  alt="Umalo" 
+                  style={{
+                    height: '40px',
+                    width: 'auto',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Right side - Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                background: '#ff0000',
+                color: '#ffffff',
+                borderRadius: '18px',
+                fontSize: '12px',
+                fontWeight: 500
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  animation: 'pulse 1s infinite'
+                }} />
+                LIVE
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content - YouTube Layout */}
+          <div style={{
+            width: '100%',
+            maxWidth: '100%',
+            margin: '0 auto',
+            paddingTop: '24px',
+            paddingBottom: '40px',
+            paddingLeft: '24px',
+            paddingRight: showChatSidebar ? '424px' : '24px',
+            transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Video Container */}
+            <div style={{
+              width: '100%',
+              maxWidth: '100%',
+            }}>
+              {/* Video Player */}
+              {streamingState.localStream && (
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '16/9',
+                  background: '#000',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  marginBottom: '16px'
+                }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted={true}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
+                  />
+
+                  {/* Live Badge on Video */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    background: '#ff0000',
+                    color: '#ffffff',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <div style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      animation: 'pulse 1s infinite'
+                    }} />
+                    LIVE
+                  </div>
+                </div>
+              )}
+
+              {/* Video Info Section - YouTube Style */}
+              <div style={{
+                padding: '0 4px',
+                marginBottom: '24px'
+              }}>
+                {/* Title */}
+                <h1 style={{
+                  fontSize: '20px',
+                  fontWeight: 500,
+                  lineHeight: '28px',
+                  color: '#0f0f0f',
+                  margin: '0 0 12px 0',
+                  wordBreak: 'break-word'
+                }}>
+                  {streamTitle || 'Live Stream'}
+                </h1>
+
+                {/* Video Metadata */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid #e5e5e5',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    fontSize: '14px',
+                    color: '#606060'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>👥</span>
+                      <span style={{ fontWeight: 500, color: '#0f0f0f' }}>{currentViewers}</span>
+                      <span>penonton</span>
+                    </div>
+                    {streamStartTime && (
+                      <div>
+                        Dimulai {new Date().toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Admin Action Buttons */}
+                <div style={{
+                  display: 'flex',
+                  gap: '16px',
+                  marginTop: '16px',
+                  marginBottom: '24px'
+                }}>
+                  {/* Salin Link Button */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        if (!streamingState.roomId) {
+                          showAlert("Room ID tidak tersedia. Silakan coba lagi.", "error");
+                          return;
+                        }
+                        const link = generateStreamUrl(streamingState.roomId);
+                        
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(link);
+                          showAlert("Link berhasil disalin ke clipboard!", "success");
+                        } else {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = link;
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          
+                          try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                              showAlert("Link berhasil disalin ke clipboard!", "success");
+                            } else {
+                              throw new Error('Copy command failed');
+                            }
+                          } catch (err) {
+                            showAlert(`Gagal menyalin ke clipboard. Silakan salin manual: ${link}`, "warning");
+                          } finally {
+                            document.body.removeChild(textArea);
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error copying to clipboard:', error);
+                        showAlert("Gagal menyalin link ke clipboard. Silakan coba lagi.", "error");
+                      }
+                    }}
+                    style={{
+                      background: '#065fd4',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '18px',
+                      padding: '14px 32px',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 4px 12px rgba(6, 95, 212, 0.3)',
+                      flex: '0 0 auto'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#0550ae';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(6, 95, 212, 0.4)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = '#065fd4';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(6, 95, 212, 0.3)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>📋</span>
+                    <span>Salin Link</span>
+                  </button>
+
+                  {/* Stop Button */}
+                  <button
+                    onClick={handleStopStream}
+                    style={{
+                      background: '#ff0000',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '18px',
+                      padding: '14px 32px',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)',
+                      flex: '0 0 auto'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#cc0000';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 0, 0, 0.4)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = '#ff0000';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 0, 0, 0.3)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>⏹️</span>
+                    <span>Berhenti Live</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Sidebar - Fixed Position */}
+          {streamingState.roomId && (
+            <ChatSidebar
+              isOpen={showChatSidebar}
+              onToggle={() => setShowChatSidebar(!showChatSidebar)}
+              streamId={streamingState.roomId}
+              socket={chatSocketRef.current}
+              currentUsername={user?.name || 'Admin'}
+              isAdmin={true}
+              readOnly={false}
+            />
+          )}
+        </div>
+
+        {/* Modal Notifikasi */}
+        <ModalNotifikasi
+          isOpen={showAlertModal}
+          title="Pemberitahuan"
+          message={alertMessage}
+          type={alertType}
+          onConfirm={() => setShowAlertModal(false)}
+          onCancel={() => setShowAlertModal(false)}
+          confirmText="OK"
+          cancelText=""
+        />
+      </>
+    );
+  }
+
+  // Layout normal ketika streaming tidak aktif
   return (
     <>
       {/* Add CSS animations */}
@@ -637,19 +1006,17 @@ animation: 'fadeInUp 0.6s ease-out'
               </p>
             </div>
 
-            {!streamingState.isStreaming ? (
-              <>
-                {/* Streaming Buttons */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
-                 
-                <button
+            {/* Streaming Buttons */}
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
+             
+            <button
   onClick={handleStartMultiCameraStreaming}
   style={{
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '10px',
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', // 🌟 MATCH BANNER
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     color: "white",
     border: 'none',
     borderRadius: 16,
@@ -659,7 +1026,7 @@ animation: 'fadeInUp 0.6s ease-out'
     cursor: 'pointer',
     opacity: 1,
     width: 'auto',
-    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)', // 🌟 MATCH BANNER STYLE
+    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), 0 4px 8px rgba(16, 185, 129, 0.25)',
     transition: 'all 0.3s ease',
     position: 'relative',
     overflow: 'hidden',
@@ -667,7 +1034,7 @@ animation: 'fadeInUp 0.6s ease-out'
   onMouseEnter={(e) => {
     e.currentTarget.style.transform = 'translateY(-2px)';
     e.currentTarget.style.boxShadow =
-      '0 12px 28px rgba(16, 185, 129, 0.45), 0 6px 12px rgba(16, 185, 129, 0.35)'; // 🌟 hover seperti banner
+      '0 12px 28px rgba(16, 185, 129, 0.45), 0 6px 12px rgba(16, 185, 129, 0.35)';
   }}
   onMouseLeave={(e) => {
     e.currentTarget.style.transform = 'translateY(0)';
@@ -679,405 +1046,7 @@ animation: 'fadeInUp 0.6s ease-out'
   Multi-Camera Stream
 </button>
 
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Camera Preview */}
-                {streamingState.isStreaming && streamingState.localStream && (
-                  <div style={{ 
-                    marginBottom: "16px",
-                    animation: "fadeInUp 0.6s ease-out"
-                  }}>
-                    <CameraPreview 
-                      stream={streamingState.localStream} 
-                      isStreaming={streamingState.isStreaming}
-                      streamTitle="Admin Live Stream"
-                      viewerCount={0}
-                      fullScreen={false}
-                    />
-                  </div>
-                )}
-
-                {/* Enhanced Status Info */}
-                <div
-                  style={{
-                    background: "#f0f9ff",
-                    border: `1px solid #e0f2fe`,
-                    borderRadius: 12,
-                    padding: "16px",
-                    marginBottom: "16px",
-                    position: "relative",
-                    overflow: "hidden",
-                    animation: "slideInRight 0.5s ease-out 0.2s both"
-                  }}
-                >
-                  {/* Background Pattern */}
-                  <div style={{
-                    position: "absolute",
-                    top: "-20px",
-                    right: "-20px",
-                    width: "80px",
-                    height: "80px",
-                     background: "radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)",
-                    borderRadius: "50%"
-                  }} />
-                  
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: "8px"
-                  }}>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px"
-                    }}>
-                      <div style={{
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "50%",
-                        background: COLORS.green,
-                        animation: "pulse 2s infinite"
-                      }} />
-                      <span style={{
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        color: '#6b7280'
-                      }}>
-                        Live Streaming Aktif
-                      </span>
-                    </div>
-                    <div style={{
-                      background: '#d1fae5',
-                      color: '#059669',
-                      padding: "4px 8px",
-                      borderRadius: 6,
-                      fontSize: "11px",
-                      fontWeight: 500
-                    }}>
-                      ONLINE
-                    </div>
-                  </div>
-                  
-                  <div style={{
-                    fontSize: "13px",
-                    color: '#9ca3af',
-                    marginBottom: "4px",
-                    fontWeight: 500
-                  }}>
-                    📺 Admin Live Stream
-                  </div>
-                  
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: isMobile ? "8px" : "16px",
-                    fontSize: "12px",
-                    color: '#9ca3af',
-                    flexWrap: isMobile ? "wrap" : "nowrap"
-                  }}>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      marginBottom: isMobile ? "4px" : "0"
-                    }}>
-                      <span>👥</span>
-                      <span>{currentViewers} penonton</span>
-                      <button
-                        onClick={fetchViewerCount}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          color: '#9ca3af',
-                          padding: '2px',
-                          borderRadius: '3px'
-                        }}
-                        title="Refresh viewer count"
-                      >
-                        🔄
-                      </button>
-                    </div>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      marginBottom: isMobile ? "4px" : "0"
-                    }}>
-                      <span>📡</span>
-                      <span>HD Quality</span>
-                    </div>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px"
-                    }}>
-                      <span>⏱️</span>
-<span>
-  Dimulai: {streamStartTime ? streamStartTime : "–"}
-</span>
-
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Share Link Section */}
-                {streamingState.isStreaming && streamingState.roomId && (
-                  <div
-                    style={{
-                      background: "#f0f9ff",
-                      border: `1px solid #e0f2fe`,
-                      borderRadius: 12,
-                      padding: "20px",
-                      marginBottom: "16px",
-                      position: "relative",
-                      overflow: "hidden",
-                      animation: "scaleIn 0.6s ease-out 0.4s both"
-                    }}
-                  >
-                    {/* Background Pattern */}
-                    <div style={{
-                      position: "absolute",
-                      top: "-30px",
-                      left: "-30px",
-                      width: "100px",
-                      height: "100px",
-                      background: "radial-gradient(circle, rgba(187, 247, 208, 0.15) 0%, transparent 70%)",
-                      borderRadius: "50%"
-                    }} />
-                    
-                    <div
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 500,
-                        color: '#6b7280',
-                        marginBottom: "12px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        position: "relative",
-                        zIndex: 1
-                      }}
-                    >
-                      🔗 Bagikan Live Stream
-                    </div>
-                    
-                    <div
-                      style={{
-                        background: '#ffffff',
-                        border: `1px solid #e5e7eb`,
-                        borderRadius: 8,
-                        padding: "12px 16px",
-                        fontSize: "13px",
-                        color: '#6b7280',
-                        marginBottom: "16px",
-                        wordBreak: "break-all",
-                        fontFamily: "monospace",
-                        position: "relative",
-                        zIndex: 1,
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
-                      }}
-                    >
-                      {generateStreamUrl(streamingState.roomId)}
-                    </div>
-                  </div>
-                )}
-
-                {/* Simple YouTube Streaming - TEMPORARILY COMMENTED OUT */}
-                {/* {streamingState.isStreaming && streamingState.roomId && (
-                  <div style={{ marginBottom: "16px" }}>
-                    <SimpleYouTube
-                      roomId={streamingState.roomId}
-                      streamTitle={streamingState.selectedMapel || 'Live Stream'}
-                      onStreamStart={(broadcastUrl) => {
-                        showAlert(`YouTube streaming started! URL: ${broadcastUrl}`, "success");
-                      }}
-                      onStreamStop={() => {
-                        showAlert("YouTube streaming stopped successfully", "success");
-                      }}
-                    />
-                  </div>
-                )} */}
-
-                {/* Action Buttons Row */}
-                <div style={{
-                  display: "flex",
-                  gap: "8px",
-                  marginBottom: "12px"
-                }}>
-
-                  {/* Salin Link Button */}
-                  <button
-                    onClick={async () => {
-                      try {
-                        if (!streamingState.roomId) {
-                          showAlert("Room ID tidak tersedia. Silakan coba lagi.", "error");
-                          return;
-                        }
-                        const link = generateStreamUrl(streamingState.roomId);
-                        
-                        // Try modern clipboard API first
-                        if (navigator.clipboard && window.isSecureContext) {
-                          await navigator.clipboard.writeText(link);
-                          showAlert("Link berhasil disalin ke clipboard!", "success");
-                        } else {
-                          // Fallback for older browsers or non-secure contexts
-                          const textArea = document.createElement('textarea');
-                          textArea.value = link;
-                          textArea.style.position = 'fixed';
-                          textArea.style.left = '-999999px';
-                          textArea.style.top = '-999999px';
-                          document.body.appendChild(textArea);
-                          textArea.focus();
-                          textArea.select();
-                          
-                          try {
-                            const successful = document.execCommand('copy');
-                            if (successful) {
-                              showAlert("Link berhasil disalin ke clipboard!", "success");
-                            } else {
-                              throw new Error('Copy command failed');
-                            }
-                          } catch (err) {
-                            // Show the link in a modal if clipboard fails
-                            showAlert(`Gagal menyalin ke clipboard. Silakan salin manual: ${link}`, "warning");
-                          } finally {
-                            document.body.removeChild(textArea);
-                          }
-                        }
-                      } catch (error) {
-                        console.error('Error copying to clipboard:', error);
-                        showAlert("Gagal menyalin link ke clipboard. Silakan coba lagi.", "error");
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-                      color: COLORS.white,
-                      border: "none",
-                      borderRadius: 10,
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      transition: "all 0.2s ease",
-                      boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
-                    }}
-                    onMouseOver={e => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(34, 197, 94, 0.4)";
-                    }}
-                    onMouseOut={e => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
-                    }}
-                  >
-                    <span style={{ fontSize: "14px" }}>📋</span>
-                    <span>Salin Link</span>
-                  </button>
-
-                  {/* Edit Layout Button - Only show for multi-camera streaming with custom layout */}
-                  {streamingState.isStreaming && currentStreamingLayoutType === 'custom' && (
-                    <button
-                      onClick={() => {
-                        // Load current layout from localStorage
-                        const savedLayout = localStorage.getItem('streamingLayout');
-                        if (savedLayout) {
-                          try {
-                            const parsedLayout = JSON.parse(savedLayout);
-                            setStreamingLayouts(parsedLayout);
-                          } catch (error) {
-                            console.error('Error parsing saved streaming layout:', error);
-                          }
-                        }
-                        
-                        // Load screen source from localStorage
-                        const savedScreenSource = localStorage.getItem('screenSource');
-                        if (savedScreenSource) {
-                          try {
-                            const parsedScreenSource = JSON.parse(savedScreenSource);
-                            setStreamingScreenSource(parsedScreenSource);
-                          } catch (error) {
-                            console.error('Error parsing saved screen source:', error);
-                          }
-                        }
-                        
-                        setShowStreamingLayoutEditor(true);
-                      }}
-                      style={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
-                        color: COLORS.white,
-                        border: "none",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
-                      }}
-                      onMouseOver={e => {
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(34, 197, 94, 0.4)";
-                      }}
-                      onMouseOut={e => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(34, 197, 94, 0.3)";
-                      }}
-                    >
-                      <span style={{ fontSize: "14px" }}>🎛️</span>
-                      <span>Edit</span>
-                    </button>
-                  )}
-
-                  {/* Stop Button */}
-                  <button
-                    onClick={handleStopStream}
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-                      color: COLORS.white,
-                      border: "none",
-                      borderRadius: 10,
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)"
-                    }}
-                    onMouseOver={e => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(239, 68, 68, 0.4)";
-                    }}
-                    onMouseOut={e => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(239, 68, 68, 0.3)";
-                    }}
-                  >
-                    <span style={{ fontSize: "14px" }}>⏹️</span>
-                    <span>Hentikan</span>
-                  </button>
-                </div>
-              </>
-            )}
+            </div>
           </div>
         </div>
 
@@ -1344,57 +1313,6 @@ animation: 'fadeInUp 0.6s ease-out'
         </div>
       )}
 
-      {/* Chat Modal for Admin - View all comments */}
-      {streamingState.isStreaming && streamingState.roomId && (
-        <>
-          {/* Button to open chat modal */}
-          <button
-            onClick={() => setShowChatModal(true)}
-            style={{
-              position: 'fixed',
-              bottom: '30px',
-              right: '30px',
-              background: 'linear-gradient(135deg, #BBF7D0 0%, #86EFAC 100%)',
-              color: '#1e293b',
-              border: '2px solid rgba(134, 239, 172, 0.8)',
-              borderRadius: '50%',
-              width: '64px',
-              height: '64px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '28px',
-              fontWeight: 600,
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-              transition: 'all 0.3s ease',
-              zIndex: 1000
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
-            }}
-            title="Lihat Komentar Penonton"
-          >
-            💬
-          </button>
-
-          {/* Chat Modal */}
-          <ChatModal
-            isOpen={showChatModal}
-            onClose={() => setShowChatModal(false)}
-            streamId={streamingState.roomId}
-            socket={chatSocketRef.current}
-            currentUsername={user?.name || 'Admin'}
-            isAdmin={true}
-            readOnly={false}
-          />
-        </>
-      )}
       </div>
     </>
   );
