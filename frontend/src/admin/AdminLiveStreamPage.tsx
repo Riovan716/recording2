@@ -8,6 +8,7 @@ import BasicLayoutEditor from "../components/BasicLayoutEditor";
 import SimpleYouTube from "../components/SimpleYouTube";
 import ChatModal from "../components/ChatModal";
 import ChatSidebar from "../components/ChatSidebar";
+import AudioLevelIndicator from "../components/AudioLevelIndicator";
 import { API_URL } from "../config";
 import { io } from 'socket.io-client';
 
@@ -85,6 +86,8 @@ const AdminLiveStreamPage: React.FC = () => {
   const [currentStreamingLayoutType, setCurrentStreamingLayoutType] = useState<string>('');
   const [currentViewers, setCurrentViewers] = useState(0);
   const [streamStartTime, setStreamStartTime] = useState<string | null>(null);
+  const [hasAudio, setHasAudio] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   const [showChatModal, setShowChatModal] = useState(false);
   const [showChatSidebar, setShowChatSidebar] = useState(true);
@@ -111,6 +114,37 @@ useEffect(() => {
   useEffect(() => {
     if (videoRef.current && streamingState.localStream) {
       videoRef.current.srcObject = streamingState.localStream;
+    }
+  }, [streamingState.localStream]);
+
+  // Check audio track status
+  useEffect(() => {
+    if (streamingState.localStream) {
+      const audioTracks = streamingState.localStream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        setHasAudio(true);
+        const audioTrack = audioTracks[0];
+        setAudioEnabled(audioTrack.enabled && !audioTrack.muted);
+        
+        // Listen for track changes
+        const handleTrackChange = () => {
+          setAudioEnabled(audioTrack.enabled && !audioTrack.muted);
+        };
+        
+        audioTrack.addEventListener('mute', handleTrackChange);
+        audioTrack.addEventListener('unmute', handleTrackChange);
+        
+        return () => {
+          audioTrack.removeEventListener('mute', handleTrackChange);
+          audioTrack.removeEventListener('unmute', handleTrackChange);
+        };
+      } else {
+        setHasAudio(false);
+        setAudioEnabled(false);
+      }
+    } else {
+      setHasAudio(false);
+      setAudioEnabled(false);
     }
   }, [streamingState.localStream]);
 
@@ -598,6 +632,43 @@ useEffect(() => {
                     }} />
                     LIVE
                   </div>
+
+                  {/* Audio Indicator on Video */}
+                  {hasAudio && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      zIndex: 10
+                    }}>
+                      <AudioLevelIndicator 
+                        stream={streamingState.localStream} 
+                        isActive={audioEnabled && streamingState.isStreaming}
+                      />
+                      {!audioEnabled && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 8px',
+                          background: 'rgba(254, 243, 199, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          color: '#92400e',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          border: '1px solid rgba(146, 64, 14, 0.2)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                        }}>
+                          <span>🔇</span>
+                          <span>Muted</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
