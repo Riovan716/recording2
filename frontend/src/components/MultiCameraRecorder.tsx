@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef} from 'react';
 import { FaTh, FaSquare, FaColumns, FaCheck, FaTimes, FaRedo, FaStar, FaVideo, FaPlay, FaCamera, FaTimes as FaClose, FaArrowsAlt, FaDesktop } from 'react-icons/fa';
 import BasicLayoutEditor from './BasicLayoutEditor';
 
@@ -51,6 +51,9 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
   const [availableScreens, setAvailableScreens] = useState<ScreenSource[]>([]);
   const [selectedScreen, setSelectedScreen] = useState<ScreenSource | null>(null);
   const [isLoadingScreens, setIsLoadingScreens] = useState(false);
+  // Guard agar init hanya jalan sekali (hindari spam)
+const initializedRef = useRef(false);
+
 
   // Detect available cameras
   const getAvailableCameras = useCallback(async () => {
@@ -58,7 +61,8 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
     
     try {
       setIsLoadingCameras(true);
-      onStatusUpdate('Mendeteksi kamera yang tersedia...');
+      // Defer status update to avoid updating parent during render
+      setTimeout(() => onStatusUpdate('Mendeteksi kamera yang tersedia...'), 0);
       
       if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
         throw new Error('Enumerate devices tidak didukung di browser ini');
@@ -74,16 +78,17 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         }));
 
       setAvailableCameras(cameras);
-      onStatusUpdate(`Ditemukan ${cameras.length} kamera`);
+      setTimeout(() => onStatusUpdate(`Ditemukan ${cameras.length} kamera`), 0);
       
       console.log('Available cameras:', cameras);
     } catch (error: any) {
       console.error('Error getting cameras:', error);
-      onStatusUpdate('Gagal mendeteksi kamera: ' + error.message);
+      setTimeout(() => onStatusUpdate('Gagal mendeteksi kamera: ' + error.message), 0);
     } finally {
       setIsLoadingCameras(false);
     }
-  }, [onStatusUpdate]);
+  }, [onStatusUpdate, isLoadingCameras]);
+
 
   // Detect available screen sources
   const getAvailableScreens = useCallback(async () => {
@@ -91,7 +96,8 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
     
     try {
       setIsLoadingScreens(true);
-      onStatusUpdate('Mendeteksi layar yang tersedia...');
+      // Defer status update to avoid updating parent during render
+      setTimeout(() => onStatusUpdate('Mendeteksi layar yang tersedia...'), 0);
       
       const isElectron = window.navigator.userAgent.toLowerCase().includes('electron');
       
@@ -104,7 +110,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
           type: source.id.startsWith('screen:') ? 'screen' : 'window'
         }));
         setAvailableScreens(screenSources);
-        onStatusUpdate(`Ditemukan ${screenSources.length} layar/jendela`);
+        setTimeout(() => onStatusUpdate(`Ditemukan ${screenSources.length} layar/jendela`), 0);
       } else if (navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
         // For web browsers, provide multiple options
         const screenOptions = [
@@ -125,14 +131,14 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
           }
         ];
         setAvailableScreens(screenOptions);
-        onStatusUpdate('Screen recording tersedia - pilih sumber yang diinginkan');
+        setTimeout(() => onStatusUpdate('Screen recording tersedia - pilih sumber yang diinginkan'), 0);
       } else {
         setAvailableScreens([]);
-        onStatusUpdate('Screen recording tidak didukung di browser ini');
+        setTimeout(() => onStatusUpdate('Screen recording tidak didukung di browser ini'), 0);
       }
     } catch (error: any) {
       console.error('Error getting screen sources:', error);
-      onStatusUpdate('Gagal mendeteksi layar: ' + error.message);
+      setTimeout(() => onStatusUpdate('Gagal mendeteksi layar: ' + error.message), 0);
       setAvailableScreens([]);
     } finally {
       setIsLoadingScreens(false);
@@ -147,42 +153,41 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
         ? prev.filter(id => id !== deviceId)
         : [...prev, deviceId];
       
-      onStatusUpdate(`${newSelected.length} kamera dipilih`);
+      // Defer status update to avoid updating parent during render
+      setTimeout(() => onStatusUpdate(`${newSelected.length} kamera dipilih`), 0);
       return newSelected;
     });
-  }, [onStatusUpdate]);
+}, [onStatusUpdate, isLoadingScreens]);
 
   // Handle custom layout change
-  const handleLayoutChange = useCallback((layouts: CameraLayout[]) => {
-    setCustomLayouts(layouts);
-    // Also update savedLayouts so it reflects the current state
-    setSavedLayouts(layouts);
-  }, []);
+ const handleLayoutChange = useCallback((layouts: CameraLayout[]) => {
+  setCustomLayouts(layouts);
+}, []);
 
   // Start recording
   const handleStartRecording = () => {
     if (selectedCameras.length === 0 && !includeScreenRecording) {
-      onStatusUpdate('Pilih setidaknya satu kamera atau aktifkan screen recording');
+      setTimeout(() => onStatusUpdate('Pilih setidaknya satu kamera atau aktifkan screen recording'), 0);
       return;
     }
 
     if (selectedCameras.length > 4) {
-      onStatusUpdate('Maksimal 4 kamera untuk recording');
+      setTimeout(() => onStatusUpdate('Maksimal 4 kamera untuk recording'), 0);
       return;
     }
 
     if (!recordingJudul.trim()) {
-      onStatusUpdate('Judul recording harus diisi!');
+      setTimeout(() => onStatusUpdate('Judul recording harus diisi!'), 0);
       return;
     }
 
     if (layoutType === 'custom' && customLayouts.length === 0) {
-      onStatusUpdate('Atur layout kamera terlebih dahulu!');
+      setTimeout(() => onStatusUpdate('Atur layout kamera terlebih dahulu!'), 0);
       return;
     }
 
     if (includeScreenRecording && !selectedScreen) {
-      onStatusUpdate('Pilih layar untuk screen recording!');
+      setTimeout(() => onStatusUpdate('Pilih layar untuk screen recording!'), 0);
       return;
     }
 
@@ -200,7 +205,15 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
       includeScreenRecording && selectedScreen ? selectedScreen : undefined
     );
   };
+    const closeLayoutEditor = useCallback(() => {
+    setShowLayoutEditor(false);
+  }, []);
 
+  const filteredCameras = useMemo(() => {
+    return availableCameras.filter(camera =>
+      selectedCameras.includes(camera.deviceId)
+    );
+  }, [availableCameras, selectedCameras]);
   // Load saved layout on mount and when modal opens
   useEffect(() => {
     const savedLayout = localStorage.getItem('cameraLayout');
@@ -219,10 +232,13 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
   }, [layoutType, showLayoutEditor]);
 
   // Initialize cameras and screens on mount
-  useEffect(() => {
-    getAvailableCameras();
-    getAvailableScreens();
-  }, [getAvailableCameras, getAvailableScreens]); // Include both functions in dependencies
+ useEffect(() => {
+  if (initializedRef.current) return;
+  initializedRef.current = true;
+
+  getAvailableCameras();
+  getAvailableScreens();
+}, [getAvailableCameras, getAvailableScreens]);
 
   return (
     <>
@@ -710,7 +726,7 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
                   onClick={() => {
                     const layoutToLoad = customLayouts.length > 0 ? customLayouts : savedLayouts;
                     setCustomLayouts(layoutToLoad);
-                    onStatusUpdate('Layout tersimpan telah dimuat!');
+                    setTimeout(() => onStatusUpdate('Layout tersimpan telah dimuat!'), 0);
                   }}
                   style={{ 
                     display: 'flex', 
@@ -849,19 +865,14 @@ const MultiCameraRecorder: React.FC<MultiCameraRecorderProps> = ({
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           border: '1px solid #e5e7eb'
         }}>
-          <BasicLayoutEditor
-            cameras={(() => {
-              const filteredCameras = availableCameras.filter(camera => selectedCameras.includes(camera.deviceId));
-              console.log('MultiCameraRecorder: selectedCameras:', selectedCameras);
-              console.log('MultiCameraRecorder: availableCameras:', availableCameras);
-              console.log('MultiCameraRecorder: filteredCameras:', filteredCameras);
-              return filteredCameras;
-            })()}
-            onLayoutChange={handleLayoutChange}
-            onClose={() => setShowLayoutEditor(false)}
-            initialLayouts={savedLayouts}
-            screenSource={includeScreenRecording && selectedScreen ? selectedScreen : undefined}
-          />
+         <BasicLayoutEditor
+  cameras={filteredCameras}
+  onLayoutChange={handleLayoutChange}
+  onClose={closeLayoutEditor}
+  initialLayouts={savedLayouts}
+  screenSource={includeScreenRecording && selectedScreen ? selectedScreen : undefined}
+/>
+
         </div>
       </div>
     )}

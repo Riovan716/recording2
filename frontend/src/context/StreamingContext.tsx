@@ -107,7 +107,7 @@ export const StreamingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [streamingLayoutVersion]);
 
   useEffect(() => {
-    socket.current = io('http://192.168.1.10:4000');
+    socket.current = io('http://192.168.1.37:4000');
     return () => {
       if (socket.current) {
         socket.current.disconnect();
@@ -1025,7 +1025,7 @@ mediaRecorder.start(); // biarkan browser buffer sendiri
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
-      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.10') {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '192.168.1.37') {
         throw new Error("Screen recording memerlukan koneksi HTTPS atau localhost untuk keamanan.");
       }
 
@@ -1195,23 +1195,39 @@ mediaRecorder.start(); // biarkan browser buffer sendiri
   };
 
   const stopRecording = () => {
-    if (streamingState.mediaRecorder && streamingState.mediaRecorder.state === 'recording') {
-      streamingState.mediaRecorder.stop();
-    }
-    
-    if (streamingState.recordingStream) {
-      streamingState.recordingStream.getTracks().forEach(track => track.stop());
-    }
+  // 1️⃣ Stop MediaRecorder
+  if (
+    streamingState.mediaRecorder &&
+    streamingState.mediaRecorder.state === "recording"
+  ) {
+    streamingState.mediaRecorder.stop();
+  }
 
-    setStreamingState(prev => ({
-      ...prev,
-      isRecording: false,
-      isScreenRecording: false,
-      recordingStream: null,
-      mediaRecorder: null,
-      status: 'Recording dihentikan'
-    }));
-  };
+  // 2️⃣ Stop semua track MediaStream
+  if (streamingState.recordingStream) {
+    streamingState.recordingStream
+      .getTracks()
+      .forEach(track => track.stop());
+  }
+
+  // 3️⃣ RESET SEMUA STATE VIDEO (WAJIB)
+  setStreamingState(prev => ({
+    ...prev,
+    isRecording: false,
+    isScreenRecording: false,
+    recordingStream: null,
+    mediaRecorder: null,
+
+    // 🔴 PENTING (INI YANG HILANG SEBELUMNYA)
+    videoBlob: null,
+    videoUrl: null,
+    recordingStartTime: null,
+    recordingDuration: 0,
+
+    status: "Recording dihentikan"
+  }));
+};
+
 
   const uploadRecording = async () => {
     if (!streamingState.videoBlob) return;
